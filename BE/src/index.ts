@@ -17,7 +17,6 @@ app.use(express.json());
 
 // Kết nối DB
 connectDB();
-console.log("🧪 MONGO_URI =", process.env.MONGO_URI);
 
 // Routes
 app.use("/api/accounts", accountRoutes);
