@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db";
 import accountRoutes from "./routes/accountRoutes";
+import authRoutes from "./routes/authRoutes";
 
 // Load biến môi trường
 dotenv.config();
@@ -21,6 +22,7 @@ console.log("🧪 MONGO_URI =", process.env.MONGO_URI);
 
 // Routes
 app.use("/api/accounts", accountRoutes);
+app.use("/api/auth", authRoutes);
 
 // Route kiểm tra
 app.get("/", (_req, res) => {

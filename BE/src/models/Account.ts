@@ -8,8 +8,8 @@ export interface IAccount extends Document {
   photoUrl?: string;
   fullName: string;
   phoneNumber: string;
-  role: string;
-  gender: string;
+  role: "customer" | "consultant" | "admin";
+  gender?: "nam" | "nữ";
   isDisabled: boolean;
 }
 
@@ -19,11 +19,18 @@ const AccountSchema: Schema = new Schema(
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    photoUrl: { type: String },
-    fullName: { type: String, required: true },
-    phoneNumber: { type: String, required: true },
-    role: { type: String, required: true }, // e.g., "customer", "consultant", "admin"
-    gender: { type: String, required: true },
+    photoUrl: { type: String, default: "" },
+    fullName: { type: String, default: "" },
+    phoneNumber: { type: String, default: "" },
+    role: {
+      type: String,
+      enum: ["customer", "consultant", "admin"],
+      default: "customer",
+    }, 
+    gender: {
+      type: String,
+      enum: ["nam", "nữ"],
+    },
     isDisabled: { type: Boolean, default: false },
   },
   { timestamps: true }
