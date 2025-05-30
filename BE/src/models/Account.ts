@@ -10,6 +10,7 @@ export interface IAccount extends Document {
   phoneNumber: string;
   role: "customer" | "consultant" | "admin";
   gender?: "nam" | "nữ";
+  isVerified: boolean;
   isDisabled: boolean;
 }
 
@@ -32,6 +33,7 @@ const AccountSchema: Schema = new Schema(
       enum: ["nam", "nữ"],
     },
     isDisabled: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

@@ -110,3 +110,82 @@ export const register = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Đã xảy ra lỗi server" });
   }
 };
+
+export const login = async (req: Request, res: Response) => {
+  try {
+    const errors: any = {};
+
+    const { login, password } = req.body;
+    
+    // Kiểm tra login và password có tồn tại và là string không
+   const formatLogin = typeof login === "string" ? login.trim().toLowerCase() : "";
+   const trimmedPassword = typeof password === "string" ? password.trim() : "";
+
+   if (!formatLogin || !trimmedPassword) {
+  errors.message = "Vui lòng điền đầy đủ các trường!";
+  throw new ValidationError(errors);
+}
+
+    const user = await Account.findOne({
+      $or: [{ email: formatLogin }, { username: formatLogin }],
+    });
+
+    if (!user) {
+      errors.message = "Tài khoản không tồn tại!";
+      errors.login = "Vui lòng kiểm tra lại!";
+      throw new ValidationError(errors);
+    }
+
+    if (user.isDisabled) {
+      errors.message =
+        "Tài khoản của bạn đã bị khóa! Vui lòng liên hệ quản trị viên để được hỗ trợ";
+      throw new ValidationError(errors);
+    }
+
+   
+
+    if (!user) {
+      errors.message = "Tài khoản không tồn tại!";
+      errors.login = "Vui lòng kiểm tra lại!";
+      throw new ValidationError(errors);
+    }
+
+    const comparePassword = await bcrypt.compare(
+      trimmedPassword,
+      user.password
+    );
+
+    if (!comparePassword) {
+      errors.message = "Mật khẩu không đúng, vui lòng thử lại!";
+      errors.login = "Vui lòng kiểm tra lại!";
+      errors.password = "Vui lòng kiểm tra lại!";
+      throw new ValidationError(errors);
+    }
+
+    const token = await signToken({
+      _id: user._id as Types.ObjectId,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    });
+
+    return res.status(200).json({
+      message: "Đăng nhập thành công!",
+      data: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
+        token,
+      },
+    });
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      return res.status(400).json(error.errors);
+    }
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
