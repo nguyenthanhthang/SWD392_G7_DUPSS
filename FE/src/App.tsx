@@ -5,6 +5,7 @@ import QuizzPage from "./pages/QuizzPage";
 import ConsultingPage from "./pages/ConsultingPage";
 import EventsPage from "./pages/EventsPage";
 import BlogPage from "./pages/BlogPage";
+import SigninPage from "./pages/Singnin";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/consulting" element={<ConsultingPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/blogs" element={<BlogPage />} />
+          <Route path="/signin" element={<SigninPage />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>
