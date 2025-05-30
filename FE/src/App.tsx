@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import MainLayout from "./components/layout/MainLayout";
+//import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import QuizzPage from "./pages/QuizzPage";
 import ConsultingPage from "./pages/ConsultingPage";
@@ -10,7 +10,7 @@ import SigninPage from "./pages/Singnin";
 function App() {
   return (
     <BrowserRouter>
-      <MainLayout>
+      
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/quizz" element={<QuizzPage />} />
@@ -19,7 +19,7 @@ function App() {
           <Route path="/blogs" element={<BlogPage />} />
           <Route path="/signin" element={<SigninPage />} />
         </Routes>
-      </MainLayout>
+      
     </BrowserRouter>
   );
 }
