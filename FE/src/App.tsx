@@ -5,7 +5,8 @@ import QuizzPage from "./pages/QuizzPage";
 import ConsultingPage from "./pages/ConsultingPage";
 import EventsPage from "./pages/EventsPage";
 import BlogPage from "./pages/BlogPage";
-import SigninPage from "./pages/Singnin";
+import LoginPage from "./pages/Login";
+import RegisterPage from "./pages/Register";
 
 function App() {
   return (
@@ -17,7 +18,8 @@ function App() {
           <Route path="/consulting" element={<ConsultingPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/blogs" element={<BlogPage />} />
-          <Route path="/signin" element={<SigninPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Routes>
       
     </BrowserRouter>
