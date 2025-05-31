@@ -24,7 +24,7 @@ function Header() {
   }, []);
 
   return (
-    <header className="fixed top-0 right-0 left-64 z-50 bg-gray-50">
+    <header className="fixed top-0 right-0 left-64 z-50 bg-white">
       <div className="flex items-center justify-end py-4 px-8">
         <div className="flex items-center gap-4">
           <div className="relative">
