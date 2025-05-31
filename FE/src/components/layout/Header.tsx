@@ -24,27 +24,13 @@ function Header() {
   }, []);
 
   return (
-    <header
-      className={`sticky top-0 z-[5] ${
-        isSticky ? "bg-white dark:bg-dark shadow-md" : "bg-white"
-      }`}
-    >
-      <div className="flex items-center justify-between py-3 px-6 ml-64">
-        <div className="flex items-center gap-4 lg:hidden">
-          <button className="p-2 rounded-full hover:bg-gray-100">
-            <span className="material-icons-outlined">menu</span>
-          </button>
-        </div>
-
-        <div className="flex-1 lg:flex-none">
-          {/* Placeholder for left side */}
-        </div>
-
+    <header className="fixed top-0 right-0 left-64 z-50 bg-gray-50">
+      <div className="flex items-center justify-end py-4 px-8">
         <div className="flex items-center gap-4">
           <div className="relative">
             <button className="p-2 text-gray-600 hover:text-gray-900">
               <span className="material-icons-outlined">notifications</span>
-              <span className="absolute top-0 right-0 block w-2 h-2 bg-indigo-500 rounded-full"></span>
+              <span className="absolute top-1 right-1 block w-2 h-2 bg-indigo-600 rounded-full"></span>
             </button>
           </div>
 

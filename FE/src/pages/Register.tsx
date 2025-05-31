@@ -1,4 +1,3 @@
-import logo from '../assets/logo1.png';
 import loginImg from '../assets/login2.png';
 import { useState } from 'react';
 import { registerApi } from '../api';
@@ -53,11 +52,7 @@ function RegisterPage() {
     <div className="min-h-screen flex flex-col lg:flex-row bg-white">
       <div className="flex items-center justify-center w-full h-screen lg:w-1/2 lg:h-screen">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm rounded-xl bg-white/70 backdrop-blur-md p-8">
-          <img
-            alt="HopeHub Logo"
-            src={logo}
-            className="mx-auto h-16 w-auto"
-          />
+          <h1 className="text-3xl font-bold text-center text-indigo-600">DUPSS</h1>
           <p className="mt-2 text-center text-sm text-gray-600">
             <a href="#" className="font-semibold text-white-600">
               HopeHub - Where Recovery Meets Peace

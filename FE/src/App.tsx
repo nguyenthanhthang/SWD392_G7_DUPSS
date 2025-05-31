@@ -8,6 +8,7 @@ import BlogPage from "./pages/BlogPage";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import AdminDashboard from "./pages/admin/Dashboard";
+import AccountList from "./pages/admin/AccountList";
 
 function App() {
   return (
@@ -15,7 +16,7 @@ function App() {
       <Routes>
         {/* Routes dành cho Admin */}
         <Route path="/admin" element={<MainLayout><AdminDashboard /></MainLayout>} />
-        <Route path="/admin/users" element={<MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý người dùng</div></MainLayout>} />
+        <Route path="/admin/users" element={<MainLayout><AccountList /></MainLayout>} />
         <Route path="/admin/courses" element={<MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý khóa học</div></MainLayout>} />
         <Route path="/admin/blogs" element={<MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý blog</div></MainLayout>} />
         <Route path="/admin/consulting" element={<MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý tư vấn</div></MainLayout>} />

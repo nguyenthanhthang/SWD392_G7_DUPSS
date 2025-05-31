@@ -20,8 +20,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <Header />
         
         {/* Content */}
-        <main className="px-6 py-6">
-          {children}
+        <main className="p-8 mt-[72px]">
+          <div className="bg-white rounded-[32px] min-h-[calc(100vh-8rem)] p-8 shadow-sm">
+            {children}
+          </div>
         </main>
       </div>
     </div>

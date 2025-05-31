@@ -1,21 +1,24 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const Sidebar = () => {
+  const location = useLocation();
+  const currentPath = location.pathname;
+
   // Danh sách menu
   const menuGroups = [
     {
-      title: 'HOME',
+      title: 'TRANG CHỦ',
       items: [
         {
-          title: 'Dashboard',
+          title: 'Tổng quan',
           path: '/admin',
           icon: 'dashboard'
         }
       ]
     },
     {
-      title: 'UTILITIES',
+      title: 'QUẢN LÝ HỆ THỐNG',
       items: [
         {
           title: 'Quản lý người dùng',
@@ -23,30 +26,50 @@ const Sidebar = () => {
           icon: 'people'
         },
         {
-          title: 'Quản lý khóa học',
-          path: '/admin/courses',
-          icon: 'school'
+          title: 'Quản lý tư vấn viên',
+          path: '/admin/consultants',
+          icon: 'support_agent'
         },
         {
-          title: 'Quản lý blog',
+          title: 'Quản lý lịch tư vấn',
+          path: '/admin/schedules',
+          icon: 'calendar_today'
+        },
+        {
+          title: 'Quản lý bài viết',
           path: '/admin/blogs',
           icon: 'article'
         },
         {
-          title: 'Quản lý tư vấn',
-          path: '/admin/consulting',
-          icon: 'support_agent'
+          title: 'Quản lý chương trình',
+          path: '/admin/programs',
+          icon: 'campaign'
+        },
+        {
+          title: 'Quản lý khảo sát',
+          path: '/admin/surveys',
+          icon: 'poll'
         }
       ]
     },
     {
-      title: 'REPORTS',
+      title: 'BÁO CÁO & THỐNG KÊ',
       items: [
         {
-          title: 'Báo cáo thống kê',
-          path: '/admin/reports',
-          icon: 'bar_chart'
+          title: 'Báo cáo tổng quan',
+          path: '/admin/dashboard',
+          icon: 'analytics'
         },
+        {
+          title: 'Xuất báo cáo Excel',
+          path: '/admin/reports/export',
+          icon: 'file_download'
+        }
+      ]
+    },
+    {
+      title: 'CẤU HÌNH',
+      items: [
         {
           title: 'Cài đặt hệ thống',
           path: '/admin/settings',
@@ -56,33 +79,51 @@ const Sidebar = () => {
     }
   ];
 
+  // Kiểm tra mục có đang được chọn hay không
+  const isActive = (path: string) => {
+    // Xử lý trường hợp đặc biệt cho trang dashboard
+    if (path === '/admin' && currentPath === '/admin') {
+      return true;
+    }
+    // Đối với các trang khác, kiểm tra nếu path hiện tại bắt đầu bằng path của mục
+    return currentPath.startsWith(path) && path !== '/admin';
+  };
+
   return (
     <div className="hidden md:block w-64 bg-white dark:bg-darkgray shadow-md h-screen fixed left-0">
-      <div className="px-6 py-4 flex items-center">
-        <svg className="w-10 h-10 text-primary" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-        </svg>
-        <h1 className="text-xl font-bold ml-2 text-primary">DUPSS Admin</h1>
+      <div className="px-4 py-6 bg-white sticky top-0 w-64 z-50">
+        <div className="flex justify-center items-center">
+          <h1 className="text-2xl font-bold text-indigo-600">DUPSS Admin</h1>
+        </div>
       </div>
       
-      <nav className="mt-6">
+      <nav className="mt-2 overflow-y-auto h-[calc(100vh-6rem)]">
         {menuGroups.map((group, groupIndex) => (
-          <div key={groupIndex} className="mb-6">
-            <h6 className="px-6 mb-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <div key={groupIndex} className="mb-4">
+            <h6 className="px-4 mb-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
               {group.title}
             </h6>
             <ul>
-              {group.items.map((item, itemIndex) => (
-                <li key={itemIndex} className="mb-1">
-                  <Link 
-                    to={item.path}
-                    className="flex items-center px-6 py-3 text-gray-700 dark:text-gray-200 hover:bg-indigo-50 hover:text-indigo-600 rounded-md"
-                  >
-                    <span className="material-icons-outlined mr-3">{item.icon}</span>
-                    <span>{item.title}</span>
-                  </Link>
-                </li>
-              ))}
+              {group.items.map((item, itemIndex) => {
+                const active = isActive(item.path);
+                return (
+                  <li key={itemIndex} className="mb-1 px-4">
+                    <Link 
+                      to={item.path}
+                      className={`flex items-center py-2 px-3 ${
+                        active 
+                          ? 'bg-indigo-500 text-white font-medium rounded-full' 
+                          : 'text-gray-700 dark:text-gray-200 hover:bg-indigo-50 hover:text-indigo-600'
+                      }`}
+                    >
+                      <span className={`material-icons-outlined mr-3 ${active ? 'text-white' : ''}`}>
+                        {item.icon}
+                      </span>
+                      <span>{item.title}</span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
