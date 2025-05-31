@@ -4,6 +4,7 @@ import Account from "../models/Account"; // Đảm bảo đúng đường dẫn 
 import { randomText, signToken } from "../utils/index"; // Đảm bảo đúng đường dẫn hàm signToken
 import { ValidationError } from "../errors/ValidationError"; // Đảm bảo đúng đường dẫn
 import { Types } from "mongoose";
+import { sendVerificationEmail } from "../services/email";
 
 
 
@@ -79,11 +80,16 @@ export const register = async (req: Request, res: Response) => {
     // Create new user
     const salt = await bcrypt.genSalt(10);
     const hashedPass = await bcrypt.hash(formatPassword, salt);
+    const verificationToken = Math.floor(
+        100000 + Math.random() * 900000
+      ).toString();
 
     const newUser = await Account.create({
       username: formatUsername,
       email: formatEmail,
       password: hashedPass,
+      verificationToken,
+      verificationTokenExpiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
 
     // Generate token
@@ -94,6 +100,12 @@ export const register = async (req: Request, res: Response) => {
       role: newUser.role,
     });
 
+    await sendVerificationEmail(
+      newUser.email,
+      newUser.username,
+      verificationToken
+    );
+
     return res.status(201).json({
       message: "Đăng ký thành công!",
       data: {
@@ -103,6 +115,8 @@ export const register = async (req: Request, res: Response) => {
         role: newUser.role,
         isVerified: false,
         token,
+        verificationToken: newUser.verificationToken,
+        verificationTokenExpiresAt: newUser.verificationTokenExpiresAt,
       },
     });
   } catch (error: any) {
@@ -256,5 +270,67 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
     res.status(500).json({
       message: "Đã xảy ra lỗi khi xử lý đăng nhập Google",
     });
+  }
+};
+
+export const sendNewVerifyEmail = async (req: Request, res: Response) => {
+  const { email, username } = req.body;
+  try {
+    const user = await Account.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "Người dùng không tồn tại" });
+    }
+
+   
+
+    const verificationToken = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+
+    // For testing
+    // const verificationToken = "123456";
+
+    const verificationTokenExpiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiresAt = verificationTokenExpiresAt as any;
+
+    await user.save();
+
+    await sendVerificationEmail(email, username, verificationToken);
+
+    return res
+      .status(200)
+      .json({ message: "Mã OTP đã được gửi đến email của bạn" });
+  } catch (error: any) {
+    console.log(error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const checkOTP = async (req: Request, res: Response) => {
+  const { verifyCode } = req.body;
+  try {
+    const user = await Account.findOne({
+      verificationToken: verifyCode,
+      verificationTokenExpiresAt: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Mã không hợp lệ hoặc hết hạn" });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+
+    await user.save();
+
+    return res.status(200).json({ message: "Xác nhận tài khoản thành công" });
+  } catch (error: any) {
+    console.log(error);
+    return res.status(500).json({ message: error.message });
   }
 };
