@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import Account from "../models/Account"; // Đảm bảo đúng đường dẫn model Account
-import { signToken } from "../utils/index"; // Đảm bảo đúng đường dẫn hàm signToken
+import { randomText, signToken } from "../utils/index"; // Đảm bảo đúng đường dẫn hàm signToken
 import { ValidationError } from "../errors/ValidationError"; // Đảm bảo đúng đường dẫn
 import { Types } from "mongoose";
+
+
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -186,6 +188,73 @@ export const login = async (req: Request, res: Response) => {
     }
     res.status(500).json({
       message: error.message,
+    });
+  }
+};
+
+export const loginWithGoogle = async (req: Request, res: Response) => {
+  try {
+    const { email, username, photoUrl } = req.body;
+
+    const formatEmail = email.trim().toLowerCase();
+    const formatUserName = username + "-" + randomText(5);
+
+    let user = await Account.findOne({ email: formatEmail });
+    
+
+    if (!user) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPass = await bcrypt.hash(randomText(12), salt);
+      user = await Account.create({
+        username: formatUserName,
+        email: formatEmail,
+        password: hashedPass,
+        isVerified: true,
+        photoUrl,
+      });
+     
+    } else {
+      if (user.isDisabled) {
+        return res.status(403).json({
+          message:
+            "Tài khoản của bạn đã bị khóa! Vui lòng liên hệ quản trị viên để được hỗ trợ",
+        });
+      }
+       
+
+      if (user.photoUrl === "") {
+        user.photoUrl = photoUrl;
+        await user.save();
+      }
+
+      user.isVerified = true;
+
+
+      await user.save();
+    }
+
+    const token = await signToken({
+      _id: user._id as Types.ObjectId,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    });
+
+    return res.status(200).json({
+      message: "Đăng nhập thành công!",
+      data: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
+        token,
+      },
+    });
+  } catch (error: any) {
+    console.log(error);
+    res.status(500).json({
+      message: "Đã xảy ra lỗi khi xử lý đăng nhập Google",
     });
   }
 };
