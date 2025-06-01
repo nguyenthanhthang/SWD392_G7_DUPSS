@@ -15,6 +15,8 @@ interface IAccount {
   isDisabled: boolean;
   isVerified: boolean;
   photoUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface UpdateAccountForm {
@@ -31,8 +33,11 @@ const AccountList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [accountToToggle, setAccountToToggle] = useState<{id: string, isDisabled: boolean} | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<IAccount | null>(null);
+  const [accountDetail, setAccountDetail] = useState<IAccount | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [updateForm, setUpdateForm] = useState<UpdateAccountForm>({
     username: '',
     email: '',
@@ -70,6 +75,18 @@ const AccountList: React.FC = () => {
     }
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Chưa cập nhật';
+    const date = new Date(dateString);
+    return date.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const openConfirmToggleModal = (id: string, isDisabled: boolean) => {
     setAccountToToggle({ id, isDisabled });
     setIsConfirmModalOpen(true);
@@ -104,6 +121,25 @@ const AccountList: React.FC = () => {
       toast.error('Không thể cập nhật trạng thái tài khoản');
       closeConfirmToggleModal();
     }
+  };
+
+  const handleOpenDetailModal = async (id: string) => {
+    try {
+      setLoadingDetail(true);
+      const response = await api.get(`/accounts/${id}`);
+      setAccountDetail(response.data);
+      setIsDetailModalOpen(true);
+      setLoadingDetail(false);
+    } catch (err: any) {
+      console.error('Lỗi khi lấy chi tiết tài khoản:', err);
+      toast.error(err.response?.data?.message || 'Không thể lấy chi tiết tài khoản');
+      setLoadingDetail(false);
+    }
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setAccountDetail(null);
   };
 
   const handleOpenUpdateModal = (account: IAccount) => {
@@ -259,7 +295,10 @@ const AccountList: React.FC = () => {
                       >
                         Cập nhật
                       </button>
-                      <button className="px-3 py-1 text-xs rounded-full bg-indigo-500 hover:bg-indigo-600 text-white">
+                      <button 
+                        onClick={() => handleOpenDetailModal(account._id)}
+                        className="px-3 py-1 text-xs rounded-full bg-indigo-500 hover:bg-indigo-600 text-white"
+                      >
                         Chi tiết
                       </button>
                     </div>
@@ -389,6 +428,117 @@ const AccountList: React.FC = () => {
                 {accountToToggle.isDisabled ? 'Mở khóa' : 'Khóa'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chi tiết tài khoản */}
+      {isDetailModalOpen && accountDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-semibold">Chi tiết tài khoản</h2>
+              <button
+                onClick={handleCloseDetailModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            {loadingDetail ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex flex-col items-center">
+                  <div className="w-32 h-32 mb-4">
+                    <img
+                      className="h-32 w-32 rounded-full object-cover"
+                      src={accountDetail.photoUrl || 'https://via.placeholder.com/128'}
+                      alt={accountDetail.username}
+                    />
+                  </div>
+                  <span className={`px-3 py-1 text-sm rounded-full ${getRoleBadgeClass(accountDetail.role)}`}>
+                    {accountDetail.role}
+                  </span>
+                  <span className={`mt-2 px-3 py-1 text-sm rounded-full ${accountDetail.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                    {accountDetail.isDisabled ? 'Đã bị khóa' : 'Đang hoạt động'}
+                  </span>
+                  <span className={`mt-2 px-3 py-1 text-sm rounded-full ${accountDetail.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    {accountDetail.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
+                  </span>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">ID</p>
+                    <p className="mt-1">{accountDetail._id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Tên tài khoản</p>
+                    <p className="mt-1">{accountDetail.username}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Email</p>
+                    <p className="mt-1">{accountDetail.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Họ tên</p>
+                    <p className="mt-1">{accountDetail.fullName || 'Chưa cập nhật'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Số điện thoại</p>
+                    <p className="mt-1">{accountDetail.phoneNumber || 'Chưa cập nhật'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Giới tính</p>
+                    <p className="mt-1">{accountDetail.gender || 'Chưa cập nhật'}</p>
+                  </div>
+                </div>
+
+                <div className="col-span-1 md:col-span-2 space-y-4 border-t border-gray-200 pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Ngày tạo</p>
+                      <p className="mt-1">{formatDate(accountDetail.createdAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Lần cập nhật cuối</p>
+                      <p className="mt-1">{formatDate(accountDetail.updatedAt)}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      onClick={() => {
+                        handleCloseDetailModal();
+                        handleOpenUpdateModal(accountDetail);
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-white bg-yellow-500 rounded-md hover:bg-yellow-600"
+                    >
+                      Cập nhật
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleCloseDetailModal();
+                        openConfirmToggleModal(accountDetail._id, accountDetail.isDisabled);
+                      }}
+                      className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
+                        accountDetail.isDisabled 
+                          ? 'bg-green-600 hover:bg-green-700' 
+                          : 'bg-red-600 hover:bg-red-700'
+                      }`}
+                    >
+                      {accountDetail.isDisabled ? 'Mở khóa' : 'Khóa'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
