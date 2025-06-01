@@ -9,6 +9,7 @@ import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AccountList from "./pages/admin/AccountList";
+import ConsultantDetailPage from "./pages/ConsultantDetailPage";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/quizz" element={<QuizzPage />} />
         <Route path="/consulting" element={<ConsultingPage />} />
+        <Route path="/consultant/:id" element={<ConsultantDetailPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/blogs" element={<BlogPage />} />
         
