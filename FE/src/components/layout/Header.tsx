@@ -1,11 +1,10 @@
 // src/components/layout/Header.tsx
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import adminAvatar from "../../assets/images/admin-avatar.jpg";
+import { Link } from 'react-router-dom';
 
 function Header() {
-  const [isSticky, setIsSticky] = useState(false);
+  const [, setIsSticky] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -36,7 +35,7 @@ function Header() {
         <a href="#" className="hover:text-black">Testimonial</a>
       </nav>
       {/* Nút Sign In/Sign Out bên phải */}
-      <button className="px-8 py-3 rounded-full border-2 border-black text-xl font-medium text-black bg-white hover:bg-gray-100 transition">Sign In</button>
+      <Link  to="/login" className="px-8 py-3 rounded-full border-2 border-black text-xl font-medium text-black bg-white hover:bg-gray-100 transition">Sign In</Link>
     </header>
   );
 }

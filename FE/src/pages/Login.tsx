@@ -2,6 +2,7 @@ import loginImg from '../assets/login2.png';
 import logo from '../assets/logo1.png';
 import { useState } from 'react';
 import { loginApi, loginWithGoogleApi } from '../api';
+import { Link } from 'react-router-dom';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -71,6 +72,9 @@ function LoginPage() {
           </p>
           <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
             Sign in to your account
+          </h2>
+          <h2 className="text-center text-l tracking-tight text-gray-900">
+            Fist time? <Link to="/register" className="text-indigo-600 hover:text-indigo-500">Sign up</Link>
           </h2>
 
         </div>

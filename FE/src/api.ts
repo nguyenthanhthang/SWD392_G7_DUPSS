@@ -23,4 +23,14 @@ export const loginWithGoogleApi = async (email: string, username: string, photoU
   return res.data;
 };
 
+export const sendOtpApi = async (email: string, username: string) => {
+  const res = await api.post('/auth/send-new-verify-email', { email, username });
+  return res.data;
+};
+
+export const checkOtpApi = async (verifyCode: string) => {
+  const res = await api.post('/auth/check-otp', { verifyCode });
+  return res.data;
+};
+
 export default api; 
