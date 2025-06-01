@@ -1,6 +1,28 @@
 // src/components/layout/Header.tsx
 
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import adminAvatar from "../../assets/images/admin-avatar.jpg";
+
 function Header() {
+  const [isSticky, setIsSticky] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsSticky(true);
+      } else {
+        setIsSticky(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   return (
     <header className="h-[110px] bg-white flex items-center justify-between px-32 border-b">
       {/* Logo bên trái */}

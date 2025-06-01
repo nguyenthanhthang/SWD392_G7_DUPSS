@@ -12,6 +12,8 @@ export interface IAccount extends Document {
   gender?: "nam" | "nữ";
   isVerified: boolean;
   isDisabled: boolean;
+  verificationToken?: string;
+  verificationTokenExpiresAt?: Date;
 }
 
 // Schema Mongoose
@@ -34,6 +36,9 @@ const AccountSchema: Schema = new Schema(
     },
     isDisabled: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
+    verificationToken: String,
+    verificationTokenExpiresAt: Date,
+    
   },
   { timestamps: true }
 );

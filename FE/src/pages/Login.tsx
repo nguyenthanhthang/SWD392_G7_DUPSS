@@ -47,24 +47,32 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white">
-      {/* Bên trái: Form nhỏ lại */}
-      <div className="flex flex-col justify-center px-6 py-12 lg:px-8 w-full lg:w-1/2">
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-white overflow-hidden">
+      {/* Ảnh nền */}
+      <img
+        src={loginImg}
+        alt="Login Background"
+        className="absolute inset-0 w-full h-full object-fill z-0"
+      />
+      {/* Overlay mờ */}
+      <div className="absolute inset-0 bg-white/40 z-10" />
+      {/* Khung login */}
+      <div className="relative z-20 w-full max-w-lg mx-auto rounded-xl shadow-lg bg-white/70 backdrop-blur-md p-8 flex flex-col justify-center">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
           <img
             alt="HopeHub Logo"
             src={logo}
             className="mx-auto h-16 w-auto"
           />
+          <p className="mt-2 text-center text-sm text-gray-600">
+            <a href="#" className="font-semibold text-white-600">
+              HopeHub - Where Recovery Meets Peace
+            </a>
+          </p>
           <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
             Sign in to your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Not a member?{' '}
-            <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-500">
-              Start a 14 day free trial
-            </a>
-          </p>
+
         </div>
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -170,24 +178,9 @@ function LoginPage() {
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-5 w-5" />
                 Google
               </button>
-              <button
-                type="button"
-                className="flex-1 flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-              >
-                <img src="https://www.svgrepo.com/show/512317/github-142.svg" alt="GitHub" className="h-5 w-5" />
-                GitHub
-              </button>
             </div>
           </div>
         </div>
-      </div>
-      {/* Bên phải: Ảnh lớn, hiển thị đầy đủ */}
-      <div className="hidden lg:flex w-full lg:w-1/2 h-screen bg-white items-center justify-center p-4">
-        <img
-          src={loginImg}
-          alt="Login Illustration"
-          className="max-w-[90%] max-h-[90%] object-contain"
-        />
       </div>
     </div>
   );
