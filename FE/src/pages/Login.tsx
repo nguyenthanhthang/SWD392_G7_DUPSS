@@ -1,7 +1,7 @@
 import loginImg from '../assets/login2.png';
 import logo from '../assets/logo1.png';
 import { useState } from 'react';
-import { loginApi } from '../api';
+import { loginApi, loginWithGoogleApi } from '../api';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -29,6 +29,20 @@ function LoginPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try { 
+      // TODO: Thay bằng dữ liệu thực tế từ Google OAuth
+      const email = 'testuser@gmail.com';
+      const username = 'testuser';
+      const photoUrl = 'https://randomuser.me/api/portraits/men/1.jpg';
+      const data = await loginWithGoogleApi(email, username, photoUrl);
+      localStorage.setItem('token', data.data.token);
+      window.location.href = '/';
+    } catch {
+      alert('Đăng nhập Google thất bại!');
     }
   };
 
@@ -151,6 +165,7 @@ function LoginPage() {
               <button
                 type="button"
                 className="flex-1 flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                onClick={handleGoogleLogin}
               >
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-5 w-5" />
                 Google

@@ -18,4 +18,9 @@ export const registerApi = async (username: string, email: string, password: str
   return res.data;
 };
 
+export const loginWithGoogleApi = async (email: string, username: string, photoUrl: string) => {
+  const res = await api.post('/auth/login-google', { email, username, photoUrl });
+  return res.data;
+};
+
 export default api; 
