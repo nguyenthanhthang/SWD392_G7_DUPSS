@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Account, { IAccount } from "../models/Account";
+import Consultant from "../models/Consultant";
 
 // [POST] /api/accounts – Tạo tài khoản
 export const createAccount = async (
@@ -58,6 +59,31 @@ export const updateAccount = async (
       res.status(404).json({ message: "Không tìm thấy tài khoản để cập nhật" });
       return;
     }
+
+    // Kiểm tra nếu role được cập nhật thành consultant
+    if (req.body.role === "consultant") {
+      // Kiểm tra xem đã có consultant cho account này chưa
+      const existingConsultant = await Consultant.findOne({ accountId: updated._id });
+      
+      if (!existingConsultant) {
+        // Tạo consultant mới nếu chưa tồn tại
+        const newConsultant = new Consultant({
+          accountId: updated._id,
+          status: "active",
+          // Thêm các thông tin mặc định khác nếu cần
+        });
+        await newConsultant.save();
+      }
+    }
+    // neu dang la consultant ma chuyen thanh custome thi status = inactive
+    if (updated.role === "consultant" && req.body.role === "customer") {
+      const consultant = await Consultant.findOne({ accountId: updated._id });
+      if (consultant) {
+        consultant.status = "inactive";
+        await consultant.save();
+      }
+    }
+
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi cập nhật", error });
