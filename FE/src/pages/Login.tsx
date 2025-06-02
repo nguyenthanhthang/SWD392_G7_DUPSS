@@ -1,8 +1,13 @@
 import loginImg from '../assets/login2.png';
 import logo from '../assets/logo1.png';
 import { useState } from 'react';
-import { loginApi, loginWithGoogleApi } from '../api';
+import { loginApi, loginWithGoogleApi, getAccountByIdApi } from '../api';
 import { Link } from 'react-router-dom';
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
+import type { CredentialResponse } from '@react-oauth/google';
+
+type GoogleJwtPayload = { email: string; name?: string; picture?: string; [key: string]: unknown };
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,8 +24,17 @@ function LoginPage() {
       const data = await loginApi(email, password);
       // Lưu token vào localStorage
       localStorage.setItem('token', data.data.token);
-      // Chuyển hướng hoặc reload lại trang
-      window.location.href = '/';
+      localStorage.setItem('userId', data.data.id);
+      // Gọi API lấy thông tin user
+      const user = await getAccountByIdApi(data.data.id);
+      localStorage.setItem('userInfo', JSON.stringify(user));
+      // Nếu role là customer thì chuyển về Home
+      if (user.role === 'customer') {
+        window.location.href = '/';
+      } else {
+        // Có thể chuyển hướng khác nếu không phải customer
+        window.location.href = '/';
+      }
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -33,18 +47,35 @@ function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try { 
-      // TODO: Thay bằng dữ liệu thực tế từ Google OAuth
-      const email = 'testuser@gmail.com';
-      const username = 'testuser';
-      const photoUrl = 'https://randomuser.me/api/portraits/men/1.jpg';
+  // Google OAuth callback
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    try {
+      if (!credentialResponse.credential) {
+        alert('Đăng nhập Google thất bại!');
+        return;
+      }
+      // Giải mã credential để lấy thông tin user
+      const decoded = jwtDecode<GoogleJwtPayload>(credentialResponse.credential);
+      const email = decoded.email;
+      const username = decoded.name || email.split('@')[0];
+      const photoUrl = decoded.picture || '';
       const data = await loginWithGoogleApi(email, username, photoUrl);
       localStorage.setItem('token', data.data.token);
-      window.location.href = '/';
+      localStorage.setItem('userId', data.data.id);
+      const user = await getAccountByIdApi(data.data.id);
+      localStorage.setItem('userInfo', JSON.stringify(user));
+      if (user.role === 'customer') {
+        window.location.href = '/';
+      } else {
+        window.location.href = '/';
+      }
     } catch {
       alert('Đăng nhập Google thất bại!');
     }
+  };
+
+  const handleGoogleError = () => {
+    alert('Đăng nhập Google thất bại!');
   };
 
   return (
@@ -173,15 +204,18 @@ function LoginPage() {
                 <span className="bg-white px-2 text-gray-500">Or continue with</span>
               </div>
             </div>
-            <div className="mt-6 flex gap-4">
-              <button
-                type="button"
-                className="flex-1 flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-                onClick={handleGoogleLogin}
-              >
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-5 w-5" />
-                Google
-              </button>
+            <div className="mt-6 flex gap-4 justify-center">
+              <GoogleOAuthProvider clientId="YOUR_GOOGLE_CLIENT_ID">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  width="100%"
+                  shape="pill"
+                  text="signin_with"
+                  logo_alignment="center"
+                  useOneTap
+                />
+              </GoogleOAuthProvider>
             </div>
           </div>
         </div>
