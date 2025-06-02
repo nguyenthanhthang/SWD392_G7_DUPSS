@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout";
-import Dashboard from "./pages/Dashboard";
+import Home from "./pages/Home";
 import QuizzPage from "./pages/QuizzPage";
 import ConsultingPage from "./pages/ConsultingPage";
 import EventsPage from "./pages/EventsPage";
@@ -24,7 +24,7 @@ function App() {
         <Route path="/admin/settings" element={<MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Cài đặt hệ thống</div></MainLayout>} />
         
         {/* Routes cho User */}
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<Home />} />
         <Route path="/quizz" element={<QuizzPage />} />
         <Route path="/consulting" element={<ConsultingPage />} />
         <Route path="/events" element={<EventsPage />} />

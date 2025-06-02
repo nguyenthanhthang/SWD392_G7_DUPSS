@@ -1,11 +1,10 @@
 // src/components/layout/Header.tsx
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import adminAvatar from "../../assets/images/admin-avatar.jpg";
+import { Link } from 'react-router-dom';
 
 function Header() {
-  const [isSticky, setIsSticky] = useState(false);
+  const [, setIsSticky] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,34 +23,19 @@ function Header() {
   }, []);
 
   return (
-    <header className="fixed top-0 right-0 left-64 z-50 bg-white">
-      <div className="flex items-center justify-end py-4 px-8">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <button className="p-2 text-gray-600 hover:text-gray-900">
-              <span className="material-icons-outlined">notifications</span>
-              <span className="absolute top-1 right-1 block w-2 h-2 bg-indigo-600 rounded-full"></span>
-            </button>
-          </div>
-
-          <Link 
-            to="/" 
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            Phòng chống ma túy
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-              <img 
-                src={adminAvatar} 
-                alt="Admin profile" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+    <header className="h-[110px] bg-white flex items-center justify-between px-32 border-b">
+      {/* Logo bên trái */}
+      <div className="text-[36px] font-semibold font-sans">HopeHub</div>
+      {/* Menu giữa */}
+      <nav className="flex gap-20 px-20 border-l border-r border-gray-200 text-[19px] font-normal text-gray-700 h-full items-center" style={{minWidth: '520px', justifyContent: 'center'}}>
+        <a href="#" className="hover:text-black">About Us</a>
+        <a href="#" className="hover:text-black">Services</a>
+        <a href="#" className="hover:text-black">FAQ</a>
+        <a href="#" className="hover:text-black">Blog</a>
+        <a href="#" className="hover:text-black">Testimonial</a>
+      </nav>
+      {/* Nút Sign In/Sign Out bên phải */}
+      <Link  to="/login" className="px-8 py-3 rounded-full border-2 border-black text-xl font-medium text-black bg-white hover:bg-gray-100 transition">Sign In</Link>
     </header>
   );
 }

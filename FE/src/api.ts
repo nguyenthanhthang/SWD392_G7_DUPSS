@@ -18,4 +18,19 @@ export const registerApi = async (username: string, email: string, password: str
   return res.data;
 };
 
+export const loginWithGoogleApi = async (email: string, username: string, photoUrl: string) => {
+  const res = await api.post('/auth/login-google', { email, username, photoUrl });
+  return res.data;
+};
+
+export const sendOtpApi = async (email: string, username: string) => {
+  const res = await api.post('/auth/send-new-verify-email', { email, username });
+  return res.data;
+};
+
+export const checkOtpApi = async (verifyCode: string) => {
+  const res = await api.post('/auth/check-otp', { verifyCode });
+  return res.data;
+};
+
 export default api; 
