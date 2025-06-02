@@ -74,6 +74,10 @@ export const updateAccount = async (
         });
         await newConsultant.save();
       }
+      else {
+        existingConsultant.status = "active";
+        await existingConsultant.save();
+      }
     }
     // neu dang la consultant ma chuyen thanh custome thi status = inactive
     if (updated.role === "consultant" && req.body.role === "customer") {
