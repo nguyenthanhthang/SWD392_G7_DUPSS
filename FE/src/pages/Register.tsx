@@ -1,7 +1,7 @@
 import loginImg from '../assets/login2.png';
 import logo from '../assets/logo1.png';
 import { useState } from 'react';
-import { registerApi, sendOtpApi, checkOtpApi } from '../api';
+import { registerApi, sendOtpApi, checkOtpApi, loginApi, getAccountByIdApi } from '../api';
 
 function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -18,6 +18,8 @@ function RegisterPage() {
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSuccess, setOtpSuccess] = useState<string | null>(null);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpResendMsg, setOtpResendMsg] = useState<string | null>(null);
 
   const validateUsername = (value: string) => {
     if (!value) return 'Vui lòng nhập tên tài khoản';
@@ -89,10 +91,17 @@ function RegisterPage() {
     }
     try {
       await registerApi(username, email, password, confirmPassword);
+      setShowOtp(true);
     } catch (err: unknown) {
-      const emailError = getEmailError(err);
-      if (emailError) {
-        setFieldErrors(prev => ({ ...prev, email: emailError }));
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        (err as { response?: { data?: Record<string, unknown> } }).response?.data
+      ) {
+        const data = (err as { response: { data: Record<string, unknown> } }).response.data;
+        if (data.message) setError(data.message as string);
+        setFieldErrors((prev) => ({ ...prev, ...data } as Record<string, string>));
         setLoading(false);
         return;
       }
@@ -100,14 +109,7 @@ function RegisterPage() {
       setLoading(false);
       return;
     }
-    try {
-      await sendOtpApi(email, username);
-      setShowOtp(true);
-    } catch {
-      setError('Không thể gửi OTP. Vui lòng thử lại!');
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   // Handle OTP submit
@@ -118,14 +120,35 @@ function RegisterPage() {
     setOtpSuccess(null);
     try {
       await checkOtpApi(otp);
+      // Sau khi xác thực OTP thành công, tự động đăng nhập
+      const loginRes = await loginApi(email, password);
+      localStorage.setItem('token', loginRes.data.token);
+      localStorage.setItem('userId', loginRes.data.id);
+      const user = await getAccountByIdApi(loginRes.data.id);
+      localStorage.setItem('userInfo', JSON.stringify(user));
       setOtpSuccess('Xác thực thành công! Đang chuyển hướng...');
       setTimeout(() => {
         window.location.href = '/';
-      }, 1500);
+      }, 1200);
     } catch {
-      setOtpError('Mã OTP không đúng hoặc đã hết hạn!');
+      setOtpError('Mã OTP không đúng, đã hết hạn hoặc đăng nhập tự động thất bại!');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Gửi lại OTP
+  const handleResendOtp = async () => {
+    setOtpLoading(true);
+    setOtpResendMsg(null);
+    setOtpError(null);
+    try {
+      await sendOtpApi(email, username);
+      setOtpResendMsg('Đã gửi lại mã OTP!');
+    } catch {
+      setOtpError('Không thể gửi lại OTP. Vui lòng thử lại!');
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -216,7 +239,7 @@ function RegisterPage() {
                     <label htmlFor="password" className="block text-sm font-medium text-gray-900">
                       Password
                     </label>
-                    <div className="mt-2 relative">
+                    <div className="mt-2 flex items-center relative">
                       <input
                         id="password"
                         name="password"
@@ -235,6 +258,7 @@ function RegisterPage() {
                         onClick={() => setShowPassword(v => !v)}
                         disabled={loading}
                         aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                        style={{ pointerEvents: loading ? 'none' : 'auto' }}
                       >
                         {showPassword ? (
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.403-3.22 1.125-4.575M15 12a3 3 0 11-6 0 3 3 0 016 0zm6.875-4.575A9.956 9.956 0 0122 9c0 5.523-4.477 10-10 10a9.956 9.956 0 01-4.575-1.125" /></svg>
@@ -242,16 +266,16 @@ function RegisterPage() {
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm2.021-2.021A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10S2 17.523 2 12c0-1.657.403-3.22 1.125-4.575M9.879 9.879A3 3 0 0115 12m-6 0a3 3 0 016 0m-6 0a3 3 0 016 0" /></svg>
                         )}
                       </button>
-                      {fieldErrors.password && (
-                        <div className="text-red-500 text-xs mt-1">{fieldErrors.password}</div>
-                      )}
                     </div>
+                    {fieldErrors.password && (
+                      <div className="text-red-500 text-xs mt-1">{fieldErrors.password}</div>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-900">
                       Confirm Password
                     </label>
-                    <div className="mt-2 relative">
+                    <div className="mt-2 flex items-center relative">
                       <input
                         id="confirmPassword"
                         name="confirmPassword"
@@ -270,6 +294,7 @@ function RegisterPage() {
                         onClick={() => setShowConfirmPassword(v => !v)}
                         disabled={loading}
                         aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                        style={{ pointerEvents: loading ? 'none' : 'auto' }}
                       >
                         {showConfirmPassword ? (
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.403-3.22 1.125-4.575M15 12a3 3 0 11-6 0 3 3 0 016 0zm6.875-4.575A9.956 9.956 0 0122 9c0 5.523-4.477 10-10 10a9.956 9.956 0 01-4.575-1.125" /></svg>
@@ -277,10 +302,10 @@ function RegisterPage() {
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm2.021-2.021A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10S2 17.523 2 12c0-1.657.403-3.22 1.125-4.575M9.879 9.879A3 3 0 0115 12m-6 0a3 3 0 016 0m-6 0a3 3 0 016 0" /></svg>
                         )}
                       </button>
-                      {fieldErrors.confirmPassword && (
-                        <div className="text-red-500 text-xs mt-1">{fieldErrors.confirmPassword}</div>
-                      )}
                     </div>
+                    {fieldErrors.confirmPassword && (
+                      <div className="text-red-500 text-xs mt-1">{fieldErrors.confirmPassword}</div>
+                    )}
                   </div>
                   {error && (
                     <div className="text-red-500 text-sm mt-2">{error}</div>
@@ -312,7 +337,7 @@ function RegisterPage() {
                   type="text"
                   inputMode="numeric"
                   maxLength={6}
-                  className="w-full text-center text-2xl tracking-widest border-2 border-indigo-300 rounded-md py-3 px-4 focus:outline-none focus:border-indigo-600 transition"
+                  className="w-full text-center text-l tracking-widest border-2 border-indigo-300 rounded-md py-3 px-4 focus:outline-none focus:border-indigo-600 transition"
                   placeholder="Nhập mã OTP 6 số"
                   value={otp}
                   onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
@@ -329,6 +354,15 @@ function RegisterPage() {
                   {loading ? 'Đang xác thực...' : 'Xác nhận'}
                 </button>
               </form>
+              <button
+                type="button"
+                className="mt-4 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-md transition"
+                onClick={handleResendOtp}
+                disabled={otpLoading}
+              >
+                {otpLoading ? 'Đang gửi lại...' : 'Gửi lại OTP'}
+              </button>
+              {otpResendMsg && <div className="text-green-600 text-center text-sm mt-2">{otpResendMsg}</div>}
             </div>
           )}
         </div>

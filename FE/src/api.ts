@@ -33,4 +33,10 @@ export const checkOtpApi = async (verifyCode: string) => {
   return res.data;
 };
 
+// Lấy thông tin account theo id
+export const getAccountByIdApi = async (id: string) => {
+  const res = await api.get(`/accounts/${id}`);
+  return res.data;
+};
+
 export default api; 
