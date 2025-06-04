@@ -8,12 +8,13 @@ import serviceRoutes from "./routes/serviceRoutes";
 import consultantRoutes from "./routes/consultantRoutes";
 import certificateRoutes from "./routes/certificateRoutes"
 import slotTimeRoutes from "./routes/slotTimeRoutes";
+const uploadRouter = require("./routes/upload");
 
 // Load biến môi trường
 dotenv.config();
 
 // Khởi tạo app
-const app = express();
+const app = express();            
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -31,6 +32,7 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/consultants", consultantRoutes);  
 app.use("/api/certificates",certificateRoutes);
 app.use("/api/slot-times",slotTimeRoutes);
+app.use("/api/uploads", uploadRouter);
 
 // Route kiểm tra
 app.get("/", (_req, res) => {
