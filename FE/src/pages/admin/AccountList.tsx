@@ -36,8 +36,14 @@ interface CreateAccountForm {
   fullName: string;
   phoneNumber: string;
   gender: string;
-  role: string;
+  role: 'customer' | 'consultant';  // Restrict role types
 }
+
+// Available roles for account creation
+const AVAILABLE_ROLES = [
+  { value: 'customer', label: 'Khách hàng' },
+  { value: 'consultant', label: 'Tư vấn viên' }
+];
 
 // Component Tooltip
 interface TooltipProps {
@@ -307,40 +313,53 @@ const AccountList: React.FC = () => {
   };
 
   const validateCreateForm = (): boolean => {
-    const errors: {[key: string]: string} = {};
-    
-    // Kiểm tra username
-    if (!createForm.username.trim()) {
-      errors.username = 'Tên đăng nhập không được để trống';
+    const errors: { [key: string]: string } = {};
+
+    // Validate username
+    if (!createForm.username) {
+      errors.username = "Vui lòng nhập tên đăng nhập";
     } else if (createForm.username.length < 8 || createForm.username.length > 30) {
-      errors.username = 'Tên đăng nhập phải từ 8-30 ký tự';
+      errors.username = "Tên đăng nhập phải từ 8-30 ký tự";
     } else if (!/^[a-zA-Z0-9_]+$/.test(createForm.username)) {
-      errors.username = 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới';
+      errors.username = "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới";
     }
 
-    // Kiểm tra email
-    if (!createForm.email.trim()) {
-      errors.email = 'Email không được để trống';
-    } else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(createForm.email)) {
-      errors.email = 'Email không hợp lệ';
+    // Validate email
+    if (!createForm.email) {
+      errors.email = "Vui lòng nhập email";
+    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(createForm.email)) {
+      errors.email = "Email không hợp lệ";
     }
 
-    // Kiểm tra mật khẩu
+    // Validate password
     if (!createForm.password) {
-      errors.password = 'Mật khẩu không được để trống';
-    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{6,30}$/.test(createForm.password)) {
-      errors.password = 'Mật khẩu phải chứa chữ thường, in hoa, số, ký tự đặc biệt và từ 6 đến 30 ký tự';
+      errors.password = "Vui lòng nhập mật khẩu";
+    } else if (createForm.password.length < 6) {
+      errors.password = "Mật khẩu phải có ít nhất 6 ký tự";
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(createForm.password)) {
+      errors.password = "Mật khẩu phải chứa chữ hoa, chữ thường, số và ký tự đặc biệt";
     }
 
-    // Kiểm tra xác nhận mật khẩu
-    if (createForm.password !== createForm.confirmPassword) {
-      errors.confirmPassword = 'Mật khẩu xác nhận không khớp';
+    // Validate confirm password
+    if (!createForm.confirmPassword) {
+      errors.confirmPassword = "Vui lòng xác nhận mật khẩu";
+    } else if (createForm.password !== createForm.confirmPassword) {
+      errors.confirmPassword = "Mật khẩu xác nhận không khớp";
     }
 
-    // Cập nhật state lỗi
+    // Validate role
+    if (!createForm.role) {
+      errors.role = "Vui lòng chọn vai trò";
+    } else if (!AVAILABLE_ROLES.some(r => r.value === createForm.role)) {
+      errors.role = "Vai trò không hợp lệ";
+    }
+
+    // Validate required fields
+    if (!createForm.fullName) errors.fullName = "Vui lòng nhập họ tên";
+    if (!createForm.phoneNumber) errors.phoneNumber = "Vui lòng nhập số điện thoại";
+    if (!createForm.gender) errors.gender = "Vui lòng chọn giới tính";
+
     setFormErrors(errors);
-    
-    // Trả về true nếu không có lỗi
     return Object.keys(errors).length === 0;
   };
 
@@ -867,149 +886,148 @@ const AccountList: React.FC = () => {
 
       {/* Modal Tạo tài khoản mới */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Tạo tài khoản mới</h2>
-              <button
-                onClick={handleCloseCreateModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleCreateAccount}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Tên tài khoản <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={createForm.username}
-                    onChange={handleCreateFormChange}
-                    className={`mt-1 block w-full rounded-md ${formErrors.username ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                    required
-                  />
-                  {formErrors.username && (
-                    <p className="mt-1 text-sm text-red-500">{formErrors.username}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={createForm.email}
-                    onChange={handleCreateFormChange}
-                    className={`mt-1 block w-full rounded-md ${formErrors.email ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                    required
-                  />
-                  {formErrors.email && (
-                    <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Mật khẩu <span className="text-red-500">*</span></label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={createForm.password}
-                    onChange={handleCreateFormChange}
-                    className={`mt-1 block w-full rounded-md ${formErrors.password ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                    required
-                  />
-                  {formErrors.password && (
-                    <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Xác nhận mật khẩu <span className="text-red-500">*</span></label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={createForm.confirmPassword}
-                    onChange={handleCreateFormChange}
-                    className={`mt-1 block w-full rounded-md ${formErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                    required
-                  />
-                  {formErrors.confirmPassword && (
-                    <p className="mt-1 text-sm text-red-500">{formErrors.confirmPassword}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Họ tên</label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={createForm.fullName}
-                    onChange={handleCreateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
-                  <input
-                    type="text"
-                    name="phoneNumber"
-                    value={createForm.phoneNumber}
-                    onChange={handleCreateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Giới tính</label>
-                  <select
-                    name="gender"
-                    value={createForm.gender}
-                    onChange={handleCreateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  >
-                    <option value="">Chọn giới tính</option>
-                    <option value="nam">Nam</option>
-                    <option value="nữ">Nữ</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Vai trò <span className="text-red-500">*</span></label>
-                  <select
-                    name="role"
-                    value={createForm.role}
-                    onChange={handleCreateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  >
-                    <option value="customer">Customer</option>
-                    <option value="consultant">Consultant</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Tạo tài khoản mới</h2>
+            <form onSubmit={handleCreateAccount} className="space-y-4">
+              {/* Username field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Tên đăng nhập</label>
+                <input
+                  type="text"
+                  name="username"
+                  value={createForm.username}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+                {formErrors.username && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
+                )}
               </div>
-              <div className="mt-6 flex justify-end space-x-3">
+
+              {/* Email field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={createForm.email}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+                {formErrors.email && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                )}
+              </div>
+
+              {/* Password field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={createForm.password}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+                {formErrors.password && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
+                )}
+              </div>
+
+              {/* Confirm Password field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Xác nhận mật khẩu</label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={createForm.confirmPassword}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+                {formErrors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.confirmPassword}</p>
+                )}
+              </div>
+
+              {/* Full Name field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={createForm.fullName}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Phone Number field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={createForm.phoneNumber}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Gender field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Giới tính</label>
+                <select
+                  name="gender"
+                  value={createForm.gender}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Chọn giới tính</option>
+                  <option value="nam">Nam</option>
+                  <option value="nữ">Nữ</option>
+                </select>
+              </div>
+
+              {/* Role field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Vai trò</label>
+                <select
+                  name="role"
+                  value={createForm.role}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                >
+                  {AVAILABLE_ROLES.map(role => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
                   onClick={handleCloseCreateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 flex items-center"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    'Tạo tài khoản'
-                  )}
+                  {isSubmitting ? 'Đang tạo...' : 'Tạo tài khoản'}
                 </button>
               </div>
             </form>
