@@ -36,9 +36,16 @@ export const updateService = async(req:Request,res:Response)=>{
         if(!service){
             return res.status(404).json({message:"Dịch vụ không tồn tại"});
         }
-        res.status(200).json(service);
+        res.status(200).json({
+            message: "Cập nhật dịch vụ thành công",
+            data: service
+        });
     } catch (error) {
-        res.status(500).json({message:"Lỗi khi cập nhật dịch vụ",error});
+        console.error("Lỗi khi cập nhật dịch vụ:", error);
+        res.status(500).json({
+            message: "Lỗi khi cập nhật dịch vụ",
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
     }
 }
 

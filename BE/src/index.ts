@@ -7,6 +7,7 @@ import authRoutes from "./routes/authRoutes";
 import serviceRoutes from "./routes/serviceRoutes";
 import consultantRoutes from "./routes/consultantRoutes";
 import certificateRoutes from "./routes/certificateRoutes"
+import slotTimeRoutes from "./routes/slotTimeRoutes";
 
 // Load biến môi trường
 dotenv.config();
@@ -29,6 +30,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/consultants", consultantRoutes);  
 app.use("/api/certificates",certificateRoutes);
+app.use("/api/slot-times",slotTimeRoutes);
 
 // Route kiểm tra
 app.get("/", (_req, res) => {

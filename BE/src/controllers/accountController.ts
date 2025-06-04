@@ -60,6 +60,12 @@ export const updateAccount = async (
       return;
     }
 
+    // Kiểm tra nếu đang cố chuyển từ consultant sang customer
+    if (updated.role === "consultant" && req.body.role === "customer") {
+      res.status(400).json({ message: "Không thể chuyển từ tư vấn viên sang khách hàng" });
+      return;
+    }
+
     // Kiểm tra nếu role được cập nhật thành consultant
     if (req.body.role === "consultant") {
       // Kiểm tra xem đã có consultant cho account này chưa
@@ -79,14 +85,7 @@ export const updateAccount = async (
         await existingConsultant.save();
       }
     }
-    // neu dang la consultant ma chuyen thanh custome thi status = inactive
-    if (updated.role === "consultant" && req.body.role === "customer") {
-      const consultant = await Consultant.findOne({ accountId: updated._id });
-      if (consultant) {
-        consultant.status = "inactive";
-        await consultant.save();
-      }
-    }
+    
 
     res.status(200).json(updated);
   } catch (error) {
