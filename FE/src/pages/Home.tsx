@@ -3,6 +3,7 @@ import Footer from "../components/layout/Footer";
 import { useState, useEffect } from 'react';
 import { getAllConsultantsApi } from '../api';
 import HomePic from "../assets//Home.png";
+import BubbleBackground from '../components/BubbleBackground';
 
 // Dữ liệu cứng cho About Us
 const aboutData = [ 
@@ -109,6 +110,7 @@ export default function Home() {
   return (
     <div>
       <Header />
+      <BubbleBackground />
       {/* Banner Section */}
       <div className='mx-auto max-w-7xl my-10 sm:py-10 px-6 lg:px-8'>
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-x-24 my-16'>
