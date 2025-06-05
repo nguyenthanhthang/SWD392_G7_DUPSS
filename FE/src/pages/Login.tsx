@@ -205,7 +205,7 @@ function LoginPage() {
               </div>
             </div>
             <div className="mt-6 flex gap-4 justify-center">
-              <GoogleOAuthProvider clientId="YOUR_GOOGLE_CLIENT_ID">
+              <GoogleOAuthProvider clientId="661139917114-21bc75lm5d3ci1iafnj3id4hck2bbegj.apps.googleusercontent.com">
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}

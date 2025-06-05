@@ -39,4 +39,34 @@ export const getAccountByIdApi = async (id: string) => {
   return res.data;
 };
 
+// Lấy danh sách consultant
+export const getAllConsultantsApi = async () => {
+  const res = await api.get('/consultants');
+  return res.data;
+};
+
+// Lấy thông tin chi tiết consultant theo id
+export const getConsultantByIdApi = async (id: string) => {
+  const res = await api.get(`/consultants/${id}`);
+  return res.data;
+};
+
+// Lấy danh sách dịch vụ
+export const getAllServicesApi = async () => {
+  const res = await api.get('/services');
+  return res.data;
+};
+
+// Lấy danh sách certificate
+export const getAllCertificatesApi = async () => {
+  const res = await api.get('/certificates');
+  return res.data;
+};
+
+// Lấy slot time theo consultant_id
+export const getSlotTimeByConsultantIdApi = async (consultantId: string) => {
+  const res = await api.get(`/slot-times/consultant/${consultantId}`);
+  return res.data;
+};
+
 export default api; 

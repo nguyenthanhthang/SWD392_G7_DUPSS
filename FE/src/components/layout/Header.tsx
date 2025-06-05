@@ -54,9 +54,9 @@ function Header() {
       {/* Logo bên trái */}
       <div className="text-[36px] font-semibold font-sans"><Link to="/">HopeHub</Link></div>
       {/* Menu giữa */}
-      <nav className="flex gap-20 px-20 border-l border-r border-gray-200 text-[19px] font-normal text-gray-700 h-full items-center" style={{minWidth: '520px', justifyContent: 'center'}}>
+      <nav className="flex gap-20 px-20 text-[19px] font-normal text-gray-700 h-full items-center" style={{minWidth: '520px', justifyContent: 'center'}}>
         <a href="#" className="hover:text-black">About Us</a>
-        <a href="#" className="hover:text-black"><Link to="/consulting">Consultant</Link></a>
+        <Link to="/consulting" className="hover:text-black">Consultant</Link>
         <a href="#" className="hover:text-black">FAQ</a>
         <a href="#" className="hover:text-black">Blog</a>
         <a href="#" className="hover:text-black">Testimonial</a>

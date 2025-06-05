@@ -1,9 +1,11 @@
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getAllConsultantsApi } from '../api';
+import HomePic from "../assets//Home.png";
 
 // Dữ liệu cứng cho About Us
-const aboutData = [
+const aboutData = [ 
   {
     heading: "About us.",
     imgSrc: "https://themewagon.github.io/Desgy//images/aboutus/imgOne.svg",
@@ -24,29 +26,25 @@ const aboutData = [
   }
 ];
 
-// Dữ liệu cứng cho Consultant
-const consultantData = [
-  {
-    name: "Nguyễn Văn A",
-    profession: "Chuyên gia tư vấn",
-    imgSrc: "https://randomuser.me/api/portraits/men/32.jpg"
-  },
-  {
-    name: "Trần Thị B",
-    profession: "Chuyên gia tâm lý",
-    imgSrc: "https://randomuser.me/api/portraits/women/44.jpg"
-  },
-  {
-    name: "Lê Văn C",
-    profession: "Bác sĩ trị liệu",
-    imgSrc: "https://randomuser.me/api/portraits/men/34.jpg"
-  },
-  {
-    name: "Phạm Thị D",
-    profession: "Chuyên gia xã hội",
-    imgSrc: "https://randomuser.me/api/portraits/women/45.jpg"
-  }
-];
+// Thêm interface từ ConsultingPage
+interface User {
+  _id: string;
+  fullName: string;
+  photoUrl: string;
+  email: string;
+  phoneNumber: string;
+}
+
+interface Consultant {
+  _id: string;
+  userId: string;
+  introduction: string;
+  contactLink: string;
+  licenseNumber: string;
+  startDate: string;
+  googleMeetLink: string;
+  accountId: User;
+}
 
 // Dữ liệu cứng cho Blog
 const postData = [
@@ -77,15 +75,36 @@ const postData = [
 ];
 
 export default function Home() {
-  // State cho slider Consultant
-  const [consultantIndex, setConsultantIndex] = useState(0);
-  const visibleConsultant = 3;
-  const maxConsultant = consultantData.length - visibleConsultant;
+  // State cho consultant từ API
+  const [consultants, setConsultants] = useState<Consultant[]>([]);
+  const [loadingConsultant, setLoadingConsultant] = useState(true);
+  const [errorConsultant, setErrorConsultant] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchConsultants = async () => {
+      try {
+        setLoadingConsultant(true);
+        const data = await getAllConsultantsApi();
+        setConsultants(data);
+        setErrorConsultant(null);
+      } catch {
+        setErrorConsultant('Không thể tải danh sách chuyên gia.');
+      } finally {
+        setLoadingConsultant(false);
+      }
+    };
+    fetchConsultants();
+  }, []);
 
   // State cho slider Latest Posts
   const [postIndex, setPostIndex] = useState(0);
   const visiblePost = 3;
   const maxPost = postData.length - visiblePost;
+
+  // Thêm state cho slider ngang
+  const [consultantSliderIndex, setConsultantSliderIndex] = useState(0);
+  const visibleConsultant = 3;
+  const maxConsultantSlider = Math.max(0, consultants.length - visibleConsultant);
 
   return (
     <div>
@@ -112,7 +131,7 @@ export default function Home() {
           {/* COLUMN-2 */}
           <div className='hidden lg:flex items-center justify-center px-8'>
             <img 
-              src="https://i.pinimg.com/736x/20/6b/7a/206b7a7b24465fc83456a5ae20176d4f.jpg" 
+              src={HomePic} 
               alt="hero-image" 
               className="w-[380px] h-auto rounded-3xl object-cover transform scale-150 -translate-x-8" 
             />
@@ -141,7 +160,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-      {/* Consultant Slider Section */}
+      {/* Consultant Slider Section (API) */}
       <div className="bg-blue-50 py-32 w-full">
         <div className='mx-auto w-full sm:py-4 px-0 lg:px-0'>
           <div className="text-center mb-12">
@@ -152,39 +171,54 @@ export default function Home() {
           <div className="relative w-full flex items-center">
             {/* Nút trái */}
             <button
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white border border-gray-200 w-10 h-10 flex items-center justify-center rounded-full shadow hover:bg-blue-100 transition disabled:opacity-30"
-              onClick={() => setConsultantIndex(i => Math.max(i - 1, 0))}
-              disabled={consultantIndex === 0}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white border border-gray-200 w-12 h-12 flex items-center justify-center rounded-full shadow hover:bg-blue-100 transition disabled:opacity-30"
+              onClick={() => setConsultantSliderIndex(i => Math.max(i - 1, 0))}
+              disabled={consultantSliderIndex === 0}
               aria-label="Prev"
             >
-              <span className="text-lg">&#8592;</span>
+              <span className="text-2xl">&#8592;</span>
             </button>
             {/* Slider */}
             <div className="w-full overflow-hidden px-12">
               <div
-                className="flex gap-8 justify-center transition-transform duration-300"
-                style={{ transform: `translateX(-${consultantIndex * (100 / visibleConsultant)}%)` }}
+                className="flex gap-8 justify-start transition-transform duration-300"
+                style={{ transform: `translateX(-${consultantSliderIndex * (100 / visibleConsultant)}%)` }}
               >
-                {consultantData.map((item, i) => (
-                  <div key={i} className='bg-white m-3 py-14 my-10 text-center shadow-xl rounded-3xl min-w-[320px] w-[350px] flex-shrink-0'>
-                    <div className='relative flex flex-col items-center'>
-                      <img src={item.imgSrc} alt={item.name} width={182} height={182} className="inline-block m-auto rounded-full" />
-                      <img src='https://cdn-icons-png.flaticon.com/512/174/174857.png' alt="linkedin" width={48} height={48} className="absolute bottom-0 right-1/2 translate-x-1/2 bg-white rounded-full border-2 border-blue-600 p-1" />
-                    </div>
-                    <h4 className='text-4xl font-bold pt-14'>{item.name}</h4>
-                    <h3 className='text-2xl font-normal pt-4 pb-2 opacity-50'>{item.profession}</h3>
-                  </div>
-                ))}
+                {loadingConsultant ? (
+                  <div className="text-center w-full py-20 text-xl">Đang tải chuyên gia...</div>
+                ) : errorConsultant ? (
+                  <div className="text-center w-full py-20 text-red-600 text-xl">{errorConsultant}</div>
+                ) : consultants.length === 0 ? (
+                  <div className="text-center w-full py-20 text-gray-500 text-xl">Không có chuyên gia nào.</div>
+                ) : (
+                  consultants.map((consultant) => (
+                    consultant.accountId ? (
+                      <div key={consultant._id} className="bg-white m-3 py-16 px-8 my-10 text-center shadow-xl rounded-3xl min-w-[360px] w-[400px] flex-shrink-0 flex flex-col items-center">
+                        <div className='relative flex flex-col items-center'>
+                          <img src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'} alt={consultant.accountId.fullName || 'Chuyên gia'} width={200} height={200} className="inline-block m-auto rounded-full mb-4" />
+                        </div>
+                        <h4 className='text-3xl font-bold pt-6'>{consultant.accountId.fullName || 'Chuyên gia'}</h4>
+                        <h3 className='text-xl font-normal pt-2 pb-2 opacity-50'>Chuyên gia tư vấn</h3>
+                        <div className="text-gray-600 text-center mb-2 line-clamp-2">{consultant.introduction}</div>
+                        <div className="text-gray-400 text-sm">Liên hệ: {consultant.accountId.phoneNumber || 'Không có số điện thoại'}</div>
+                      </div>
+                    ) : (
+                      <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-lg p-6 flex flex-col items-center">
+                        <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
+                      </div>
+                    )
+                  ))
+                )}
               </div>
             </div>
             {/* Nút phải */}
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white border border-gray-200 w-10 h-10 flex items-center justify-center rounded-full shadow hover:bg-blue-100 transition disabled:opacity-30"
-              onClick={() => setConsultantIndex(i => Math.min(i + 1, maxConsultant))}
-              disabled={consultantIndex === maxConsultant}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white border border-gray-200 w-12 h-12 flex items-center justify-center rounded-full shadow hover:bg-blue-100 transition disabled:opacity-30"
+              onClick={() => setConsultantSliderIndex(i => Math.min(i + 1, maxConsultantSlider))}
+              disabled={consultantSliderIndex === maxConsultantSlider || consultants.length === 0}
               aria-label="Next"
             >
-              <span className="text-lg">&#8594;</span>
+              <span className="text-2xl">&#8594;</span>
             </button>
           </div>
         </div>
