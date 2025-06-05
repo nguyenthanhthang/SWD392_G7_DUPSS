@@ -46,6 +46,11 @@ const Sidebar = () => {
           icon: 'campaign'
         },
         {
+          title: 'Quản lý dịch vụ',
+          path: '/admin/services',
+          icon: 'local_activity'
+        },
+        {
           title: 'Quản lý khảo sát',
           path: '/admin/surveys',
           icon: 'poll'
