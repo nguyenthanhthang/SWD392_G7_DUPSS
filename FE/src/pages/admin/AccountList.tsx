@@ -26,6 +26,7 @@ interface UpdateAccountForm {
   phoneNumber: string;
   gender: string;
   role?: string;
+  photoUrl?: string;
 }
 
 interface CreateAccountForm {
@@ -227,7 +228,8 @@ const AccountList: React.FC = () => {
       fullName: account.fullName || '',
       phoneNumber: account.phoneNumber || '',
       gender: account.gender || '',
-      role: account.role
+      role: account.role,
+      photoUrl: account.photoUrl
     });
     setIsUpdateModalOpen(true);
   };
@@ -240,7 +242,9 @@ const AccountList: React.FC = () => {
       email: '',
       fullName: '',
       phoneNumber: '',
-      gender: ''
+      gender: '',
+      role: '',
+      photoUrl: ''
     });
   };
 
@@ -495,22 +499,22 @@ const AccountList: React.FC = () => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-white table-fixed">
           <thead>
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
-              <th className="px-4 py-3 rounded-tl-lg">Tên tài khoản</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Họ tên</th>
-              <th className="px-4 py-3">Vai trò</th>
-              <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3 rounded-tr-lg">Thao tác</th>
+              <th className="px-4 py-3 rounded-tl-lg w-1/5">Tên tài khoản</th>
+              <th className="px-4 py-3 w-1/5">Email</th>
+              <th className="px-4 py-3 w-1/5">Họ tên</th>
+              <th className="px-4 py-3 w-1/6">Vai trò</th>
+              <th className="px-4 py-3 w-1/6">Trạng thái</th>
+              <th className="px-4 py-3 rounded-tr-lg w-1/6">Thao tác</th>
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm">
             {accounts.length > 0 ? (
               accounts.map((account) => (
                 <tr key={account._id} className="border-b border-gray-200 hover:bg-purple-50">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 flex-shrink-0 mr-3">
                         <img
@@ -525,19 +529,19 @@ const AccountList: React.FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">{account.email}</td>
-                  <td className="px-4 py-3">{account.fullName || 'Chưa cập nhật'}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">{account.email}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{account.fullName || 'Chưa cập nhật'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${getRoleBadgeClass(account.role)}`}>
                       {account.role}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${account.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                       {account.isDisabled ? 'Bị khóa' : 'Hoạt động'}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center space-x-3">
                       {/* Chỉ hiện nút khóa/mở khóa cho các tài khoản không phải admin */}
                       {!isAdminAccount(account) && (
