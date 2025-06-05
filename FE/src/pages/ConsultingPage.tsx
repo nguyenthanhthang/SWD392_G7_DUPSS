@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { getAllConsultantsApi } from '../api';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 interface User {
   _id: string;
@@ -31,6 +32,8 @@ function ConsultingPage() {
   // State phân trang
   const [page, setPage] = useState(1);
   const pageSize = 4;
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchConsultants = async () => {
@@ -82,17 +85,28 @@ function ConsultingPage() {
   }
 
   return (
-    <div>
+    <div className="relative min-h-screen bg-[#DBE8FA]">
       <Header />
       {/* Section tiêu biểu */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-gray-700 mb-8 text-center">Chuyên gia tiêu biểu</h2>
+      <div className="max-w-7xl mx-auto px-4 py-12 relative z-10">
+        <motion.h2
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.7 }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
+          className="text-3xl font-bold text-gray-700 mb-8 text-center"
+        >
+          Chuyên gia tiêu biểu
+        </motion.h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {featuredConsultants.map(consultant => (
+          {featuredConsultants.map((consultant, idx) => (
             consultant.accountId ? (
-              <Link
+              <motion.div
                 key={consultant._id}
-                to={`/consultant/${consultant._id}`}
+                initial={{ opacity: 0, y: 60 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
                 className="bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center hover:scale-105 transition cursor-pointer no-underline"
               >
                 <img 
@@ -103,8 +117,16 @@ function ConsultingPage() {
                 <h3 className="text-xl font-bold text-gray-900 mb-1">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
                 <div className="text-blue-600 font-semibold mb-2">Chuyên gia tư vấn</div>
                 <div className="text-gray-600 text-center mb-2 line-clamp-2">{consultant.introduction}</div>
-                <div className="text-gray-400 text-sm">Liên hệ: {consultant.accountId.email || 'Không có email'}</div>
-              </Link>
+                <div className="text-gray-400 text-sm mb-4">Liên hệ: {consultant.accountId.email || 'Không có email'}</div>
+                <motion.button
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.96 }}
+                  className="mt-2 px-8 py-3 rounded-full bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition text-lg"
+                  onClick={() => navigate(`/consultant/${consultant._id}`)}
+                >
+                  Đặt lịch
+                </motion.button>
+              </motion.div>
             ) : (
               <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-xl p-8 flex flex-col items-center">
                 <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
@@ -113,19 +135,29 @@ function ConsultingPage() {
           ))}
         </div>
       </div>
-
       {/* Danh sách consultant */}
-      <div className="max-w-7xl mx-auto px-4 pb-16">
-        <h2 className="text-2xl font-bold text-gray-700 mb-6">Danh sách chuyên gia</h2>
+      <div className="max-w-7xl mx-auto px-4 pb-16 relative z-10">
+        <motion.h2
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.7 }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
+          className="text-2xl font-bold text-gray-700 mb-6"
+        >
+          Danh sách chuyên gia
+        </motion.h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {pagedConsultants.length === 0 ? (
             <div className="col-span-4 text-center text-gray-500 py-12">Không tìm thấy chuyên gia.</div>
           ) : (
-            pagedConsultants.map(consultant => (
+            pagedConsultants.map((consultant, idx) => (
               consultant.accountId ? (
-                <Link
+                <motion.div
                   key={consultant._id}
-                  to={`/consultant/${consultant._id}`}
+                  initial={{ opacity: 0, y: 60 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
                   className="bg-white rounded-3xl shadow-lg p-6 flex flex-col items-center hover:shadow-2xl hover:scale-105 transition cursor-pointer no-underline"
                 >
                   <img 
@@ -136,8 +168,16 @@ function ConsultingPage() {
                   <h3 className="text-lg font-bold text-gray-900 mb-1">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
                   <div className="text-blue-600 font-medium mb-1">Chuyên gia tư vấn</div>
                   <div className="text-gray-600 text-center mb-2 line-clamp-2">{consultant.introduction}</div>
-                  <div className="text-gray-400 text-sm">Liên hệ: {consultant.accountId.phoneNumber || 'Không có số điện thoại'}</div>
-                </Link>
+                  <div className="text-gray-400 text-sm mb-4">Liên hệ: {consultant.accountId.phoneNumber || 'Không có số điện thoại'}</div>
+                  <motion.button
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.96 }}
+                    className="mt-2 px-8 py-3 rounded-full bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition text-lg"
+                    onClick={() => navigate(`/consultant/${consultant._id}`)}
+                  >
+                    Đặt lịch
+                  </motion.button>
+                </motion.div>
               ) : (
                 <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-lg p-6 flex flex-col items-center">
                   <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
@@ -146,7 +186,6 @@ function ConsultingPage() {
             ))
           )}
         </div>
-
         {/* Pagination */}
         {totalPage > 1 && (
           <div className="flex justify-center mt-10 gap-2">
