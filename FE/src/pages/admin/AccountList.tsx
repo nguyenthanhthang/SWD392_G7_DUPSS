@@ -37,7 +37,7 @@ interface CreateAccountForm {
   fullName: string;
   phoneNumber: string;
   gender: string;
-  role: 'customer' | 'consultant';  // Restrict role types
+  role: 'customer' | 'consultant';  // Khôi phục tạo cả customer và consultant
 }
 
 // Available roles for account creation
@@ -65,6 +65,7 @@ const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
 
 const AccountList: React.FC = () => {
   const [accounts, setAccounts] = useState<IAccount[]>([]);
+  const [filteredAccounts, setFilteredAccounts] = useState<IAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -76,12 +77,19 @@ const AccountList: React.FC = () => {
   const [accountDetail, setAccountDetail] = useState<IAccount | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [currentUser, setCurrentUser] = useState<IAccount | null>(null);
+  const [filters, setFilters] = useState({
+    role: 'all',
+    status: 'all',
+    search: ''
+  });
   const [updateForm, setUpdateForm] = useState<UpdateAccountForm>({
     username: '',
     email: '',
     fullName: '',
     phoneNumber: '',
-    gender: ''
+    gender: '',
+    role: '',
+    photoUrl: ''
   });
   const [createForm, setCreateForm] = useState<CreateAccountForm>({
     username: '',
@@ -107,6 +115,7 @@ const AccountList: React.FC = () => {
         setLoading(true);
         const response = await api.get('/accounts');
         setAccounts(response.data);
+        setFilteredAccounts(response.data);
         setLoading(false);
 
         // Giả định user hiện tại là admin đầu tiên trong danh sách
@@ -124,6 +133,34 @@ const AccountList: React.FC = () => {
 
     fetchAccounts();
   }, []);
+
+  // Thêm useEffect để xử lý bộ lọc
+  useEffect(() => {
+    let result = [...accounts];
+    
+    // Lọc theo vai trò
+    if (filters.role !== 'all') {
+      result = result.filter(account => account.role === filters.role);
+    }
+    
+    // Lọc theo trạng thái
+    if (filters.status !== 'all') {
+      const isDisabled = filters.status === 'disabled';
+      result = result.filter(account => account.isDisabled === isDisabled);
+    }
+    
+    // Lọc theo từ khóa tìm kiếm
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(account => 
+        account.username.toLowerCase().includes(searchLower) || 
+        account.email.toLowerCase().includes(searchLower) ||
+        (account.fullName && account.fullName.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    setFilteredAccounts(result);
+  }, [accounts, filters]);
 
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
@@ -354,7 +391,7 @@ const AccountList: React.FC = () => {
     } else if (createForm.password !== createForm.confirmPassword) {
       errors.confirmPassword = "Mật khẩu xác nhận không khớp";
     }
-
+    
     // Validate role
     if (!createForm.role) {
       errors.role = "Vui lòng chọn vai trò";
@@ -498,6 +535,65 @@ const AccountList: React.FC = () => {
         </button>
       </div>
 
+      {/* Bộ lọc */}
+      <div className="bg-purple-50 p-4 rounded-lg mb-4">
+        <div className="flex flex-wrap gap-4 items-end">
+          {/* Tìm kiếm */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              placeholder="Tìm theo tên, email..."
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            />
+          </div>
+          
+          {/* Lọc theo vai trò */}
+          <div className="w-40">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò</label>
+            <select
+              value={filters.role}
+              onChange={(e) => setFilters(prev => ({ ...prev, role: e.target.value }))}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              <option value="all">Tất cả</option>
+              <option value="admin">Admin</option>
+              <option value="customer">Khách hàng</option>
+              <option value="consultant">Tư vấn viên</option>
+            </select>
+          </div>
+          
+          {/* Lọc theo trạng thái */}
+          <div className="w-40">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              <option value="all">Tất cả</option>
+              <option value="active">Hoạt động</option>
+              <option value="disabled">Bị khóa</option>
+            </select>
+          </div>
+          
+          {/* Nút xóa bộ lọc */}
+          <div>
+            <button
+              onClick={() => setFilters({ role: 'all', status: 'all', search: '' })}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Xóa bộ lọc
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white table-fixed">
           <thead>
@@ -511,8 +607,8 @@ const AccountList: React.FC = () => {
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm">
-            {accounts.length > 0 ? (
-              accounts.map((account) => (
+            {filteredAccounts.length > 0 ? (
+              filteredAccounts.map((account) => (
                 <tr key={account._id} className="border-b border-gray-200 hover:bg-purple-50">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
@@ -596,7 +692,9 @@ const AccountList: React.FC = () => {
             ) : (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  Không có tài khoản nào
+                  {filters.role !== 'all' || filters.status !== 'all' || filters.search ? 
+                    'Không tìm thấy tài khoản nào phù hợp với bộ lọc' : 
+                    'Không có tài khoản nào'}
                 </td>
               </tr>
             )}
@@ -706,7 +804,6 @@ const AccountList: React.FC = () => {
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     >
                       <option value="customer">Customer</option>
-                      <option value="consultant">Consultant</option>
                       {/* Admin không thể thay đổi role của mình */}
                       {selectedAccount.role === 'admin' && (
                         <option value="admin">Admin</option>

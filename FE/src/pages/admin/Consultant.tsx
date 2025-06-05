@@ -63,12 +63,18 @@ const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
 
 const Consultant: React.FC = () => {
   const [consultants, setConsultants] = useState<IConsultant[]>([]);
+  const [filteredConsultants, setFilteredConsultants] = useState<IConsultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedConsultant, setSelectedConsultant] = useState<IConsultant | null>(null);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    search: '',
+    experience: 'all' // all, 0-1, 1-3, 3+
+  });
   const [formData, setFormData] = useState<IFormData>({
     accountId: '',
     fullName: '',
@@ -88,6 +94,7 @@ const Consultant: React.FC = () => {
       const response = await api.get('/consultants');
       console.log('API Response:', response.data);
       setConsultants(response.data);
+      setFilteredConsultants(response.data);
       setError(null);
     } catch (err) {
       console.error('API Error:', err);
@@ -101,6 +108,40 @@ const Consultant: React.FC = () => {
   useEffect(() => {
     fetchConsultants();
   }, []);
+
+  // Xử lý lọc dữ liệu
+  useEffect(() => {
+    let result = [...consultants];
+    
+    // Lọc theo trạng thái
+    if (filters.status !== 'all') {
+      result = result.filter(consultant => consultant.status === filters.status);
+    }
+    
+    // Lọc theo kinh nghiệm
+    if (filters.experience !== 'all') {
+      if (filters.experience === '0-1') {
+        result = result.filter(consultant => consultant.experience >= 0 && consultant.experience <= 1);
+      } else if (filters.experience === '1-3') {
+        result = result.filter(consultant => consultant.experience > 1 && consultant.experience <= 3);
+      } else if (filters.experience === '3+') {
+        result = result.filter(consultant => consultant.experience > 3);
+      }
+    }
+    
+    // Lọc theo từ khóa tìm kiếm
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(consultant => 
+        (consultant.accountId.username && consultant.accountId.username.toLowerCase().includes(searchLower)) || 
+        (consultant.accountId.email && consultant.accountId.email.toLowerCase().includes(searchLower)) ||
+        (consultant.accountId.fullName && consultant.accountId.fullName.toLowerCase().includes(searchLower)) ||
+        (consultant.introduction && consultant.introduction.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    setFilteredConsultants(result);
+  }, [consultants, filters]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -333,210 +374,183 @@ const Consultant: React.FC = () => {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-indigo-500">Quản lý tư vấn viên</h1>
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Thêm tư vấn viên
-        </button>
+        {/* Đã ẩn nút thêm tư vấn viên - người dùng sẽ tạo tài khoản ở trang quản lý tài khoản */}
+      </div>
+
+      {/* Thông báo hướng dẫn */}
+      <div className="bg-blue-50 p-4 rounded-lg mb-4 flex items-start">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <p className="text-blue-800 font-medium mb-1">Thêm tư vấn viên mới</p>
+          <p className="text-blue-700 text-sm">Để thêm tư vấn viên mới, vui lòng tạo tài khoản có vai trò "Tư vấn viên" trong trang <a href="/admin/users" className="text-blue-600 underline hover:text-blue-800">Quản lý tài khoản</a>.</p>
+        </div>
+      </div>
+
+      {/* Bộ lọc */}
+      <div className="bg-purple-50 p-4 rounded-lg mb-4">
+        <div className="flex flex-wrap gap-4 items-end">
+          {/* Tìm kiếm */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              placeholder="Tìm theo tên, email..."
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            />
+          </div>
+          
+          {/* Lọc theo trạng thái */}
+          <div className="w-40">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              <option value="all">Tất cả</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+              <option value="isDeleted">Đã xóa</option>
+            </select>
+          </div>
+          
+          {/* Lọc theo kinh nghiệm */}
+          <div className="w-40">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Kinh nghiệm</label>
+            <select
+              value={filters.experience}
+              onChange={(e) => setFilters(prev => ({ ...prev, experience: e.target.value }))}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              <option value="all">Tất cả</option>
+              <option value="0-1">0-1 năm</option>
+              <option value="1-3">1-3 năm</option>
+              <option value="3+">Trên 3 năm</option>
+            </select>
+          </div>
+          
+          {/* Nút xóa bộ lọc */}
+          <div>
+            <button
+              onClick={() => setFilters({ status: 'all', search: '', experience: 'all' })}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Xóa bộ lọc
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-white table-fixed">
           <thead>
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
-              <th className="px-4 py-3 rounded-tl-lg">Họ và tên</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Số điện thoại</th>
-              <th className="px-4 py-3">Giới thiệu</th>
-              <th className="px-4 py-3">Kinh nghiệm (năm)</th>
-              <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3">Ngày tạo</th>
-              <th className="px-4 py-3 rounded-tr-lg">Thao tác</th>
+              <th className="px-4 py-3 rounded-tl-lg w-1/5">Họ và tên</th>
+              <th className="px-4 py-3 w-1/6">Email</th>
+              <th className="px-4 py-3 w-1/6">Số điện thoại</th>
+              <th className="px-4 py-3 w-1/5">Giới thiệu</th>
+              <th className="px-4 py-3 w-24">Kinh nghiệm</th>
+              <th className="px-4 py-3 w-24">Trạng thái</th>
+              <th className="px-4 py-3 w-24">Ngày tạo</th>
+              <th className="px-4 py-3 rounded-tr-lg w-20">Thao tác</th>
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm">
-            {consultants.map((consultant) => (
-              <tr key={consultant._id} className="border-b border-gray-200 hover:bg-purple-50">
-                <td className="px-4 py-3 font-medium">
-                  <img src={consultant.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-10 h-10 rounded-full object-cover mr-2 inline-block" />
-                  {consultant.accountId.fullName}
-                </td>
-                <td className="px-4 py-3">{consultant.accountId.email}</td>
-                <td className="px-4 py-3">{consultant.accountId.phoneNumber}</td>
-                <td className="px-4 py-3">{consultant.introduction}</td>
-                <td className="px-4 py-3">{consultant.experience}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      consultant.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : consultant.status === 'inactive'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {consultant.status === 'active' ? 'Hoạt động' : consultant.status === 'inactive' ? 'Không hoạt động' : 'Đã xóa'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">{formatDate(consultant.createdAt)}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center space-x-3">
-                    <Tooltip text="Cập nhật">
-                      <button
-                        onClick={() => handleOpenUpdateModal(consultant)}
-                        className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+            {filteredConsultants.length > 0 ? (
+              filteredConsultants.map((consultant) => (
+                <tr key={consultant._id} className="border-b border-gray-200 hover:bg-purple-50">
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">
+                    <img src={consultant.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-10 h-10 rounded-full object-cover mr-2 inline-block" />
+                    {consultant.accountId.fullName}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">{consultant.accountId.email}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{consultant.accountId.phoneNumber}</td>
+                  <td className="px-4 py-3 whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: '150px' }}>
+                    {consultant.introduction}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">{consultant.experience} năm</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        consultant.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : consultant.status === 'inactive'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {consultant.status === 'active' ? 'Hoạt động' : consultant.status === 'inactive' ? 'Không hoạt động' : 'Đã xóa'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">{formatDate(consultant.createdAt)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center space-x-3">
+                      <Tooltip text="Cập nhật">
+                        <button
+                          onClick={() => handleOpenUpdateModal(consultant)}
+                          className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      </button>
-                    </Tooltip>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </button>
+                      </Tooltip>
 
-                    <Tooltip text="Xóa">
-                      <button
-                        onClick={() => handleOpenDeleteModal(consultant)}
-                        className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                      <Tooltip text="Xóa">
+                        <button
+                          onClick={() => handleOpenDeleteModal(consultant)}
+                          className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </Tooltip>
-                  </div>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  {filters.status !== 'all' || filters.experience !== 'all' || filters.search ? 
+                    'Không tìm thấy tư vấn viên nào phù hợp với bộ lọc' : 
+                    'Không có tư vấn viên nào'}
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
-
-      {/* Modal Tạo tư vấn viên mới */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Thêm tư vấn viên mới</h2>
-              <button
-                onClick={handleCloseCreateModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateConsultant} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">ID Tài khoản</label>
-                <input
-                  type="text"
-                  name="accountId"
-                  value={formData.accountId}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-                <p className="mt-1 text-xs text-gray-500">Nhập ID của tài khoản đã tồn tại</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Giới thiệu</label>
-                <textarea
-                  name="introduction"
-                  value={formData.introduction}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Nhập thông tin giới thiệu về tư vấn viên"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Thông tin liên hệ</label>
-                <input
-                  type="text"
-                  name="contact"
-                  value={formData.contact}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Thông tin liên hệ thêm (nếu có)"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Kinh nghiệm (năm)</label>
-                <input
-                  type="number"
-                  name="experience"
-                  value={formData.experience}
-                  onChange={handleInputChange}
-                  min="0"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option value="active">Hoạt động</option>
-                  <option value="inactive">Không hoạt động</option>
-                  <option value="isDeleted">Đã xóa</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCloseCreateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
-                >
-                  Tạo mới
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal Cập nhật tư vấn viên */}
       {isUpdateModalOpen && selectedConsultant && (
