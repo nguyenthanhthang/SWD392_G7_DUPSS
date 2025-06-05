@@ -79,6 +79,8 @@ const Consultant: React.FC = () => {
     experience: 0,
     status: 'active'
   });
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const fetchConsultants = async () => {
     try {
@@ -270,6 +272,30 @@ const Consultant: React.FC = () => {
     }
   };
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarPreview(URL.createObjectURL(file));
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/uploads/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const url = res.data.imageUrl;
+      setFormData(prev => ({
+        ...prev,
+        photoUrl: url
+      }));
+      setIsUploadingAvatar(false);
+      toast.success('Tải ảnh lên thành công!');
+    } catch (err) {
+      setIsUploadingAvatar(false);
+      toast.error('Tải ảnh lên thất bại!');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm">
@@ -335,7 +361,10 @@ const Consultant: React.FC = () => {
           <tbody className="text-gray-600 text-sm">
             {consultants.map((consultant) => (
               <tr key={consultant._id} className="border-b border-gray-200 hover:bg-purple-50">
-                <td className="px-4 py-3 font-medium">{consultant.accountId.fullName}</td>
+                <td className="px-4 py-3 font-medium">
+                  <img src={consultant.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-10 h-10 rounded-full object-cover mr-2 inline-block" />
+                  {consultant.accountId.fullName}
+                </td>
                 <td className="px-4 py-3">{consultant.accountId.email}</td>
                 <td className="px-4 py-3">{consultant.accountId.phoneNumber}</td>
                 <td className="px-4 py-3">{consultant.introduction}</td>
@@ -526,6 +555,12 @@ const Consultant: React.FC = () => {
             </div>
 
             <form onSubmit={handleUpdateConsultant} className="space-y-4">
+              <div className="flex flex-col items-center mb-4">
+                <img src={avatarPreview || selectedConsultant?.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-24 h-24 rounded-full object-cover border-2 border-indigo-200 mb-2" />
+                <input type="file" accept="image/*" onChange={handleAvatarChange} className="mt-1 block w-full text-sm" disabled={isUploadingAvatar} />
+                {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
+              </div>
+
               <div className="mb-4 p-3 bg-gray-50 rounded-md">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Thông tin tài khoản (chỉ đọc)</h3>
                 <div className="grid grid-cols-2 gap-3">

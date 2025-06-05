@@ -52,17 +52,25 @@ export const updateAccount = async (
   res: Response
 ): Promise<void> => {
   try {
-    const updated = await Account.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
-    if (!updated) {
+    // Lấy account hiện tại trước khi cập nhật
+    const currentAccount = await Account.findById(req.params.id);
+    if (!currentAccount) {
       res.status(404).json({ message: "Không tìm thấy tài khoản để cập nhật" });
       return;
     }
 
     // Kiểm tra nếu đang cố chuyển từ consultant sang customer
-    if (updated.role === "consultant" && req.body.role === "customer") {
+    if (currentAccount.role === "consultant" && req.body.role === "customer") {
       res.status(400).json({ message: "Không thể chuyển từ tư vấn viên sang khách hàng" });
+      return;
+    }
+
+    // Nếu hợp lệ, tiến hành cập nhật
+    const updated = await Account.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!updated) {
+      res.status(404).json({ message: "Không tìm thấy tài khoản để cập nhật" });
       return;
     }
 
@@ -86,7 +94,6 @@ export const updateAccount = async (
       }
     }
     
-
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi cập nhật", error });

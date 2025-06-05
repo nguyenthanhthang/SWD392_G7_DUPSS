@@ -94,6 +94,10 @@ const AccountList: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // State cho upload ảnh đại diện
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   useEffect(() => {
     // Hàm để lấy danh sách tài khoản
@@ -414,6 +418,35 @@ const AccountList: React.FC = () => {
     }
   };
 
+  // Xử lý chọn file ảnh
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setIsUploadingAvatar(true);
+    try {
+      // Upload lên Cloudinary (giả sử bạn có endpoint /uploads/upload)
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/uploads/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      console.log('Upload response:', res);
+      const url = res.data.imageUrl;
+      setUpdateForm(prev => ({ ...prev, photoUrl: url }));
+      setIsUploadingAvatar(false);
+      toast.success('Tải ảnh lên thành công!');
+    } catch (err: any) {
+      setIsUploadingAvatar(false);
+      console.error('Upload error:', err);
+      if (err.response) {
+        console.error('Error response:', err.response);
+      }
+      toast.error('Tải ảnh lên thất bại!');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm">
@@ -482,7 +515,7 @@ const AccountList: React.FC = () => {
                       <div className="w-10 h-10 flex-shrink-0 mr-3">
                         <img
                           className="h-10 w-10 rounded-full object-cover"
-                          src={account.photoUrl || 'https://via.placeholder.com/40'}
+                          src={account.photoUrl || '/avarta.png'}
                           alt={account.username}
                         />
                       </div>
@@ -584,6 +617,23 @@ const AccountList: React.FC = () => {
             </div>
             <form onSubmit={handleUpdateAccount}>
               <div className="space-y-4">
+                {/* Ảnh đại diện */}
+                <div className="flex flex-col items-center">
+                  <img
+                    src={avatarPreview || updateForm.photoUrl || selectedAccount?.photoUrl || '/avarta.png'}
+                    alt="avatar"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-indigo-200 mb-2"
+                  />
+                  <label className="block text-sm font-medium text-gray-700">Ảnh đại diện</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="mt-1 block w-full text-sm"
+                    disabled={isUploadingAvatar}
+                  />
+                  {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Tên tài khoản</label>
                   <input
@@ -779,7 +829,7 @@ const AccountList: React.FC = () => {
                   <div className="w-32 h-32 mb-4">
                     <img
                       className="h-32 w-32 rounded-full object-cover"
-                      src={accountDetail.photoUrl || 'https://via.placeholder.com/128'}
+                      src={accountDetail.photoUrl || '/avarta.png'}
                       alt={accountDetail.username}
                     />
                   </div>
@@ -1018,7 +1068,7 @@ const AccountList: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCloseCreateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 >
                   Hủy
                 </button>
