@@ -12,6 +12,7 @@ import AccountList from "./pages/admin/AccountList";
 import ConsultantDetailPage from "./pages/ConsultantDetailPage";
 import Service from "./pages/admin/Service";
 import Consultant from "./pages/admin/Consultant";
+import AboutUsPage from "./pages/AboutUsPage";
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/consultant/:id" element={<ConsultantDetailPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/blogs" element={<BlogPage />} />
+        <Route path="/about-us" element={<AboutUsPage />} />
         
         {/* Routes cho Authentication */}
         <Route path="/login" element={<LoginPage />} />
