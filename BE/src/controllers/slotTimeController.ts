@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import SlotTime from "../models/SlotTime";
+import Appointment from "../models/Appointment";
 
 export const getAllSlotTime = async (req: Request, res: Response) => {
     try {
@@ -58,3 +59,21 @@ export const updateStatusSlotTime = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Xảy ra lỗi khi cập nhật trạng thái slot time",error });
     }
 }   
+
+export const deleteSlotTime = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const slotTime = await SlotTime.findById(id);
+        const appointment = await Appointment.find({ slot_time_id: id });
+        if (appointment.length > 0) {
+            return res.status(400).json({ message: "Không thể xóa slot time đã được đặt",data:slotTime });
+        }
+        if(slotTime?.status === "booked"){
+            return res.status(400).json({ message: "Không thể xóa slot time đã được đặt",data:slotTime });
+        }
+        await SlotTime.findByIdAndDelete(id);
+        res.status(200).json({ message: "Xóa slot time thành công",data:slotTime });
+    } catch (error) {
+        res.status(500).json({ message: "Xảy ra lỗi khi xóa slot time",error });
+    }
+}

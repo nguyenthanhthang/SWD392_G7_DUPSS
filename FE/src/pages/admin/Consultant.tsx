@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
+import ConsultantScheduleModal from '../../components/admin/ConsultantScheduleModal';
 
 interface IConsultant {
   _id: string;
@@ -81,6 +82,9 @@ const Consultant: React.FC = () => {
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [selectedConsultantId, setSelectedConsultantId] = useState<string | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const fetchConsultants = async () => {
     try {
@@ -350,25 +354,19 @@ const Consultant: React.FC = () => {
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
               <th className="px-4 py-3 rounded-tl-lg">Họ và tên</th>
               <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Số điện thoại</th>
-              <th className="px-4 py-3">Giới thiệu</th>
-              <th className="px-4 py-3">Kinh nghiệm (năm)</th>
               <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3">Ngày tạo</th>
+              <th className="px-4 py-3">Lịch làm việc</th>
               <th className="px-4 py-3 rounded-tr-lg">Thao tác</th>
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm">
-            {consultants.map((consultant) => (
+            {consultants.map(consultant => (
               <tr key={consultant._id} className="border-b border-gray-200 hover:bg-purple-50">
-                <td className="px-4 py-3 font-medium">
+                <td className="px-4 py-3 font-medium flex items-center">
                   <img src={consultant.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-10 h-10 rounded-full object-cover mr-2 inline-block" />
                   {consultant.accountId.fullName}
                 </td>
                 <td className="px-4 py-3">{consultant.accountId.email}</td>
-                <td className="px-4 py-3">{consultant.accountId.phoneNumber}</td>
-                <td className="px-4 py-3">{consultant.introduction}</td>
-                <td className="px-4 py-3">{consultant.experience}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
@@ -382,53 +380,34 @@ const Consultant: React.FC = () => {
                     {consultant.status === 'active' ? 'Hoạt động' : consultant.status === 'inactive' ? 'Không hoạt động' : 'Đã xóa'}
                   </span>
                 </td>
-                <td className="px-4 py-3">{formatDate(consultant.createdAt)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center space-x-3">
-                    <Tooltip text="Cập nhật">
-                      <button
-                        onClick={() => handleOpenUpdateModal(consultant)}
-                        className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      </button>
-                    </Tooltip>
-
-                    <Tooltip text="Xóa">
-                      <button
-                        onClick={() => handleOpenDeleteModal(consultant)}
-                        className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </Tooltip>
-                  </div>
+                  <button
+                    onClick={() => { setSelectedConsultantId(consultant._id); setScheduleModalOpen(true); }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-semibold shadow-md transition-all"
+                  >
+                    Lịch làm việc
+                  </button>
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => { setSelectedConsultant(consultant); setIsDetailModalOpen(true); }}
+                    className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 mr-2"
+                    title="Xem chi tiết"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleOpenUpdateModal(consultant)}
+                    className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                    title="Chỉnh sửa"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
                 </td>
               </tr>
             ))}
@@ -684,6 +663,60 @@ const Consultant: React.FC = () => {
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
               >
                 Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scheduleModalOpen && selectedConsultantId && (
+        <ConsultantScheduleModal
+          consultantId={selectedConsultantId}
+          open={scheduleModalOpen}
+          onClose={() => setScheduleModalOpen(false)}
+        />
+      )}
+
+      {isDetailModalOpen && selectedConsultant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl relative">
+            <button
+              onClick={() => setIsDetailModalOpen(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-blue-600 text-2xl"
+              title="Đóng"
+            >
+              &times;
+            </button>
+            <div className="flex flex-col items-center mb-6">
+              <img
+                src={selectedConsultant.accountId.photoUrl || '/avarta.png'}
+                alt="avatar"
+                className="w-24 h-24 rounded-full object-cover border-4 border-blue-200 shadow mb-2"
+              />
+              <h2 className="text-xl font-bold text-blue-700 mb-1">{selectedConsultant.accountId.fullName}</h2>
+              <span className={`px-3 py-1 text-xs rounded-full font-semibold mt-1 ${
+                selectedConsultant.status === 'active'
+                  ? 'bg-green-100 text-green-800'
+                  : selectedConsultant.status === 'inactive'
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {selectedConsultant.status === 'active' ? 'Hoạt động' : selectedConsultant.status === 'inactive' ? 'Không hoạt động' : 'Đã xóa'}
+              </span>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div><span className="font-semibold text-gray-600">Email:</span> {selectedConsultant.accountId.email}</div>
+              <div><span className="font-semibold text-gray-600">Số điện thoại:</span> {selectedConsultant.accountId.phoneNumber}</div>
+              <div><span className="font-semibold text-gray-600">Giới thiệu:</span> {selectedConsultant.introduction || <span className="italic text-gray-400">Chưa cập nhật</span>}</div>
+              <div><span className="font-semibold text-gray-600">Liên hệ:</span> {selectedConsultant.contact || <span className="italic text-gray-400">Chưa cập nhật</span>}</div>
+              <div><span className="font-semibold text-gray-600">Kinh nghiệm:</span> {selectedConsultant.experience} năm</div>
+            </div>
+            <div className="flex justify-end mt-8">
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow"
+              >
+                Đóng
               </button>
             </div>
           </div>

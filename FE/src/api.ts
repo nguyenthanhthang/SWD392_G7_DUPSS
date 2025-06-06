@@ -69,4 +69,24 @@ export const getSlotTimeByConsultantIdApi = async (consultantId: string) => {
   return res.data;
 };
 
+export const createSlotTimeApi = async (data: { consultant_id: string; start_time: string; end_time: string; status: string }) => {
+  const res = await api.post('/slot-times', data);
+  return res.data;
+};
+
+export const updateSlotTimeApi = async (id: string, data: { start_time: string; end_time: string }) => {
+  const res = await api.put(`/slot-times/${id}`, data);
+  return res.data;
+};
+
+export const updateStatusSlotTimeApi = async (id: string, status: string) => {
+  const res = await api.put(`/slot-times/status/${id}`, { status });
+  return res.data;
+};
+
+export const deleteSlotTimeApi = async (id: string) => {
+  const res = await api.delete(`/slot-times/${id}`);
+  return res.data;
+};
+
 export default api; 
