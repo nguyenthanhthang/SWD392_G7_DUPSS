@@ -27,7 +27,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         {isAdminPage && user && <Sidebar />}
 
         {/* Content */}
-        <main className={`flex-1 ${isAdminPage ? 'ml-64' : ''} p-6`}>
+        <main className={`flex-1 ${isAdminPage ? 'ml-64' : ''} p-6 pt-16`}>
           {children}
         </main>
       </div>

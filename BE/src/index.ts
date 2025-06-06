@@ -9,6 +9,7 @@ import consultantRoutes from "./routes/consultantRoutes";
 import certificateRoutes from "./routes/certificateRoutes";
 import slotTimeRoutes from "./routes/slotTimeRoutes";
 import eventRoutes from "./routes/eventRoutes";
+import appointmentRoutes from "./routes/appointmentRoutes";
 const uploadRouter = require("./routes/upload");
 
 // Load biến môi trường
@@ -35,6 +36,7 @@ app.use("/api/certificates", certificateRoutes);
 app.use("/api/slot-times", slotTimeRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/uploads", uploadRouter);
+app.use("/api/appointments", appointmentRoutes);
 
 // Route kiểm tra
 app.get("/", (_req, res) => {
