@@ -31,6 +31,7 @@ export const getSlotTimeByConsultantId = async (req: Request, res: Response) => 
 export const createSlotTime = async (req: Request, res: Response) => {
     try {
         const { consultant_id, start_time, end_time } = req.body;
+        // chua check thuoc consultant_id co ton tai khong, lcih nay da ton tai chua
         const slotTime = await SlotTime.create({ consultant_id, start_time, end_time });
         res.status(201).json(slotTime);
     } catch (error) {

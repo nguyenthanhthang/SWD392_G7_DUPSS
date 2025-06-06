@@ -3,6 +3,8 @@ import Footer from "../components/layout/Footer";
 import { useState, useEffect } from 'react';
 import { getAllConsultantsApi } from '../api';
 import HomePic from "../assets//Home.png";
+import BubbleBackground from '../components/BubbleBackground';
+import { motion } from 'framer-motion';
 
 // Dữ liệu cứng cho About Us
 const aboutData = [ 
@@ -109,6 +111,12 @@ export default function Home() {
   return (
     <div>
       <Header />
+      <BubbleBackground />
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      >
       {/* Banner Section */}
       <div className='mx-auto max-w-7xl my-10 sm:py-10 px-6 lg:px-8'>
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-x-24 my-16'>
@@ -164,11 +172,17 @@ export default function Home() {
       {/* Consultant Slider Section (API) */}
       <div className="bg-blue-50 py-32 w-full">
         <div className='mx-auto w-full sm:py-4 px-0 lg:px-0'>
-          <div className="text-center mb-12">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 40 }}
+              whileInView={{ opacity: 1, scale: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              className="text-center mb-12"
+            >
             <h3 className="text-4xl sm:text-6xl font-bold text-black my-2">Đội ngũ chuyên gia tư vấn</h3>
             <h3 className="text-4xl sm:text-6xl font-bold text-black opacity-50 lg:mr-48 my-2">Đội ngũ chuyên gia tư vấn</h3>
             <h3 className="text-4xl sm:text-6xl font-bold text-black opacity-25 lg:-mr-32 my-2">Đội ngũ chuyên gia tư vấn</h3>
-          </div>
+            </motion.div>
           <div className="relative w-full flex items-center">
             {/* Nút trái */}
             <button
@@ -192,17 +206,32 @@ export default function Home() {
                 ) : consultants.length === 0 ? (
                   <div className="text-center w-full py-20 text-gray-500 text-xl">Không có chuyên gia nào.</div>
                 ) : (
-                  consultants.map((consultant) => (
+                    consultants.map((consultant, idx) => (
                     consultant.accountId ? (
-                      <div key={consultant._id} className="bg-white m-3 py-16 px-8 my-10 text-center shadow-xl rounded-3xl min-w-[360px] w-[400px] flex-shrink-0 flex flex-col items-center">
+                        <motion.div
+                          key={consultant._id}
+                          initial={{ opacity: 0, y: 60 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, amount: 0.3 }}
+                          transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
+                          className="bg-white m-3 py-16 px-8 my-10 text-center shadow-xl rounded-3xl min-w-[360px] w-[400px] flex-shrink-0 flex flex-col items-center"
+                        >
                         <div className='relative flex flex-col items-center'>
                           <img src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'} alt={consultant.accountId.fullName || 'Chuyên gia'} width={200} height={200} className="inline-block m-auto rounded-full mb-4" />
                         </div>
                         <h4 className='text-3xl font-bold pt-6'>{consultant.accountId.fullName || 'Chuyên gia'}</h4>
                         <h3 className='text-xl font-normal pt-2 pb-2 opacity-50'>Chuyên gia tư vấn</h3>
                         <div className="text-gray-600 text-center mb-2 line-clamp-2">{consultant.introduction}</div>
-                        <div className="text-gray-400 text-sm">Liên hệ: {consultant.accountId.phoneNumber || 'Không có số điện thoại'}</div>
-                      </div>
+                          <div className="text-gray-400 text-sm mb-4">Liên hệ: {consultant.accountId.phoneNumber || 'Không có số điện thoại'}</div>
+                          <motion.button
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.96 }}
+                            className="mt-2 px-8 py-3 rounded-full bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition text-lg"
+                            onClick={() => window.location.href = `/consultant/${consultant._id}`}
+                          >
+                            Đặt lịch
+                          </motion.button>
+                        </motion.div>
                     ) : (
                       <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-lg p-6 flex flex-col items-center">
                         <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
@@ -273,6 +302,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+      </motion.div>
       <Footer />
     </div>
   );

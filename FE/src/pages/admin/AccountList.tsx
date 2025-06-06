@@ -26,6 +26,7 @@ interface UpdateAccountForm {
   phoneNumber: string;
   gender: string;
   role?: string;
+  photoUrl?: string;
 }
 
 interface CreateAccountForm {
@@ -94,6 +95,10 @@ const AccountList: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // State cho upload ảnh đại diện
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   useEffect(() => {
     // Hàm để lấy danh sách tài khoản
@@ -223,7 +228,8 @@ const AccountList: React.FC = () => {
       fullName: account.fullName || '',
       phoneNumber: account.phoneNumber || '',
       gender: account.gender || '',
-      role: account.role
+      role: account.role,
+      photoUrl: account.photoUrl
     });
     setIsUpdateModalOpen(true);
   };
@@ -236,7 +242,9 @@ const AccountList: React.FC = () => {
       email: '',
       fullName: '',
       phoneNumber: '',
-      gender: ''
+      gender: '',
+      role: '',
+      photoUrl: ''
     });
   };
 
@@ -414,6 +422,35 @@ const AccountList: React.FC = () => {
     }
   };
 
+  // Xử lý chọn file ảnh
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setIsUploadingAvatar(true);
+    try {
+      // Upload lên Cloudinary (giả sử bạn có endpoint /uploads/upload)
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/uploads/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      console.log('Upload response:', res);
+      const url = res.data.imageUrl;
+      setUpdateForm(prev => ({ ...prev, photoUrl: url }));
+      setIsUploadingAvatar(false);
+      toast.success('Tải ảnh lên thành công!');
+    } catch (err: any) {
+      setIsUploadingAvatar(false);
+      console.error('Upload error:', err);
+      if (err.response) {
+        console.error('Error response:', err.response);
+      }
+      toast.error('Tải ảnh lên thất bại!');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm">
@@ -462,27 +499,27 @@ const AccountList: React.FC = () => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-white table-fixed">
           <thead>
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
-              <th className="px-4 py-3 rounded-tl-lg">Tên tài khoản</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Họ tên</th>
-              <th className="px-4 py-3">Vai trò</th>
-              <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3 rounded-tr-lg">Thao tác</th>
+              <th className="px-4 py-3 rounded-tl-lg w-1/5">Tên tài khoản</th>
+              <th className="px-4 py-3 w-1/5">Email</th>
+              <th className="px-4 py-3 w-1/5">Họ tên</th>
+              <th className="px-4 py-3 w-1/6">Vai trò</th>
+              <th className="px-4 py-3 w-1/6">Trạng thái</th>
+              <th className="px-4 py-3 rounded-tr-lg w-1/6">Thao tác</th>
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm">
             {accounts.length > 0 ? (
               accounts.map((account) => (
                 <tr key={account._id} className="border-b border-gray-200 hover:bg-purple-50">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 flex-shrink-0 mr-3">
                         <img
                           className="h-10 w-10 rounded-full object-cover"
-                          src={account.photoUrl || 'https://via.placeholder.com/40'}
+                          src={account.photoUrl || '/avarta.png'}
                           alt={account.username}
                         />
                       </div>
@@ -492,19 +529,19 @@ const AccountList: React.FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">{account.email}</td>
-                  <td className="px-4 py-3">{account.fullName || 'Chưa cập nhật'}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">{account.email}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{account.fullName || 'Chưa cập nhật'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${getRoleBadgeClass(account.role)}`}>
                       {account.role}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${account.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                       {account.isDisabled ? 'Bị khóa' : 'Hoạt động'}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center space-x-3">
                       {/* Chỉ hiện nút khóa/mở khóa cho các tài khoản không phải admin */}
                       {!isAdminAccount(account) && (
@@ -584,6 +621,23 @@ const AccountList: React.FC = () => {
             </div>
             <form onSubmit={handleUpdateAccount}>
               <div className="space-y-4">
+                {/* Ảnh đại diện */}
+                <div className="flex flex-col items-center">
+                  <img
+                    src={avatarPreview || updateForm.photoUrl || selectedAccount?.photoUrl || '/avarta.png'}
+                    alt="avatar"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-indigo-200 mb-2"
+                  />
+                  <label className="block text-sm font-medium text-gray-700">Ảnh đại diện</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="mt-1 block w-full text-sm"
+                    disabled={isUploadingAvatar}
+                  />
+                  {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Tên tài khoản</label>
                   <input
@@ -779,7 +833,7 @@ const AccountList: React.FC = () => {
                   <div className="w-32 h-32 mb-4">
                     <img
                       className="h-32 w-32 rounded-full object-cover"
-                      src={accountDetail.photoUrl || 'https://via.placeholder.com/128'}
+                      src={accountDetail.photoUrl || '/avarta.png'}
                       alt={accountDetail.username}
                     />
                   </div>
@@ -1018,7 +1072,7 @@ const AccountList: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCloseCreateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 >
                   Hủy
                 </button>
