@@ -26,76 +26,13 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Routes dành cho Admin */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <MainLayout>
-                  <AdminDashboard />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <MainLayout>
-                  <AccountList />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/courses"
-            element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <MainLayout>
-                  <div className="p-6 bg-white rounded-lg shadow-sm">Quản lý khóa học</div>
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/blogs"
-            element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <MainLayout>
-                  <div className="p-6 bg-white rounded-lg shadow-sm">Quản lý blog</div>
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/consultants"
-            element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <MainLayout>
-                  <Consultant />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/reports"
-            element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <MainLayout>
-                  <div className="p-6 bg-white rounded-lg shadow-sm">Báo cáo thống kê</div>
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/services"
-            element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <MainLayout>
-                  <Service />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/admin"element={ <ProtectedRoute requiredRoles={['admin']}> <MainLayout> <AdminDashboard /> </MainLayout> </ProtectedRoute>}/>
+          <Route path="/admin/users" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><AccountList /></MainLayout></ProtectedRoute>}/>
+          <Route path="/admin/courses"element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý khóa học</div></MainLayout></ProtectedRoute>}/>
+          <Route path="/admin/blogs"element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý blog</div></MainLayout></ProtectedRoute>}/>
+          <Route path="/admin/consultants" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Consultant /></MainLayout></ProtectedRoute>}/>
+          <Route path="/admin/reports" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Báo cáo thống kê</div></MainLayout></ProtectedRoute>}/>
+          <Route path="/admin/services"element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Service /></MainLayout></ProtectedRoute>}/>
           
           {/* Routes cho User */}
           <Route path="/" element={<Home />} />
@@ -105,6 +42,10 @@ function App() {
           <Route path="/events" element={<EventsPage />} />
           <Route path="/blogs" element={<BlogPage />} />
           <Route path="/about-us" element={<AboutUsPage />} />
+          <Route path="/service" element={<ServicePage />} /> 
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/appointments" element={<AppointmentsPage />} />
+          <Route path="/payment-history" element={<PaymentHistory />} />
           
           {/* Routes cho Authentication */}
           <Route path="/login" element={<LoginPage />} />
