@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logo from '/avarta.png';
 
 function AdminHeader() {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -55,6 +56,11 @@ function AdminHeader() {
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
+            <img
+              src={logo}
+              alt="Logo"
+              className="h-10 w-10 object-cover rounded-full mr-2"
+            />
             <h1 className="text-2xl font-semibold text-gray-800">Dashboard</h1>
             <div className="ml-4 text-sm text-gray-500">
               {formatDate(currentTime)}

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logo from '/avarta.png';
 
 function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -36,7 +37,11 @@ function Header() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
+              <img
+                src={logo}
+                alt="Logo"
+                className="h-10 w-10 object-cover rounded-full mr-2"
+              />
               <span className="ml-2 text-xl font-bold text-gray-900">HopeHub</span>
             </Link>
           </div>

@@ -1,5 +1,5 @@
 import loginImg from '../assets/login2.png';
-import logo from '../assets/logo1.png';
+import logo from '/avarta.png';
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
