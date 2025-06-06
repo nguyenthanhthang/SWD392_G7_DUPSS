@@ -10,6 +10,10 @@ import RegisterPage from "./pages/Register";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AccountList from "./pages/admin/AccountList";
 import ConsultantDetailPage from "./pages/ConsultantDetailPage";
+import Profile from "./pages/Profile";
+import ServicePage from "./pages/ServicePage";
+import AppointmentsPage from "./pages/Appointments";
+import PaymentHistory from "./pages/PaymentHistory";
 
 function App() {
   return (
@@ -31,6 +35,10 @@ function App() {
         <Route path="/consultant/:id" element={<ConsultantDetailPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/blogs" element={<BlogPage />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/services" element={<ServicePage />} />
+        <Route path="/appointments" element={<AppointmentsPage />} />
+        <Route path="/payment-history" element={<PaymentHistory />} />
         
         {/* Routes cho Authentication */}
         <Route path="/login" element={<LoginPage />} />

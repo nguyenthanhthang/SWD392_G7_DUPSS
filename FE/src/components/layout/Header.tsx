@@ -57,7 +57,7 @@ function Header() {
       <nav className="flex gap-20 px-20 text-[19px] font-normal text-gray-700 h-full items-center" style={{minWidth: '520px', justifyContent: 'center'}}>
         <a href="#" className="hover:text-black">About Us</a>
         <Link to="/consulting" className="hover:text-black">Consultant</Link>
-        <a href="#" className="hover:text-black">FAQ</a>
+        <Link to="/services" className="hover:text-black">Service</Link>
         <a href="#" className="hover:text-black">Blog</a>
         <a href="#" className="hover:text-black">Testimonial</a>
       </nav>
