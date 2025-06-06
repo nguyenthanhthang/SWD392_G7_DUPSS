@@ -1,10 +1,11 @@
 // src/components/layout/MainLayout.tsx
 
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import AdminHeader from './AdminHeader';
 import Sidebar from './Sidebar';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,23 +13,22 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  const { user } = useAuth();
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   return (
-    <div className="flex w-full min-h-screen bg-gray-50 dark:bg-darkgray">
-      {/* Sidebar */}
-      <Sidebar />
-      
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      {isAdminPage ? <AdminHeader /> : <Header />}
+
       {/* Main Content */}
-      <div className="flex-1 ml-64">
-        {/* Header - Sử dụng AdminHeader cho trang admin và Header cho trang user */}
-        {isAdminRoute ? <AdminHeader /> : <Header />}
-        
+      <div className="flex">
+        {/* Sidebar - chỉ hiển thị ở trang admin */}
+        {isAdminPage && user && <Sidebar />}
+
         {/* Content */}
-        <main className="p-8 mt-[72px]">
-          <div className="bg-white rounded-[32px] min-h-[calc(100vh-8rem)] p-8 shadow-sm">
-            {children}
-          </div>
+        <main className={`flex-1 ${isAdminPage ? 'ml-64' : ''} p-6`}>
+          {children}
         </main>
       </div>
     </div>

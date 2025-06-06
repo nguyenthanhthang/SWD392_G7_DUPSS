@@ -13,34 +13,101 @@ import ConsultantDetailPage from "./pages/ConsultantDetailPage";
 import Service from "./pages/admin/Service";
 import Consultant from "./pages/admin/Consultant";
 import AboutUsPage from "./pages/AboutUsPage";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Routes dành cho Admin */}
-        <Route path="/admin" element={<MainLayout><AdminDashboard /></MainLayout>} />
-        <Route path="/admin/users" element={<MainLayout><AccountList /></MainLayout>} />
-        <Route path="/admin/courses" element={<MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý khóa học</div></MainLayout>} />
-        <Route path="/admin/blogs" element={<MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý blog</div></MainLayout>} />
-        <Route path="/admin/consultants" element={<MainLayout><Consultant /></MainLayout>} />
-        <Route path="/admin/reports" element={<MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Báo cáo thống kê</div></MainLayout>} />
-        <Route path="/admin/services" element={<MainLayout><Service /></MainLayout>} />
-        
-        {/* Routes cho User */}
-        <Route path="/" element={<Home />} />
-        <Route path="/quizz" element={<QuizzPage />} />
-        <Route path="/consulting" element={<ConsultingPage />} />
-        <Route path="/consultant/:id" element={<ConsultantDetailPage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/blogs" element={<BlogPage />} />
-        <Route path="/about-us" element={<AboutUsPage />} />
-        
-        {/* Routes cho Authentication */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Routes dành cho Admin */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MainLayout>
+                  <AdminDashboard />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MainLayout>
+                  <AccountList />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/courses"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MainLayout>
+                  <div className="p-6 bg-white rounded-lg shadow-sm">Quản lý khóa học</div>
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/blogs"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MainLayout>
+                  <div className="p-6 bg-white rounded-lg shadow-sm">Quản lý blog</div>
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/consultants"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MainLayout>
+                  <Consultant />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MainLayout>
+                  <div className="p-6 bg-white rounded-lg shadow-sm">Báo cáo thống kê</div>
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/services"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MainLayout>
+                  <Service />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Routes cho User */}
+          <Route path="/" element={<Home />} />
+          <Route path="/quizz" element={<QuizzPage />} />
+          <Route path="/consulting" element={<ConsultingPage />} />
+          <Route path="/consultant/:id" element={<ConsultantDetailPage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/blogs" element={<BlogPage />} />
+          <Route path="/about-us" element={<AboutUsPage />} />
+          
+          {/* Routes cho Authentication */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
