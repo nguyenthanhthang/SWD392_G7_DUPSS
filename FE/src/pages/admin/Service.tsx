@@ -216,17 +216,15 @@ const Service: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        </div>
+      <div className="p-6 bg-white rounded-lg flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm">
+      <div className="p-6 bg-white rounded-lg">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           <p>{error}</p>
         </div>
@@ -235,7 +233,7 @@ const Service: React.FC = () => {
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm">
+    <div className="p-6 bg-white rounded-lg mt-4">
       <ToastContainer
         position="top-right"
         autoClose={3000}

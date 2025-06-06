@@ -472,7 +472,7 @@ const AccountList: React.FC = () => {
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm">
+    <div className="p-4 bg-white rounded-lg mt-4">
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -498,7 +498,7 @@ const AccountList: React.FC = () => {
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto mt-8">
         <table className="min-w-full bg-white table-fixed">
           <thead>
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">

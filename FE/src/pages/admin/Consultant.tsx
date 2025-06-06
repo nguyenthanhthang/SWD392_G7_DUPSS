@@ -321,7 +321,7 @@ const Consultant: React.FC = () => {
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm">
+    <div className="p-4 bg-white rounded-lg mt-4">
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -337,15 +337,6 @@ const Consultant: React.FC = () => {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-indigo-500">Quản lý tư vấn viên</h1>
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Thêm tư vấn viên
-        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -414,108 +405,6 @@ const Consultant: React.FC = () => {
           </tbody>
         </table>
       </div>
-
-      {/* Modal Tạo tư vấn viên mới */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Thêm tư vấn viên mới</h2>
-              <button
-                onClick={handleCloseCreateModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateConsultant} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">ID Tài khoản</label>
-                <input
-                  type="text"
-                  name="accountId"
-                  value={formData.accountId}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-                <p className="mt-1 text-xs text-gray-500">Nhập ID của tài khoản đã tồn tại</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Giới thiệu</label>
-                <textarea
-                  name="introduction"
-                  value={formData.introduction}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Nhập thông tin giới thiệu về tư vấn viên"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Thông tin liên hệ</label>
-                <input
-                  type="text"
-                  name="contact"
-                  value={formData.contact}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Thông tin liên hệ thêm (nếu có)"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Kinh nghiệm (năm)</label>
-                <input
-                  type="number"
-                  name="experience"
-                  value={formData.experience}
-                  onChange={handleInputChange}
-                  min="0"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option value="active">Hoạt động</option>
-                  <option value="inactive">Không hoạt động</option>
-                  <option value="isDeleted">Đã xóa</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCloseCreateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
-                >
-                  Tạo mới
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal Cập nhật tư vấn viên */}
       {isUpdateModalOpen && selectedConsultant && (

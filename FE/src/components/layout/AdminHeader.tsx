@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import logo from '/avarta.png';
 
-function AdminHeader() {
+interface AdminHeaderProps {
+  isSidebarCollapsed?: boolean;
+}
+
+function AdminHeader({ isSidebarCollapsed = false }: AdminHeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
@@ -52,7 +56,7 @@ function AdminHeader() {
   };
 
   return (
-    <header className="fixed top-0 right-0 left-64 z-40 bg-white border-b border-gray-200">
+    <header className={`fixed top-0 right-0 ${isSidebarCollapsed ? 'left-20' : 'left-64'} z-40 bg-white transition-all duration-300`}>
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -61,7 +65,7 @@ function AdminHeader() {
               alt="Logo"
               className="h-10 w-10 object-cover rounded-full mr-2"
             />
-            <h1 className="text-2xl font-semibold text-gray-800">Dashboard</h1>
+            
             <div className="ml-4 text-sm text-gray-500">
               {formatDate(currentTime)}
             </div>
