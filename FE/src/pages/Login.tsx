@@ -1,6 +1,6 @@
 import loginImg from '../assets/login2.png';
 import logo from '/avarta.png';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
@@ -13,17 +13,27 @@ function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, loginWithGoogle, error: authError, loading } = useAuth();
+  const { login, loginWithGoogle, error: authError, loading, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        navigate('/admin', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(email, password);
-      // Lấy trang trước đó từ state hoặc chuyển về trang chủ
-      const from = (location.state as any)?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      // Nếu không phải admin, chuyển hướng như cũ
+      if (!user || user.role !== 'admin') {
+        const from = (location.state as any)?.from?.pathname || '/';
+        navigate(from, { replace: true });
+      }
     } catch (err) {
       // Lỗi đã được xử lý trong AuthContext
     }
