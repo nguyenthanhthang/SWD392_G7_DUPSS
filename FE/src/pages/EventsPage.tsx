@@ -39,7 +39,8 @@ export default function EventsPage() {
     { id: 'upcoming', name: 'Sắp diễn ra', icon: '🎓' },
     { id: 'ongoing', name: 'Đang diễn ra', icon: '🎤' },
     { id: 'completed', name: 'Đã kết thúc', icon: '📚' },
-    { id: 'cancelled', name: 'Đã hủy', icon: '❌' }
+    { id: 'cancelled', name: 'Đã hủy', icon: '❌' },
+    { id: 'Đã đăng ký', name: 'Đã đăng ký' }
   ];
 
   useEffect(() => {
@@ -64,18 +65,18 @@ export default function EventsPage() {
 
   useEffect(() => {
     let filtered = events;
-    
+
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(event => event.status === selectedCategory);
     }
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(event => 
+      filtered = filtered.filter(event =>
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     setFilteredEvents(filtered);
   }, [selectedCategory, searchTerm, events]);
 
@@ -149,11 +150,10 @@ export default function EventsPage() {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                    selectedCategory === category.id
+                  className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${selectedCategory === category.id
                       ? 'bg-blue-600 text-white shadow-md'
                       : 'bg-white text-gray-700 hover:bg-blue-50'
-                  }`}
+                    }`}
                 >
                   <span className="mr-2">{category.icon}</span>
                   {category.name}
@@ -181,8 +181,8 @@ export default function EventsPage() {
                 />
                 <div className="absolute top-4 right-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm">
                   {event.status === 'upcoming' ? 'Sắp diễn ra' :
-                   event.status === 'ongoing' ? 'Đang diễn ra' :
-                   event.status === 'completed' ? 'Đã kết thúc' : 'Đã hủy'}
+                    event.status === 'ongoing' ? 'Đang diễn ra' :
+                      event.status === 'completed' ? 'Đã kết thúc' : 'Đã hủy'}
                 </div>
               </div>
               <div className="p-6">
@@ -208,14 +208,13 @@ export default function EventsPage() {
                   <button
                     onClick={() => handleRegister(event._id)}
                     disabled={event.registeredUsers.length >= event.capacity || event.status !== 'upcoming'}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                      event.registeredUsers.length >= event.capacity || event.status !== 'upcoming'
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${event.registeredUsers.length >= event.capacity || event.status !== 'upcoming'
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
+                      }`}
                   >
-                    {event.registeredUsers.length >= event.capacity ? 'Đã đầy' : 
-                     event.status !== 'upcoming' ? 'Không thể đăng ký' : 'Đăng ký'}
+                    {event.registeredUsers.length >= event.capacity ? 'Đã đầy' :
+                      event.status !== 'upcoming' ? 'Không thể đăng ký' : 'Đăng ký'}
                   </button>
                 </div>
               </div>
