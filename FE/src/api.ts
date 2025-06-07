@@ -89,4 +89,17 @@ export const deleteSlotTimeApi = async (id: string) => {
   return res.data;
 };
 
+export const createAppointmentApi = async (data: {
+  slotTime_id: string;
+  user_id: string;
+  consultant_id: string;
+  service_id: string;
+  dateBooking: string;
+  reason: string;
+  note?: string;
+}) => {
+  const res = await api.post('/appointments', data);
+  return res.data;
+};
+
 export default api; 

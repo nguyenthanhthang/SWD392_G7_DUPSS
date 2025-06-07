@@ -15,7 +15,7 @@ export const createAppointment = async (req: Request, res: Response) => {
 
         const savedAppointment = await newAppointment.save();
         res.status(201).json(savedAppointment);
-    } catch (err: any) {
+    } catch (err: any) { 
         res.status(400).json({ message: err.message });
     }
 }   
