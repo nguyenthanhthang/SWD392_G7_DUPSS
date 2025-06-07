@@ -89,4 +89,74 @@ export const deleteSlotTimeApi = async (id: string) => {
   return res.data;
 };
 
+// Event APIs
+export const getAllEventsApi = async (status?: string, consultantId?: string) => {
+  const params = new URLSearchParams();
+  if (status) params.append('status', status);
+  if (consultantId) params.append('consultantId', consultantId);
+  const res = await api.get(`/events?${params.toString()}`);
+  return res.data;
+};
+
+export const getEventByIdApi = async (id: string) => {
+  const res = await api.get(`/events/${id}`);
+  return res.data;
+};
+
+export const createEventApi = async (data: {
+  title: string;
+  description: string;
+  startDate: Date;
+  endDate: Date;
+  location: string;
+  capacity: number;
+  consultantId: string;
+}) => {
+  const res = await api.post('/events', data);
+  return res.data;
+};
+
+export const updateEventApi = async (id: string, data: Partial<{
+  title: string;
+  description: string;
+  startDate: Date;
+  endDate: Date;
+  location: string;
+  capacity: number;
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+}>) => {
+  const res = await api.put(`/events/${id}`, data);
+  return res.data;
+};
+
+export const deleteEventApi = async (id: string) => {
+  const res = await api.delete(`/events/${id}`);
+  return res.data;
+};
+
+export const registerEventApi = async (eventId: string, userId: string) => {
+  const res = await api.post(`/events/${eventId}/register`, { userId });
+  return res.data;
+};
+
+export const unregisterEventApi = async (eventId: string, userId: string) => {
+  const res = await api.post(`/events/${eventId}/unregister`, { userId });
+  return res.data;
+};
+
+export const getEventQRCodeApi = async (eventId: string) => {
+  const res = await api.get(`/events/${eventId}/qr`);
+  return res.data;
+};
+
+export const checkInEventApi = async (eventId: string, qrData: string, userId: string) => {
+  const res = await api.post(`/events/${eventId}/check-in`, { qrData, userId });
+  return res.data;
+};
+
+export const getEventAttendanceApi = async (eventId: string) => {
+  const res = await api.get(`/events/${eventId}/attendance`);
+  return res.data;
+};
+
 export default api; 

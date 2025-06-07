@@ -1,8 +1,19 @@
 import { Request, Response } from "express";
 import Event, { IEvent } from "../models/Event";
 import Account from "../models/Account";
-import mongoose, { Document } from "mongoose";
+import mongoose, { Document, Types } from "mongoose";
 import { generateEventQRCode, verifyQRCode } from "../utils/qrCodeUtils";
+
+interface CheckInUser {
+  userId: Types.ObjectId;
+  checkedInAt: Date;
+}
+
+interface RegisteredUser {
+  _id: Types.ObjectId;
+  fullName: string;
+  email: string;
+}
 
 // [POST] /api/events - Tạo sự kiện mới
 export const createEvent = async (
@@ -233,7 +244,7 @@ export const getEventQRCode = async (
   res: Response
 ): Promise<void> => {
   try {
-    const eventId = req.params.id;
+    const eventId: string = req.params.id;
     const event = await Event.findById(eventId);
     if (!event) {
       res.status(404).json({ message: "Không tìm thấy sự kiện" });
@@ -300,7 +311,7 @@ export const checkInEvent = async (
     }
 
     // Kiểm tra người dùng đã check-in chưa
-    const isCheckedIn = event.checkedInUsers.some((check) =>
+    const isCheckedIn = event.checkedInUsers.some((check: CheckInUser) =>
       check.userId.equals(new mongoose.Types.ObjectId(req.body.userId))
     );
     if (isCheckedIn) {
@@ -328,8 +339,8 @@ export const getEventAttendance = async (
 ): Promise<void> => {
   try {
     const event = await Event.findById(req.params.id)
-      .populate("registeredUsers", "fullName email")
-      .populate("checkedInUsers.userId", "fullName email");
+      .populate<{ registeredUsers: RegisteredUser[] }>("registeredUsers", "fullName email")
+      .populate<{ checkedInUsers: CheckInUser[] }>("checkedInUsers.userId", "fullName email");
 
     if (!event) {
       res.status(404).json({ message: "Không tìm thấy sự kiện" });
@@ -337,11 +348,12 @@ export const getEventAttendance = async (
     }
 
     // Tạo danh sách điểm danh
-    const attendance = event.registeredUsers.map((user) => ({
+    const attendance = event.registeredUsers.map((user: RegisteredUser) => ({
       user,
       checkedIn:
-        event.checkedInUsers.find((check) => check.userId.equals(user._id))
-          ?.checkedInAt || null,
+        event.checkedInUsers.find((check: CheckInUser) => 
+          check.userId.equals(user._id)
+        )?.checkedInAt || null,
     }));
 
     res.status(200).json(attendance);
