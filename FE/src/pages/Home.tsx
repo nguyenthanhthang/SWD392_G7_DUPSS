@@ -134,6 +134,7 @@ export default function Home() {
               <button className='text-sm md:text-xl font-semibold hover:shadow-xl bg-blue-600 text-white py-3 px-6 md:py-5 md:px-14 rounded-full hover:bg-blue-700'>
                 Take Quiz
               </button>
+              
             </div>  
           </div>
           {/* COLUMN-2 */}

@@ -1,74 +1,57 @@
 import loginImg from '../assets/login2.png';
-import logo from '../assets/logo1.png';
-import { useState } from 'react';
-import { loginApi, loginWithGoogleApi, getAccountByIdApi } from '../api';
-import { Link } from 'react-router-dom';
+import logo from '/avarta.png';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import type { CredentialResponse } from '@react-oauth/google';
+import { useAuth } from '../contexts/AuthContext';
 
 type GoogleJwtPayload = { email: string; name?: string; picture?: string; [key: string]: unknown };
 
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const { login, loginWithGoogle, error: authError, loading, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        navigate('/admin', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
     try {
-      const data = await loginApi(email, password);
-      // Lưu token vào localStorage
-      localStorage.setItem('token', data.data.token);
-      localStorage.setItem('userId', data.data.id);
-      // Gọi API lấy thông tin user
-      const user = await getAccountByIdApi(data.data.id);
-      localStorage.setItem('userInfo', JSON.stringify(user));
-      // Nếu role là customer thì chuyển về Home
-      if (user.role === 'customer') {
-        window.location.href = '/';
-      } else {
-        // Có thể chuyển hướng khác nếu không phải customer
-        window.location.href = '/';
+      await login(email, password);
+      // Nếu không phải admin, chuyển hướng như cũ
+      if (!user || user.role !== 'admin') {
+        const from = (location.state as any)?.from?.pathname || '/';
+        navigate(from, { replace: true });
       }
-    } catch (err: unknown) {
-      if (typeof err === 'object' && err !== null && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { message?: string } } };
-        setError(axiosErr.response?.data?.message || 'Đăng nhập thất bại!');
-      } else {
-        setError('Đăng nhập thất bại!');
-      }
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      // Lỗi đã được xử lý trong AuthContext
     }
   };
 
-  // Google OAuth callback
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     try {
       if (!credentialResponse.credential) {
         alert('Đăng nhập Google thất bại!');
         return;
       }
-      // Giải mã credential để lấy thông tin user
       const decoded = jwtDecode<GoogleJwtPayload>(credentialResponse.credential);
       const email = decoded.email;
       const username = decoded.name || email.split('@')[0];
       const photoUrl = decoded.picture || '';
-      const data = await loginWithGoogleApi(email, username, photoUrl);
-      localStorage.setItem('token', data.data.token);
-      localStorage.setItem('userId', data.data.id);
-      const user = await getAccountByIdApi(data.data.id);
-      localStorage.setItem('userInfo', JSON.stringify(user));
-      if (user.role === 'customer') {
-        window.location.href = '/';
-      } else {
-        window.location.href = '/';
-      }
+      await loginWithGoogle(email, username, photoUrl);
+      const from = (location.state as any)?.from?.pathname || '/';
+      navigate(from, { replace: true });
     } catch {
       alert('Đăng nhập Google thất bại!');
     }
@@ -105,30 +88,32 @@ function LoginPage() {
             Sign in to your account
           </h2>
           <h2 className="text-center text-l tracking-tight text-gray-900">
-            Fist time? <Link to="/register" className="text-indigo-600 hover:text-indigo-500">Sign up</Link>
+            First time? <Link to="/register" className="text-indigo-600 hover:text-indigo-500">Sign up</Link>
           </h2>
-
         </div>
+
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-900">
-                Email address
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-900">
+                Email hoặc Username
               </label>
               <div className="mt-2">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
+                  id="identifier"
+                  name="identifier"
+                  type="text"
+                  autoComplete="username"
                   required
-                  autoComplete="email"
                   className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600 sm:text-sm"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   disabled={loading}
+                  placeholder="Nhập email hoặc username"
                 />
               </div>
             </div>
+
             <div>
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-900">
@@ -170,21 +155,11 @@ function LoginPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                disabled={loading}
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                Remember me
-              </label>
-            </div>
-            {error && (
-              <div className="text-red-500 text-sm">{error}</div>
+
+            {authError && (
+              <div className="text-red-500 text-sm">{authError}</div>
             )}
+
             <div>
               <button
                 type="submit"

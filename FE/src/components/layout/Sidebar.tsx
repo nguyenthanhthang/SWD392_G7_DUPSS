@@ -1,138 +1,116 @@
-import React from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Sidebar = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
-  const currentPath = location.pathname;
+  const { user } = useAuth();
 
-  // Danh sách menu
-  const menuGroups = [
-    {
-      title: 'TRANG CHỦ',
-      items: [
-        {
-          title: 'Tổng quan',
-          path: '/admin',
-          icon: 'dashboard'
-        }
-      ]
-    },
-    {
-      title: 'QUẢN LÝ HỆ THỐNG',
-      items: [
-        {
-          title: 'Quản lý người dùng',
-          path: '/admin/users',
-          icon: 'people'
-        },
-        {
-          title: 'Quản lý tư vấn viên',
-          path: '/admin/consultants',
-          icon: 'support_agent'
-        },
-        {
-          title: 'Quản lý lịch tư vấn',
-          path: '/admin/schedules',
-          icon: 'calendar_today'
-        },
-        {
-          title: 'Quản lý bài viết',
-          path: '/admin/blogs',
-          icon: 'article'
-        },
-        {
-          title: 'Quản lý chương trình',
-          path: '/admin/programs',
-          icon: 'campaign'
-        },
-        {
-          title: 'Quản lý dịch vụ',
-          path: '/admin/services',
-          icon: 'local_activity'
-        },
-        {
-          title: 'Quản lý khảo sát',
-          path: '/admin/surveys',
-          icon: 'poll'
-        }
-      ]
-    },
-    {
-      title: 'BÁO CÁO & THỐNG KÊ',
-      items: [
-        {
-          title: 'Báo cáo tổng quan',
-          path: '/admin/dashboard',
-          icon: 'analytics'
-        },
-        {
-          title: 'Xuất báo cáo Excel',
-          path: '/admin/reports/export',
-          icon: 'file_download'
-        }
-      ]
-    },
-    {
-      title: 'CẤU HÌNH',
-      items: [
-        {
-          title: 'Cài đặt hệ thống',
-          path: '/admin/settings',
-          icon: 'settings'
-        }
-      ]
-    }
-  ];
-
-  // Kiểm tra mục có đang được chọn hay không
   const isActive = (path: string) => {
-    // Xử lý trường hợp đặc biệt cho trang dashboard
-    if (path === '/admin' && currentPath === '/admin') {
+    if (path === '/admin' && location.pathname === '/admin') {
       return true;
     }
-    // Đối với các trang khác, kiểm tra nếu path hiện tại bắt đầu bằng path của mục
-    return currentPath.startsWith(path) && path !== '/admin';
+    return location.pathname.startsWith(path) && path !== '/admin';
   };
 
+  const adminMenuItems = [
+    { path: '/admin', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+    { path: '/admin/users', label: 'Quản lý người dùng', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+    { path: '/admin/courses', label: 'Quản lý khóa học', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+    { path: '/admin/blogs', label: 'Quản lý blog', icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z' },
+    { path: '/admin/consultants', label: 'Quản lý tư vấn viên', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+    { path: '/admin/reports', label: 'Báo cáo thống kê', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+    { path: '/admin/services', label: 'Quản lý dịch vụ', icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' }
+  ];
+
+  const consultantMenuItems = [
+    { path: '/admin', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+    { path: '/admin/consultants', label: 'Quản lý tư vấn', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' }
+  ];
+
+  const menuItems = user?.role === 'admin' ? adminMenuItems : consultantMenuItems;
+
   return (
-    <div className="hidden md:block w-64 bg-white dark:bg-darkgray shadow-md h-screen fixed left-0">
-      <div className="px-4 py-6 bg-white sticky top-0 w-64 z-50">
-        <div className="flex justify-center items-center">
-          <h1 className="text-2xl font-bold text-indigo-600">DUPSS Admin</h1>
+    <div className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
+      <div className="flex flex-col h-full">
+        {/* Logo */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          {!isCollapsed && (
+            <Link to="/admin" className="text-xl font-bold text-indigo-600">
+              DUPSS Admin
+            </Link>
+          )}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 rounded-lg hover:bg-gray-100"
+          >
+            <svg
+              className="w-6 h-6 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d={isCollapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'}
+              />
+            </svg>
+          </button>
         </div>
-      </div>
-      
-      <nav className="mt-2 overflow-y-auto h-[calc(100vh-6rem)]">
-        {menuGroups.map((group, groupIndex) => (
-          <div key={groupIndex} className="mb-4">
-            <h6 className="px-4 mb-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {group.title}
-            </h6>
-            <ul>
-              {group.items.map((item, itemIndex) => {
-                const active = isActive(item.path);
-                return (
-                  <li key={itemIndex} className="mb-1 px-4">
-                    <Link 
-                      to={item.path}
-                      className={`flex items-center py-2 px-3 ${
-                        active 
-                          ? 'bg-indigo-500 text-white font-medium rounded-full' 
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-indigo-50 hover:text-indigo-600'
-                      }`}
-                    >
-                      <span className={`material-icons-outlined mr-3 ${active ? 'text-white' : ''}`}>
-                        {item.icon}
-                      </span>
-                      <span>{item.title}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+
+        {/* Menu Items */}
+        <nav className="flex-1 overflow-y-auto py-4">
+          <ul className="space-y-2 px-3">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    isActive(item.path)
+                      ? 'bg-indigo-50 text-indigo-600'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5 mr-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d={item.icon}
+                    />
+                  </svg>
+                  {!isCollapsed && <span>{item.label}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* User Info */}
+        {!isCollapsed && user && (
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex items-center">
+              <img
+                src={user.photoUrl || 'https://ui-avatars.com/api/?name=User&background=eee&color=555'}
+                alt={user.fullName || user.username}
+                className="w-8 h-8 rounded-full"
+              />
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-700">{user.fullName || user.username}</p>
+                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+              </div>
+            </div>
           </div>
-        ))}
-      </nav>
+        )}
+      </div>
     </div>
   );
 };

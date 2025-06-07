@@ -281,15 +281,21 @@ function ConsultantDetailPage() {
                         });
                         
                         const isBooked = slotObj?.status === 'booked';
+                        const isAvailable = slotObj?.status === 'available';
                         return (
                           <button
                             key={day + slot}
-                            className={`h-14 w-full flex items-center justify-center border-t border-gray-100 transition-all rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 ${isBooked ? 'bg-red-200 text-red-700 cursor-not-allowed' : 'bg-white hover:bg-blue-50'}`}
-                            onClick={() => !isBooked && handleOpenModal(day, slot)}
+                            className={`h-14 w-full flex items-center justify-center border-t border-l border-gray-200 transition-all focus:outline-none
+                              ${isBooked ? 'bg-red-200 text-red-700 cursor-not-allowed' :
+                                isAvailable ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer' :
+                                'bg-gray-100 text-gray-400 cursor-not-allowed'}
+                            `}
+                            style={{ borderRadius: 0 }}
+                            onClick={() => isAvailable && handleOpenModal(day, slot)}
                             type="button"
-                            disabled={isBooked}
+                            disabled={!isAvailable}
                           >
-                            {isBooked ? 'Đã đặt' : ''}
+                            {isBooked ? 'Đã đặt' : isAvailable ? 'Có sẵn' : ''}
                           </button>
                         );
                       })}
