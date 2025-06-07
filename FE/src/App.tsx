@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import ServicePage from "./pages/ServicePage";
 import AppointmentsPage from "./pages/Appointments";
 import PaymentHistory from "./pages/PaymentHistory";
+import Event from "./pages/admin/Event";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="/admin/consultants" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Consultant /></MainLayout></ProtectedRoute>}/>
           <Route path="/admin/reports" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Báo cáo thống kê</div></MainLayout></ProtectedRoute>}/>
           <Route path="/admin/services"element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Service /></MainLayout></ProtectedRoute>}/>
+          <Route path="/admin/events"element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Event /></MainLayout></ProtectedRoute>}/>
           
           {/* Routes cho User */}
           <Route path="/" element={<Home />} />
