@@ -14,6 +14,7 @@ export const createAppointment = async (req: Request, res: Response) => {
         }
 
         const savedAppointment = await newAppointment.save();
+        await SlotTime.findByIdAndUpdate(req.body.slotTime_id, { status: "booked" });
         res.status(201).json(savedAppointment);
     } catch (err: any) {
         res.status(400).json({ message: err.message });
