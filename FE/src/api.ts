@@ -233,7 +233,6 @@ export const checkPhoneNumberExistsApi = async (phone: string, excludeId?: strin
   return res.data;
 };
 
-export default api; 
 export const getRegisteredEventsApi = async (userId: string) => {
   const res = await api.get(`/events/registered/${userId}`);
   return res.data;
