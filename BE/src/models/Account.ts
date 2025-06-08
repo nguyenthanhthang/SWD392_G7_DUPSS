@@ -2,45 +2,41 @@ import mongoose, { Schema, Document } from "mongoose";
 
 // Interface TypeScript cho Account
 export interface IAccount extends Document {
-  username: string;
+  fullName: string;
   email: string;
   password: string;
-  photoUrl?: string;
-  fullName: string;
-  phoneNumber: string;
-  role: "customer" | "consultant" | "admin";
-  gender?: "nam" | "nữ";
+  username: string;
+  role: "consultant" | "customer";
   isVerified: boolean;
   isDisabled: boolean;
+  photoUrl?: string;
   verificationToken?: string;
   verificationTokenExpiresAt?: Date;
+  phoneNumber?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Schema Mongoose
-const AccountSchema: Schema = new Schema(
+const accountSchema = new Schema<IAccount>(
   {
-    username: { type: String, required: true, unique: true },
+    fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    photoUrl: { type: String, default: "" },
-    fullName: { type: String, default: "" },
-    phoneNumber: { type: String, default: "" },
+    username: { type: String, required: true, unique: true },
     role: {
       type: String,
-      enum: ["customer", "consultant", "admin"],
+      enum: ["consultant", "customer"],
       default: "customer",
-    }, 
-    gender: {
-      type: String,
-      enum: ["nam", "nữ"],
     },
-    isDisabled: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
-    verificationToken: String,
-    verificationTokenExpiresAt: Date,
-    
+    isDisabled: { type: Boolean, default: false },
+    photoUrl: { type: String },
+    verificationToken: { type: String },
+    verificationTokenExpiresAt: { type: Date },
+    phoneNumber: { type: String },
   },
   { timestamps: true }
 );
 
-export default mongoose.model<IAccount>("Account", AccountSchema);
+export default mongoose.model<IAccount>("Account", accountSchema);
