@@ -12,6 +12,7 @@ export interface IAccount extends Document {
   photoUrl?: string;
   verificationToken?: string;
   verificationTokenExpiresAt?: Date;
+  phoneNumber?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +34,7 @@ const accountSchema = new Schema<IAccount>(
     photoUrl: { type: String },
     verificationToken: { type: String },
     verificationTokenExpiresAt: { type: Date },
+    phoneNumber: { type: String },
   },
   { timestamps: true }
 );

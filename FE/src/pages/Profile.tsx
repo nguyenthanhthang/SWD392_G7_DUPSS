@@ -207,7 +207,7 @@ export default function Profile() {
                     onClick={() => setTab(m.key)}
                   >
                     {m.label}
-                    </button>
+                  </button>
                 ) : (
                   <button
                     key={m.key}
@@ -221,7 +221,7 @@ export default function Profile() {
                     {m.label}
                   </button>
                 )
-              )}
+              ))}
               <div className="mt-auto pt-8 border-t border-gray-200 mt-8">
                 <Link
                   to="/login"
