@@ -15,20 +15,20 @@ interface User {
   photoUrl?: string;
   fullName?: string;
   phoneNumber?: string;
-  role?: "customer" | "consultant" | "admin";
+  role?: "consultant" | "customer";
   gender?: "nam" | "nữ";
   isVerified?: boolean;
   isDisabled?: boolean;
 } 
 
 const menuTabs = [
-  { key: 'profile', label: 'User Profile' },
-  { key: 'Appointments', label: 'Appointments' },
-  { key: 'payments', label: 'Payments' },
+  { key: "profile", label: "User Profile" },
+  { key: "Appointments", label: "Appointments" },
+  { key: "payments", label: "Payments" },
 ];
 
 export default function Profile() {
-  const [tab, setTab] = useState('profile');
+  const [tab, setTab] = useState("profile");
   const [user, setUser] = useState<User | null>(null);
   const [editData, setEditData] = useState<User>({});
   const [editMode, setEditMode] = useState(false);
@@ -48,7 +48,7 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const userId = localStorage.getItem('userId');
+      const userId = localStorage.getItem("userId");
       if (!userId) return;
       try {
         const data = await getAccountByIdApi(userId);
@@ -211,17 +211,33 @@ export default function Profile() {
                 ) : (
                   <button
                     key={m.key}
-                    className={`text-left px-4 py-3 rounded-lg font-medium transition-colors ${tab === m.key ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:bg-blue-50'}`}
+                    className={`text-left px-4 py-3 rounded-lg font-medium transition-colors ${
+                      tab === m.key
+                        ? "bg-white text-blue-700 shadow-sm"
+                        : "text-gray-600 hover:bg-blue-50"
+                    }`}
                     onClick={() => setTab(m.key)}
                   >
                     {m.label}
                   </button>
                 )
-              ))}
+              )}
               <div className="mt-auto pt-8 border-t border-gray-200 mt-8">
-                <Link to="/login" className="text-red-500 font-medium hover:underline flex items-center gap-2 px-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 5a1 1 0 10-2 0v4a1 1 0 102 0V8z" clipRule="evenodd" />
+                <Link
+                  to="/login"
+                  className="text-red-500 font-medium hover:underline flex items-center gap-2 px-4"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 5a1 1 0 10-2 0v4a1 1 0 102 0V8z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   Sign out
                 </Link>
@@ -368,18 +384,26 @@ export default function Profile() {
             </div>
           </div>
         </div>
-        
+
         {/* Bottom wave decoration */}
         <div className="w-full h-40 mt-12 relative">
           <div className="absolute bottom-0 left-0 right-0">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="w-full">
-              <path fill="#b1e2f3" fillOpacity="1" d="M0,128L48,133.3C96,139,192,149,288,144C384,139,480,117,576,128C672,139,768,181,864,176C960,171,1056,117,1152,96C1248,75,1344,85,1392,90.7L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 1440 320"
+              className="w-full"
+            >
+              <path
+                fill="#b1e2f3"
+                fillOpacity="1"
+                d="M0,128L48,133.3C96,139,192,149,288,144C384,139,480,117,576,128C672,139,768,181,864,176C960,171,1056,117,1152,96C1248,75,1344,85,1392,90.7L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+              ></path>
             </svg>
-            <img 
-              src={whaleLogo} 
-              alt="Whale decoration" 
-              className="absolute right-16 bottom-4 w-32 h-auto opacity-80" 
-              style={{ transform: 'scaleX(-1)' }}
+            <img
+              src={whaleLogo}
+              alt="Whale decoration"
+              className="absolute right-16 bottom-4 w-32 h-auto opacity-80"
+              style={{ transform: "scaleX(-1)" }}
             />
           </div>
         </div>

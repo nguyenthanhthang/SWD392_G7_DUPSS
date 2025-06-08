@@ -10,11 +10,16 @@ import { sendNewVerifyEmailApi, changePasswordApi } from '../api';
 import { Eye, EyeOff } from 'lucide-react';
 import type { AxiosError } from 'axios';
 
-type GoogleJwtPayload = { email: string; name?: string; picture?: string; [key: string]: unknown };
+type GoogleJwtPayload = {
+  email: string;
+  name?: string;
+  picture?: string;
+  [key: string]: unknown;
+};
 
 function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { login, loginWithGoogle, error: authError, loading, user } = useAuth();
   const navigate = useNavigate();
@@ -32,11 +37,21 @@ function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      if (user.role === 'admin') {
-        navigate('/admin', { replace: true });
+      if (user.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else if (user.role === "consultant") {
+        navigate("/consultant-portal/events", { replace: true });
+      } else {
+        const from =
+          location.state &&
+          typeof location.state === "object" &&
+          "from" in location.state
+            ? (location.state.from as { pathname: string }).pathname
+            : "/";
+        navigate(from, { replace: true });
       }
     }
-  }, [user, navigate]);
+  }, [user, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,22 +68,26 @@ function LoginPage() {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+  const handleGoogleSuccess = async (
+    credentialResponse: CredentialResponse
+  ) => {
     try {
       if (!credentialResponse.credential) {
-        alert('Đăng nhập Google thất bại!');
+        alert("Đăng nhập Google thất bại!");
         return;
       }
-      const decoded = jwtDecode<GoogleJwtPayload>(credentialResponse.credential);
+      const decoded = jwtDecode<GoogleJwtPayload>(
+        credentialResponse.credential
+      );
       const email = decoded.email;
-      const username = decoded.name || email.split('@')[0];
-      const photoUrl = decoded.picture || '';
+      const username = decoded.name || email.split("@")[0];
+      const photoUrl = decoded.picture || "";
       await loginWithGoogle(email, username, photoUrl);
       const fromObjGoogle = (location.state as Record<string, unknown>)?.from;
       const fromGoogle = typeof fromObjGoogle === 'object' && fromObjGoogle && 'pathname' in fromObjGoogle ? (fromObjGoogle as { pathname: string }).pathname : '/';
       navigate(fromGoogle, { replace: true });
     } catch {
-      alert('Đăng nhập Google thất bại!');
+      alert("Đăng nhập Google thất bại!");
     }
   };
 

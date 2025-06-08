@@ -2,7 +2,9 @@ import { Request, Response } from "express";
 import Event, { IEvent } from "../models/Event";
 import Account from "../models/Account";
 import mongoose, { Document, Types } from "mongoose";
-import { generateEventQRCode, verifyQRCode } from "../utils/qrCodeUtils";
+import jwt from "jsonwebtoken";
+import QRCode from "qrcode";
+import EventRegistration from "../models/EventRegistration";
 
 interface CheckInUser {
   userId: Types.ObjectId;
@@ -15,32 +17,30 @@ interface RegisteredUser {
   email: string;
 }
 
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
 // [POST] /api/events - Tạo sự kiện mới
 export const createEvent = async (
-  req: Request<{}, {}, IEvent>,
+  req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    // Kiểm tra consultant có tồn tại
-    const consultant = await Account.findById(req.body.consultantId);
-    if (!consultant || consultant.role !== "consultant") {
-      res.status(400).json({ message: "Tư vấn viên không hợp lệ" });
-      return;
-    }
+    const { title, description, startDate, endDate, location, capacity } =
+      req.body;
 
-    // Kiểm tra thời gian
-    if (new Date(req.body.startDate) >= new Date(req.body.endDate)) {
-      res
-        .status(400)
-        .json({ message: "Thời gian bắt đầu phải trước thời gian kết thúc" });
-      return;
-    }
+    const event = new Event({
+      title,
+      description,
+      startDate,
+      endDate,
+      location,
+      capacity,
+    });
 
-    const event = new Event(req.body);
-    const saved = await event.save();
-    res.status(201).json(saved);
+    await event.save();
+    res.status(201).json(event);
   } catch (error) {
-    res.status(400).json({ message: "Tạo sự kiện thất bại", error });
+    res.status(400).json({ message: "Lỗi khi tạo sự kiện", error });
   }
 };
 
@@ -50,22 +50,10 @@ export const getAllEvents = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { status, consultantId } = req.query;
-    let query = {};
-
-    if (status) {
-      query = { ...query, status };
-    }
-    if (consultantId) {
-      query = { ...query, consultantId };
-    }
-
-    const events = await Event.find(query)
-      .populate("consultantId", "fullName email")
-      .sort({ startDate: 1 });
+    const events = await Event.find();
     res.status(200).json(events);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi khi lấy danh sách sự kiện", error });
+    res.status(400).json({ message: "Lỗi khi lấy danh sách sự kiện", error });
   }
 };
 
@@ -75,17 +63,14 @@ export const getEventById = async (
   res: Response
 ): Promise<void> => {
   try {
-    const event = await Event.findById(req.params.id)
-      .populate("consultantId", "fullName email")
-      .populate("registeredUsers", "fullName email");
-
+    const event = await Event.findById(req.params.id);
     if (!event) {
       res.status(404).json({ message: "Không tìm thấy sự kiện" });
       return;
     }
     res.status(200).json(event);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi khi tìm sự kiện", error });
+    res.status(400).json({ message: "Lỗi khi lấy thông tin sự kiện", error });
   }
 };
 
@@ -95,35 +80,13 @@ export const updateEvent = async (
   res: Response
 ): Promise<void> => {
   try {
-    // Kiểm tra sự kiện tồn tại
-    const event = await Event.findById(req.params.id);
-    if (!event) {
-      res.status(404).json({ message: "Không tìm thấy sự kiện" });
-      return;
-    }
-
-    // Không cho phép cập nhật nếu sự kiện đã kết thúc
-    if (event.status === "completed") {
-      res
-        .status(400)
-        .json({ message: "Không thể cập nhật sự kiện đã kết thúc" });
-      return;
-    }
-
-    // Kiểm tra thời gian nếu có cập nhật
-    if (req.body.startDate && req.body.endDate) {
-      if (new Date(req.body.startDate) >= new Date(req.body.endDate)) {
-        res
-          .status(400)
-          .json({ message: "Thời gian bắt đầu phải trước thời gian kết thúc" });
-        return;
-      }
-    }
-
     const updated = await Event.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
-    }).populate("consultantId", "fullName email");
-
+    });
+    if (!updated) {
+      res.status(404).json({ message: "Không tìm thấy sự kiện để cập nhật" });
+      return;
+    }
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi cập nhật sự kiện", error });
@@ -136,22 +99,14 @@ export const deleteEvent = async (
   res: Response
 ): Promise<void> => {
   try {
-    const event = await Event.findById(req.params.id);
-    if (!event) {
-      res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    const deleted = await Event.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      res.status(404).json({ message: "Không tìm thấy sự kiện để xóa" });
       return;
     }
-
-    // Không cho phép xóa sự kiện đang diễn ra hoặc đã kết thúc
-    if (event.status === "ongoing" || event.status === "completed") {
-      res.status(400).json({
-        message: "Không thể xóa sự kiện đang diễn ra hoặc đã kết thúc",
-      });
-      return;
-    }
-
-    await Event.findByIdAndDelete(req.params.id);
-    res.status(204).send();
+    // Xóa tất cả đăng ký liên quan
+    await EventRegistration.deleteMany({ eventId: req.params.id });
+    res.status(200).json({ message: "Xóa sự kiện thành công" });
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi xóa sự kiện", error });
   }
@@ -163,6 +118,13 @@ export const registerEvent = async (
   res: Response
 ): Promise<void> => {
   try {
+    // Kiểm tra account tồn tại
+    const account = await Account.findById(req.body.userId);
+    if (!account) {
+      res.status(404).json({ message: "Không tìm thấy tài khoản" });
+      return;
+    }
+
     const event = await Event.findById(req.params.id);
     if (!event) {
       res.status(404).json({ message: "Không tìm thấy sự kiện" });
@@ -178,63 +140,82 @@ export const registerEvent = async (
     }
 
     // Kiểm tra số lượng đăng ký
-    if (event.registeredUsers.length >= event.capacity) {
+    const registrationCount = await EventRegistration.countDocuments({
+      eventId: event._id,
+    });
+    if (registrationCount >= event.capacity) {
       res.status(400).json({ message: "Sự kiện đã đủ số lượng đăng ký" });
       return;
     }
 
     // Kiểm tra người dùng đã đăng ký chưa
-    const userObjectId = new mongoose.Types.ObjectId(req.body.userId);
-    if (event.registeredUsers.includes(userObjectId)) {
+    const existingRegistration = await EventRegistration.findOne({
+      userId: req.body.userId,
+      eventId: event._id,
+    });
+
+    if (existingRegistration) {
       res.status(400).json({ message: "Bạn đã đăng ký sự kiện này" });
       return;
     }
 
-    event.registeredUsers.push(userObjectId);
-    await event.save();
+    // Tạo JWT token chứa thông tin đăng ký
+    const token = jwt.sign(
+      {
+        userId: req.body.userId,
+        eventId: event._id,
+        timestamp: new Date().toISOString(),
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-    res.status(200).json({ message: "Đăng ký sự kiện thành công" });
+    // Tạo QR code từ token
+    const qrString = await QRCode.toDataURL(token);
+
+    // Lưu thông tin đăng ký
+    const registration = new EventRegistration({
+      userId: req.body.userId,
+      eventId: event._id,
+      token,
+      qrString,
+    });
+
+    await registration.save();
+
+    res.status(200).json({
+      message: "Đăng ký sự kiện thành công",
+      data: {
+        userName: account.fullName,
+        eventName: event.title,
+        eventDate: event.startDate,
+        qrCode: qrString,
+      },
+    });
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi đăng ký sự kiện", error });
   }
 };
 
-// [POST] /api/events/:id/unregister - Hủy đăng ký tham gia sự kiện
+// [POST] /api/events/:id/unregister - Hủy đăng ký sự kiện
 export const unregisterEvent = async (
   req: Request<{ id: string }, {}, { userId: string }>,
   res: Response
 ): Promise<void> => {
   try {
-    const event = await Event.findById(req.params.id);
-    if (!event) {
-      res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    const deleted = await EventRegistration.findOneAndDelete({
+      eventId: req.params.id,
+      userId: req.body.userId,
+    });
+
+    if (!deleted) {
+      res.status(404).json({ message: "Không tìm thấy đăng ký để hủy" });
       return;
     }
 
-    // Kiểm tra trạng thái sự kiện
-    if (event.status !== "upcoming") {
-      res
-        .status(400)
-        .json({ message: "Chỉ có thể hủy đăng ký sự kiện sắp diễn ra" });
-      return;
-    }
-
-    // Kiểm tra người dùng đã đăng ký chưa
-    const userObjectId = new mongoose.Types.ObjectId(req.body.userId);
-    const userIndex = event.registeredUsers.findIndex((id) =>
-      id.equals(userObjectId)
-    );
-    if (userIndex === -1) {
-      res.status(400).json({ message: "Bạn chưa đăng ký sự kiện này" });
-      return;
-    }
-
-    event.registeredUsers.splice(userIndex, 1);
-    await event.save();
-
-    res.status(200).json({ message: "Hủy đăng ký sự kiện thành công" });
+    res.status(200).json({ message: "Hủy đăng ký thành công" });
   } catch (error) {
-    res.status(400).json({ message: "Lỗi khi hủy đăng ký sự kiện", error });
+    res.status(400).json({ message: "Lỗi khi hủy đăng ký", error });
   }
 };
 
@@ -254,77 +235,73 @@ export const getEventQRCode = async (
     // Kiểm tra trạng thái sự kiện
     if (event.status !== "ongoing") {
       res.status(400).json({
-        message: "Chỉ có thể tạo QR code cho sự kiện đang diễn ra",
+        message: "Chỉ có thể lấy QR code cho sự kiện đang diễn ra",
       });
       return;
     }
 
-    // Tạo QR code
-    const qrCodeUrl = await generateEventQRCode(eventId, event.qrCodeSecret);
-    res.status(200).json({ qrCodeUrl });
+    // Lấy QR code từ registration
+    const registration = await EventRegistration.findOne({ eventId });
+    if (!registration) {
+      res.status(404).json({ message: "Không tìm thấy thông tin đăng ký" });
+      return;
+    }
+
+    res.status(200).json({ qrCodeUrl: registration.qrString });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi khi tạo QR code", error });
+    res.status(500).json({ message: "Lỗi khi lấy QR code", error });
   }
 };
 
-// [POST] /api/events/check-in - Check-in vào sự kiện bằng QR code
+// [POST] /api/events/:id/check-in - Check-in sự kiện
 export const checkInEvent = async (
-  req: Request<{ id: string }, {}, { qrData: string; userId: string }>,
+  req: Request<{ id: string }, {}, { qrData: string }>,
   res: Response
 ): Promise<void> => {
   try {
-    // Xác thực người dùng
-    const user = await Account.findById(req.body.userId).exec();
-    if (!user) {
-      res.status(404).json({ message: "Không tìm thấy người dùng" });
+    // Giải mã token từ QR code
+    let decoded;
+    try {
+      decoded = jwt.verify(req.body.qrData, JWT_SECRET) as {
+        userId: string;
+        eventId: string;
+        timestamp: string;
+      };
+    } catch (err) {
+      res.status(400).json({ message: "Mã QR không hợp lệ" });
       return;
     }
 
-    // Xác thực QR code và lấy eventId
-    const event = await Event.findById(req.params.id).exec();
-    if (!event) {
-      res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    // Kiểm tra event ID có khớp không
+    if (decoded.eventId !== req.params.id) {
+      res.status(400).json({ message: "Mã QR không khớp với sự kiện" });
       return;
     }
 
-    const verifyResult = verifyQRCode(req.body.qrData, event.qrCodeSecret);
-    if (!verifyResult.isValid) {
-      res.status(400).json({ message: verifyResult.error });
+    // Tìm thông tin đăng ký
+    const registration = await EventRegistration.findOne({
+      userId: decoded.userId,
+      eventId: decoded.eventId,
+      token: req.body.qrData,
+    });
+
+    if (!registration) {
+      res.status(400).json({ message: "Không tìm thấy thông tin đăng ký" });
       return;
     }
 
-    // Kiểm tra sự kiện có đang diễn ra không
-    if (event.status !== "ongoing") {
+    // Kiểm tra đã check-in chưa
+    if (registration.checkedInAt) {
       res.status(400).json({
-        message: "Chỉ có thể check-in cho sự kiện đang diễn ra",
+        message: "Đã check-in trước đó",
+        checkedInAt: registration.checkedInAt,
       });
       return;
     }
 
-    // Kiểm tra người dùng đã đăng ký sự kiện chưa
-    const isRegistered = event.registeredUsers.some((id) =>
-      id.equals(new mongoose.Types.ObjectId(req.body.userId))
-    );
-    if (!isRegistered) {
-      res.status(400).json({ message: "Bạn chưa đăng ký sự kiện này" });
-      return;
-    }
-
-    // Kiểm tra người dùng đã check-in chưa
-    const isCheckedIn = event.checkedInUsers.some((check: CheckInUser) =>
-      check.userId.equals(new mongoose.Types.ObjectId(req.body.userId))
-    );
-    if (isCheckedIn) {
-      res.status(400).json({ message: "Bạn đã check-in sự kiện này" });
-      return;
-    }
-
-    // Thực hiện check-in
-    event.checkedInUsers.push({
-      userId: new mongoose.Types.ObjectId(req.body.userId),
-      checkedInAt: new Date(),
-    });
-    await event.save();
+    // Cập nhật thời gian check-in
+    registration.checkedInAt = new Date();
+    await registration.save();
 
     res.status(200).json({ message: "Check-in thành công" });
   } catch (error) {
@@ -338,26 +315,36 @@ export const getEventAttendance = async (
   res: Response
 ): Promise<void> => {
   try {
-    const event = await Event.findById(req.params.id)
-      .populate<{ registeredUsers: RegisteredUser[] }>("registeredUsers", "fullName email")
-      .populate<{ checkedInUsers: CheckInUser[] }>("checkedInUsers.userId", "fullName email");
+    const registrations = await EventRegistration.find({
+      eventId: req.params.id,
+    }).populate("userId", "fullName email");
 
-    if (!event) {
-      res.status(404).json({ message: "Không tìm thấy sự kiện" });
-      return;
-    }
-
-    // Tạo danh sách điểm danh
-    const attendance = event.registeredUsers.map((user: RegisteredUser) => ({
-      user,
-      checkedIn:
-        event.checkedInUsers.find((check: CheckInUser) => 
-          check.userId.equals(user._id)
-        )?.checkedInAt || null,
+    const attendance = registrations.map((reg) => ({
+      userId: reg.userId,
+      checkedInAt: reg.checkedInAt,
     }));
 
     res.status(200).json(attendance);
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi lấy danh sách điểm danh", error });
+  }
+};
+
+// [GET] /api/events/registered/:userId - Lấy danh sách sự kiện đã đăng ký
+export const getRegisteredEvents = async (
+  req: Request<{ userId: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const registrations = await EventRegistration.find({
+      userId: req.params.userId,
+    }).populate("eventId");
+
+    const events = registrations.map((reg) => reg.eventId);
+    res.status(200).json(events);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Lỗi khi lấy danh sách sự kiện đã đăng ký", error });
   }
 };

@@ -1,35 +1,85 @@
-import axios from 'axios';
+import axios from "axios";
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Đổi lại nếu BE chạy port khác hoặc có prefix khác
+  baseURL: "http://localhost:5000/api", // Đổi lại nếu BE chạy port khác hoặc có prefix khác
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
+// Add request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear local storage on unauthorized
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userInfo");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const loginApi = async (login: string, password: string) => {
   // login có thể là email hoặc username
-  const res = await api.post('/auth/login', { login, password });
+  const res = await api.post("/auth/login", { login, password });
   return res.data;
 };
 
-export const registerApi = async (username: string, email: string, password: string, confirmPassword: string) => {
-  const res = await api.post('/auth/register', { username, email, password, confirmPassword });
+export const registerApi = async (
+  username: string,
+  email: string,
+  password: string,
+  confirmPassword: string
+) => {
+  const res = await api.post("/auth/register", {
+    username,
+    email,
+    password,
+    confirmPassword,
+  });
   return res.data;
 };
 
-export const loginWithGoogleApi = async (email: string, username: string, photoUrl: string) => {
-  const res = await api.post('/auth/login-google', { email, username, photoUrl });
+export const loginWithGoogleApi = async (
+  email: string,
+  username: string,
+  photoUrl: string
+) => {
+  const res = await api.post("/auth/login-google", {
+    email,
+    username,
+    photoUrl,
+  });
   return res.data;
 };
 
 export const sendOtpApi = async (email: string, username: string) => {
-  const res = await api.post('/auth/send-new-verify-email', { email, username });
+  const res = await api.post("/auth/send-new-verify-email", {
+    email,
+    username,
+  });
   return res.data;
 };
 
 export const checkOtpApi = async (verifyCode: string) => {
-  const res = await api.post('/auth/check-otp', { verifyCode });
+  const res = await api.post("/auth/check-otp", { verifyCode });
   return res.data;
 };
 
@@ -41,7 +91,7 @@ export const getAccountByIdApi = async (id: string) => {
 
 // Lấy danh sách consultant
 export const getAllConsultantsApi = async () => {
-  const res = await api.get('/consultants');
+  const res = await api.get("/consultants");
   return res.data;
 };
 
@@ -53,13 +103,13 @@ export const getConsultantByIdApi = async (id: string) => {
 
 // Lấy danh sách dịch vụ
 export const getAllServicesApi = async () => {
-  const res = await api.get('/services');
+  const res = await api.get("/services");
   return res.data;
 };
 
 // Lấy danh sách certificate
 export const getAllCertificatesApi = async () => {
-  const res = await api.get('/certificates');
+  const res = await api.get("/certificates");
   return res.data;
 };
 
@@ -69,12 +119,20 @@ export const getSlotTimeByConsultantIdApi = async (consultantId: string) => {
   return res.data;
 };
 
-export const createSlotTimeApi = async (data: { consultant_id: string; start_time: string; end_time: string; status: string }) => {
-  const res = await api.post('/slot-times', data);
+export const createSlotTimeApi = async (data: {
+  consultant_id: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+}) => {
+  const res = await api.post("/slot-times", data);
   return res.data;
 };
 
-export const updateSlotTimeApi = async (id: string, data: { start_time: string; end_time: string }) => {
+export const updateSlotTimeApi = async (
+  id: string,
+  data: { start_time: string; end_time: string }
+) => {
   const res = await api.put(`/slot-times/${id}`, data);
   return res.data;
 };
@@ -90,10 +148,9 @@ export const deleteSlotTimeApi = async (id: string) => {
 };
 
 // Event APIs
-export const getAllEventsApi = async (status?: string, consultantId?: string) => {
+export const getAllEventsApi = async (status?: string) => {
   const params = new URLSearchParams();
-  if (status) params.append('status', status);
-  if (consultantId) params.append('consultantId', consultantId);
+  if (status) params.append("status", status);
   const res = await api.get(`/events?${params.toString()}`);
   return res.data;
 };
@@ -112,19 +169,22 @@ export const createEventApi = async (data: {
   capacity: number;
   consultantId: string;
 }) => {
-  const res = await api.post('/events', data);
+  const res = await api.post("/events", data);
   return res.data;
 };
 
-export const updateEventApi = async (id: string, data: Partial<{
-  title: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  location: string;
-  capacity: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-}>) => {
+export const updateEventApi = async (
+  id: string,
+  data: Partial<{
+    title: string;
+    description: string;
+    startDate: Date;
+    endDate: Date;
+    location: string;
+    capacity: number;
+    status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  }>
+) => {
   const res = await api.put(`/events/${id}`, data);
   return res.data;
 };
@@ -154,13 +214,22 @@ export const getEventQRCodeApi = async (eventId: string) => {
   return res.data;
 };
 
-export const checkInEventApi = async (eventId: string, qrData: string, userId: string) => {
+export const checkInEventApi = async (
+  eventId: string,
+  qrData: string,
+  userId: string
+) => {
   const res = await api.post(`/events/${eventId}/check-in`, { qrData, userId });
   return res.data;
 };
 
 export const getEventAttendanceApi = async (eventId: string) => {
   const res = await api.get(`/events/${eventId}/attendance`);
+  return res.data;
+};
+
+export const getRegisteredEventsApi = async (userId: string) => {
+  const res = await api.get(`/events/registered/${userId}`);
   return res.data;
 };
 
@@ -189,4 +258,4 @@ export const changePasswordApi = async (email: string, password: string, confirm
   return res.data;
 };
 
-export default api; 
+export default api;
