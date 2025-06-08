@@ -208,6 +208,10 @@ function ConsultantDetailPage() {
         note: form.note,
       };
       await createAppointmentApi(payload);
+      // Sau khi đặt lịch thành công, cập nhật trạng thái slot vừa đặt thành 'booked' trong slotTimes
+      setSlotTimes(prevSlotTimes => prevSlotTimes.map(st =>
+        st._id === selectedSlotObj._id ? { ...st, status: 'booked' } : st
+      ));
       showNotification('Đặt lịch thành công!', 'success');
       handleCloseModal();
     } catch (err: unknown) {

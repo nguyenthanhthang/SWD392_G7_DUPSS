@@ -138,6 +138,11 @@ export const registerEventApi = async (eventId: string, userId: string) => {
   const res = await api.post(`/events/${eventId}/register`, { userId });
   return res.data;
 };
+// Gửi OTP về email
+export const sendNewVerifyEmailApi = async (email: string, username: string) => {
+  const res = await api.post('/auth/send-new-verify-email', { email, username });
+  return res.data;
+};
 
 export const unregisterEventApi = async (eventId: string, userId: string) => {
   const res = await api.post(`/events/${eventId}/unregister`, { userId });
@@ -169,6 +174,18 @@ export const createAppointmentApi = async (data: {
   note?: string;
 }) => {
   const res = await api.post('/appointments', data);
+  return res.data;
+};
+
+// Cập nhật thông tin account
+export const updateAccountApi = async (id: string, data: Partial<{ fullName: string; phoneNumber: string }>) => {
+  const res = await api.put(`/accounts/${id}`, data);
+  return res.data;
+};
+
+// Đổi mật khẩu
+export const changePasswordApi = async (email: string, password: string, confirmPassword: string) => {
+  const res = await api.post(`/accounts/change-password`, { email, password, confirmPassword });
   return res.data;
 };
 

@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import Account, { IAccount } from "../models/Account";
 import Consultant from "../models/Consultant";
+import bcrypt from "bcryptjs";
+import { isStrongPassword } from "../utils";
 
 // [POST] /api/accounts – Tạo tài khoản
 export const createAccount = async (
@@ -59,6 +61,34 @@ export const updateAccount = async (
       return;
     }
 
+    // Validate tên (fullName)
+    if (req.body.fullName) {
+      const name = req.body.fullName.trim();
+      if (name.length < 8 || name.length > 30) {
+        res.status(400).json({ message: "Tên phải từ 8 đến 30 ký tự!" });
+        return;
+      }
+      if (!/^[a-zA-Z0-9_ ]{8,30}$/.test(name)) {
+        res.status(400).json({ message: "Tên chỉ được chứa chữ, số, dấu gạch dưới!" });
+        return;
+      }
+      // Kiểm tra trùng tên với account khác
+      const exists = await Account.findOne({ fullName: name, _id: { $ne: req.params.id } });
+      if (exists) {
+        res.status(400).json({ message: "Tên này đã được sử dụng!" });
+        return;
+      }
+    }
+
+    // Validate số điện thoại
+    if (req.body.phoneNumber) {
+      const phone = req.body.phoneNumber.trim();
+      if (!/^0\d{9}$/.test(phone)) {
+        res.status(400).json({ message: "Số điện thoại phải 10 số, bắt đầu bằng 0!" });
+        return;
+      }
+    }
+
     // Kiểm tra nếu đang cố chuyển từ consultant sang customer
     if (currentAccount.role === "consultant" && req.body.role === "customer") {
       res.status(400).json({ message: "Không thể chuyển từ tư vấn viên sang khách hàng" });
@@ -114,5 +144,38 @@ export const deleteAccount = async (
     res.status(204).send();
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi xoá", error });
+  }
+};
+
+// [POST] /api/accounts/change-password – Đổi mật khẩu bằng email
+export const changePassword = async (
+  req: Request<{}, {}, { email: string; password: string; confirmPassword: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { email, password, confirmPassword } = req.body;
+    if (!email || !password || !confirmPassword) {
+      res.status(400).json({ message: "Vui lòng nhập đầy đủ email, mật khẩu mới và xác nhận!" });
+      return;
+    }
+    if (password !== confirmPassword) {
+      res.status(400).json({ message: "Mật khẩu xác nhận không khớp!" });
+      return;
+    }
+    if (!isStrongPassword(password)) {
+      res.status(400).json({ message: "Mật khẩu phải mạnh (ít nhất 8 ký tự, chữ hoa, thường, số, ký tự đặc biệt)!" });
+      return;
+    }
+    const account = await Account.findOne({ email });
+    if (!account) {
+      res.status(404).json({ message: "Không tìm thấy tài khoản với email này!" });
+      return;
+    }
+    const hashed = await bcrypt.hash(password, 10);
+    account.password = hashed;
+    await account.save();
+    res.status(200).json({ message: "Đổi mật khẩu thành công!" });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi đổi mật khẩu", error });
   }
 };
