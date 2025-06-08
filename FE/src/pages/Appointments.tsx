@@ -1,109 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Search, Eye, X, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAppointmentByUserIdApi } from '../api';
 
 const AppointmentsPage = () => {
   const navigate = useNavigate();
-  type Appointment = { 
-    id: number; 
-    consultant: string;
-    specialty: string;
-    date: string;
-    time: string;
-    duration: string;
-    status: 'confirmed' | 'completed' | 'cancelled';
-    type: string;
-    location: string;
-    avatar: string;
-    notes: string;
-  };
+  interface Appointment {
+    _id: string;
+    consultant_id?: { fullName?: string; photoUrl?: string };
+    service_id?: { name?: string };
+    slotTime_id?: { start_time?: string; end_time?: string };
+    dateBooking?: string;
+    type?: string;
+    location?: string;
+    status?: string;
+    reason?: string;
+  }
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDate, setFilterDate] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data
-  const appointments: Appointment[] = [
-    {
-      id: 1,
-      consultant: 'Dr. Sarah Johnson',
-      specialty: 'Cardiology',
-      date: '2025-06-08',
-      time: '09:00',
-      duration: '30 min',
-      status: 'confirmed',
-      type: 'Video Call',
-      location: 'Online',
-      avatar: '👩‍⚕️',
-      notes: 'Regular checkup for heart condition'
-    },
-    {
-      id: 2,
-      consultant: 'Dr. Michael Chen',
-      specialty: 'Dermatology',
-      date: '2025-06-10',
-      time: '14:30',
-      duration: '45 min',
-      status: 'completed',
-      type: 'In-person',
-      location: 'Room 205, Medical Center',
-      avatar: '👨‍⚕️',
-      notes: 'Skin examination and treatment consultation'
-    },
-    {
-      id: 3,
-      consultant: 'Dr. Emily Rodriguez',
-      specialty: 'Psychology',
-      date: '2025-06-05',
-      time: '11:00',
-      duration: '60 min',
-      status: 'completed',
-      type: 'Video Call',
-      location: 'Online',
-      avatar: '👩‍⚕️',
-      notes: 'Therapy session - anxiety management'
-    },
-    {
-      id: 4,
-      consultant: 'Dr. James Wilson',
-      specialty: 'Orthopedics',
-      date: '2025-06-12',
-      time: '16:00',
-      duration: '30 min',
-      status: 'cancelled',
-      type: 'In-person',
-      location: 'Room 301, Medical Center',
-      avatar: '👨‍⚕️',
-      notes: 'Follow-up for knee injury'
-    }
-  ];
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      setLoading(true);
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        setAppointments([]);
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await getAppointmentByUserIdApi(userId);
+        setAppointments(data || []);
+      } catch {
+        setAppointments([]);
+      }
+      setLoading(false);
+    };
+    fetchAppointments();
+  }, []);
 
-  const filteredAppointments = appointments.filter(apt => {
+  const filteredAppointments = appointments.filter((apt: Appointment) => {
     const matchesStatus = filterStatus === 'all' || apt.status === filterStatus;
-    const matchesSearch = apt.consultant.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apt.specialty.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (apt.consultant_id?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (apt.service_id?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
-
-  const getStatusColor = (status: 'confirmed' | 'completed' | 'cancelled') => {
-    switch(status) {
-      case 'confirmed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getStatusIcon = (status: 'confirmed' | 'completed' | 'cancelled') => {
-    switch(status) {
-      case 'confirmed': return <CheckCircle className="w-4 h-4" />;
-      case 'completed': return <CheckCircle className="w-4 h-4" />;
-      case 'cancelled': return <X className="w-4 h-4" />;
-      default: return <Clock className="w-4 h-4" />;
-    }
-  };
 
   return (
     <div className="bg-gray-50 w-full">
@@ -114,7 +61,9 @@ const AppointmentsPage = () => {
             <h1 className="text-2xl font-bold text-gray-900">My Appointments</h1>
             <p className="text-gray-600 mt-1">Manage your medical consultations</p>
           </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            onClick={() => navigate('/service')}
+          >
             Book New Appointment
           </button>
         </div>
@@ -124,40 +73,51 @@ const AppointmentsPage = () => {
         
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <button
-            type="button"
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6 ">
+          {/* Confirmed */}
+          <div
+            className={`bg-white rounded-lg p-4 shadow-sm border flex flex-col items-center justify-center transition-all min-w-[200px] max-w-[240px] h-25 mx-auto cursor-pointer ${filterStatus === 'confirmed' ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200'}`}
             onClick={() => setFilterStatus('confirmed')}
-            className={`bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col items-center justify-center transition-all focus:outline-none ${filterStatus === 'confirmed' ? 'ring-2 ring-green-400 border-green-300' : ''}`}
           >
             <div className="p-2 bg-green-100 rounded-lg mb-1 flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
-            <p className="text-base text-gray-600 mb-0.5">Confirmed</p>
-            <p className="text-2xl font-bold text-gray-900">8</p>
-          </button>
-          <button
-            type="button"
+            <p className="text-sm text-gray-600 mb-0.5">Confirmed</p>
+            <p className="text-2xl font-bold text-gray-900">{appointments.filter(a => a.status === 'confirmed').length}</p>
+          </div>
+          {/* Completed */}
+          <div
+            className={`bg-white rounded-lg p-4 shadow-sm border flex flex-col items-center justify-center transition-all min-w-[200px] max-w-[240px] h-25 mx-auto cursor-pointer ${filterStatus === 'completed' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}`}
             onClick={() => setFilterStatus('completed')}
-            className={`bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col items-center justify-center transition-all focus:outline-none ${filterStatus === 'completed' ? 'ring-2 ring-blue-400 border-blue-300' : ''}`}
           >
             <div className="p-2 bg-blue-100 rounded-lg mb-1 flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-blue-600" />
             </div>
-            <p className="text-base text-gray-600 mb-0.5">Completed</p>
-            <p className="text-2xl font-bold text-gray-900">2</p>
-          </button>
-          <button
-            type="button"
+            <p className="text-sm text-gray-600 mb-0.5">Completed</p>
+            <p className="text-2xl font-bold text-gray-900">{appointments.filter(a => a.status === 'completed').length}</p>
+          </div>
+          {/* Cancelled */}
+          <div
+            className={`bg-white rounded-lg p-4 shadow-sm border flex flex-col items-center justify-center transition-all min-w-[200px] max-w-[240px] h-25 mx-auto cursor-pointer ${filterStatus === 'cancelled' ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-200'}`}
             onClick={() => setFilterStatus('cancelled')}
-            className={`bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col items-center justify-center transition-all focus:outline-none ${filterStatus === 'cancelled' ? 'ring-2 ring-red-400 border-red-300' : ''}`}
           >
             <div className="p-2 bg-red-100 rounded-lg mb-1 flex items-center justify-center">
               <X className="w-6 h-6 text-red-600" />
             </div>
-            <p className="text-base text-gray-600 mb-0.5">Cancelled</p>
-            <p className="text-2xl font-bold text-gray-900">1</p>
-          </button>
+            <p className="text-sm text-gray-600 mb-0.5">Cancelled</p>
+            <p className="text-2xl font-bold text-gray-900">{appointments.filter(a => a.status === 'cancelled').length}</p>
+          </div>
+          {/* Pending */}
+          <div
+            className={`bg-white rounded-lg p-4 shadow-sm border flex flex-col items-center justify-center transition-all min-w-[200px] max-w-[240px] h-25 mx-auto cursor-pointer ${filterStatus === 'pending' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-gray-200'}`}
+            onClick={() => setFilterStatus('pending')}
+          >
+            <div className="p-2 bg-yellow-100 rounded-lg mb-1 flex items-center justify-center">
+              <Clock className="w-6 h-6 text-yellow-600" />
+            </div>
+            <p className="text-sm text-gray-600 mb-0.5">Pending</p>
+            <p className="text-2xl font-bold text-gray-900">{appointments.filter(a => a.status === 'pending').length}</p>
+          </div>
         </div>
 
         {/* Filters & Search */}
@@ -187,6 +147,7 @@ const AppointmentsPage = () => {
               <option value="confirmed">Confirmed</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
+              <option value="pending">Pending</option>
             </select>
 
             {/* Date Filter */}
@@ -213,73 +174,60 @@ const AppointmentsPage = () => {
               Appointments ({filteredAppointments.length})
             </h2>
           </div>
-          
           <div className="divide-y divide-gray-200">
-            {filteredAppointments.map((appointment) => (
+            {loading ? (
+              <div className="p-8 text-center text-gray-500">Đang tải dữ liệu...</div>
+            ) : filteredAppointments.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">Bạn chưa có lịch hẹn nào.</div>
+            ) : filteredAppointments.map((appointment: Appointment) => (
               <div
-                key={appointment.id}
+                key={appointment._id}
                 className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => navigate(`/appointments/${appointment.id}`)}
+                onClick={() => navigate(`/appointments/${appointment._id}`)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
-                      {appointment.avatar}
+                      {appointment.consultant_id?.photoUrl ? (
+                        <img src={appointment.consultant_id.photoUrl} alt="avatar" className="w-10 h-10 rounded-full" />
+                      ) : (
+                        <span role="img" aria-label="doctor">👨‍⚕️</span>
+                      )}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{appointment.consultant}</h3>
-                      <p className="text-sm text-gray-600">{appointment.specialty}</p>
+                      <h3 className="font-semibold text-gray-900">{appointment.consultant_id?.fullName || '---'}</h3>
+                      <p className="text-sm text-gray-600">{appointment.service_id?.name || ''}</p>
                     </div>
                   </div>
-
                   <div className="flex items-center space-x-6">
                     <div className="text-right">
                       <div className="flex items-center text-gray-900 font-medium">
                         <Calendar className="w-4 h-4 mr-2" />
-                        {new Date(appointment.date).toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
+                        {appointment.dateBooking ? new Date(appointment.dateBooking).toLocaleDateString('vi-VN') : '--'}
                       </div>
                       <div className="flex items-center text-gray-600 text-sm mt-1">
                         <Clock className="w-4 h-4 mr-2" />
-                        {appointment.time} ({appointment.duration})
+                        {appointment.slotTime_id?.start_time || ''} - {appointment.slotTime_id?.end_time || ''}
                       </div>
                     </div>
-
                     <div className="text-right">
                       <div className="flex items-center text-gray-600 text-sm">
                         <MapPin className="w-4 h-4 mr-2" />
-                        {appointment.type}
+                        {appointment.type || '---'}
                       </div>
                       <p className="text-xs text-gray-500 mt-1 max-w-32 truncate">
-                        {appointment.location}
+                        {appointment.location || ''}
                       </p>
                     </div>
-
-                    <div className={`px-3 py-1.5 rounded-full text-xs font-medium border flex items-center ${getStatusColor(appointment.status)}`}>
-                      {getStatusIcon(appointment.status)}
-                      <span className="ml-1.5 capitalize">{appointment.status}</span>
-                      {appointment.status === 'confirmed' && (
-                        <button
-                          className="ml-3 px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-semibold border border-red-200 hover:bg-red-200 transition-colors"
-                          onClick={e => {
-                            e.stopPropagation();
-                            setShowCancelModal(true);
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      )}
+                    <div className={`px-3 py-1.5 rounded-full text-xs font-medium border flex items-center`}>
+                      <span className="ml-1.5 capitalize">{appointment.status || ''}</span>
                     </div>
                   </div>
                 </div>
-
-                {appointment.notes && (
+                {appointment.reason && (
                   <div className="mt-3 ml-16">
                     <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-                      <strong>Notes:</strong> {appointment.notes}
+                      <strong>Notes:</strong> {appointment.reason}
                     </p>
                   </div>
                 )}
@@ -293,7 +241,9 @@ const AppointmentsPage = () => {
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
             <p className="text-gray-600 mb-4">Try adjusting your filters or search terms</p>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              onClick={() => navigate('/service')}
+            >
               Book Your First Appointment
             </button>
           </div>

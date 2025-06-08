@@ -258,4 +258,9 @@ export const changePasswordApi = async (email: string, password: string, confirm
   return res.data;
 };
 
+export const getAppointmentByUserIdApi = async (userId: string) => {
+  const res = await api.get(`/appointments/user/${userId}`);
+  return res.data;
+};
+
 export default api;
