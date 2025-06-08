@@ -88,6 +88,10 @@ export const updateAccount = async (
       });
       if (existedPhone) {
         res.status(400).json({ message: "Số điện thoại đã tồn tại" });
+        return;
+      }
+    }
+
     // Validate tên (fullName)
     if (req.body.fullName) {
       const name = req.body.fullName.trim();
