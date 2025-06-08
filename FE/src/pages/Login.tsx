@@ -57,12 +57,7 @@ function LoginPage() {
     e.preventDefault();
     try {
       await login(email, password);
-      // Nếu không phải admin, chuyển hướng như cũ
-      if (!user || user.role !== 'admin') {
-        const fromObj = (location.state as Record<string, unknown>)?.from;
-        const from = typeof fromObj === 'object' && fromObj && 'pathname' in fromObj ? (fromObj as { pathname: string }).pathname : '/';
-        navigate(from, { replace: true });
-      }
+      // Chuyển hướng sẽ được xử lý trong useEffect khi user cập nhật
     } catch {
       // Lỗi đã được xử lý trong AuthContext
     }

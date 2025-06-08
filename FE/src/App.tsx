@@ -149,6 +149,7 @@ function AppContent() {
                   <Route path="users" element={<AccountList />} />
                   <Route path="services" element={<Service />} />
                   <Route path="events" element={<EventManagement />} />
+                  <Route path="consultants" element={<Consultant />} />
                 </Routes>
               </AdminLayout>
             </AdminRoute>
