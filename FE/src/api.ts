@@ -159,4 +159,9 @@ export const getEventAttendanceApi = async (eventId: string) => {
   return res.data;
 };
 
+export const checkPhoneNumberExistsApi = async (phone: string, excludeId?: string) => {
+  const res = await api.get(`/accounts/check-phone/${phone}` + (excludeId ? `?excludeId=${excludeId}` : ''));
+  return res.data;
+};
+
 export default api; 

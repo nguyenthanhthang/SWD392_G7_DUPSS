@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import api from '../../api';
+import React, { useEffect, useState, useCallback } from 'react';
+import api, { checkPhoneNumberExistsApi } from '../../api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -63,10 +63,89 @@ const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
   );
 };
 
+// Component con cho input số điện thoại + icon trạng thái
+const PhoneNumberInput: React.FC<{
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  excludeId?: string;
+  disabled?: boolean;
+}> = React.memo(({ value, onChange, excludeId, disabled }) => {
+  const [phoneCheckLoading, setPhoneCheckLoading] = useState(false);
+  const [phoneExists, setPhoneExists] = useState(false);
+
+  useEffect(() => {
+    if (!value) {
+      setPhoneExists(false);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      setPhoneCheckLoading(true);
+      try {
+        const res = await checkPhoneNumberExistsApi(value, excludeId);
+        setPhoneExists(res.existed);
+      } catch {
+        setPhoneExists(false);
+      } finally {
+        setPhoneCheckLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [value, excludeId]);
+
+  // Xác định trạng thái icon
+  let icon = null;
+  let iconColor = '';
+  if (phoneCheckLoading) {
+    icon = (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+    );
+    iconColor = 'text-blue-500';
+  } else if (phoneExists) {
+    icon = (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+    );
+    iconColor = 'text-red-500';
+  } else if (value) {
+    icon = (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+    );
+    iconColor = 'text-green-500';
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+      <div className="relative">
+        <input
+          type="text"
+          name="phoneNumber"
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-10 ${phoneExists ? 'border-red-500' : ''}`}
+        />
+        {/* Icon trạng thái, luôn giữ chỗ, luôn căn giữa dọc */}
+        <span
+          className={`absolute top-0 bottom-0 right-3 flex items-center transition-all duration-200 ease-in-out ${iconColor}`}
+          style={{ width: 20, height: 20, opacity: icon ? 1 : 0, transform: icon ? 'scale(1)' : 'scale(0.7)' }}
+        >
+          {icon || <span style={{ width: 20, height: 20 }} />}
+        </span>
+      </div>
+      {phoneCheckLoading && <div className="text-xs text-blue-500 mt-1">Đang kiểm tra...</div>}
+      {phoneExists && <div className="text-xs text-red-500 mt-1">Số điện thoại đã tồn tại</div>}
+    </div>
+  );
+});
+
 const AccountList: React.FC = () => {
   const [accounts, setAccounts] = useState<IAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [genderFilter, setGenderFilter] = useState<string>('');
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -451,6 +530,55 @@ const AccountList: React.FC = () => {
     }
   };
 
+  // Hàm xử lý tìm kiếm
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setSearchTerm(e.target.value);
+  };
+
+  // Hàm xử lý lọc vai trò
+  const handleRoleFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.preventDefault();
+    setRoleFilter(e.target.value);
+  };
+
+  // Hàm xử lý lọc trạng thái
+  const handleStatusFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.preventDefault();
+    setStatusFilter(e.target.value);
+  };
+
+  // Hàm xử lý lọc giới tính
+  const handleGenderFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.preventDefault();
+    setGenderFilter(e.target.value);
+  };
+
+  // Hàm reset bộ lọc
+  const handleResetFilters = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setSearchTerm('');
+    setRoleFilter('');
+    setStatusFilter('');
+    setGenderFilter('');
+  };
+
+  // Hàm lọc tài khoản
+  const filteredAccounts = accounts.filter(account => {
+    const matchesSearch = searchTerm === '' || 
+      (account.username?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+      (account.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+      (account.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+    
+    const matchesRole = roleFilter === '' || account.role === roleFilter;
+    const matchesStatus = statusFilter === '' || 
+      (statusFilter === 'active' && !account.isDisabled) ||
+      (statusFilter === 'disabled' && account.isDisabled);
+    const matchesGender = genderFilter === '' || account.gender === genderFilter;
+
+    return matchesSearch && matchesRole && matchesStatus && matchesGender;
+  });
+
   if (loading) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm">
@@ -498,21 +626,131 @@ const AccountList: React.FC = () => {
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Phần tìm kiếm và lọc */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-700">Tìm kiếm và Lọc</h2>
+          {(searchTerm || roleFilter || statusFilter || genderFilter) && (
+            <button
+              onClick={handleResetFilters}
+              className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Đặt lại bộ lọc
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Tìm kiếm */}
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={handleSearch}
+                placeholder="Tìm theo tên, email..."
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pl-10"
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Lọc theo vai trò */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò</label>
+            <select
+              value={roleFilter}
+              onChange={handleRoleFilter}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              <option value="">Tất cả vai trò</option>
+              <option value="admin">Admin</option>
+              <option value="consultant">Tư vấn viên</option>
+              <option value="customer">Khách hàng</option>
+            </select>
+          </div>
+
+          {/* Lọc theo trạng thái */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+            <select
+              value={statusFilter}
+              onChange={handleStatusFilter}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="disabled">Đã khóa</option>
+            </select>
+          </div>
+
+          {/* Lọc theo giới tính */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
+            <select
+              value={genderFilter}
+              onChange={handleGenderFilter}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              <option value="">Tất cả giới tính</option>
+              <option value="nam">Nam</option>
+              <option value="nữ">Nữ</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Hiển thị số lượng kết quả và bộ lọc đang áp dụng */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+          <span className="font-medium">Kết quả: {filteredAccounts.length} tài khoản</span>
+          {(searchTerm || roleFilter || statusFilter || genderFilter) && (
+            <span className="mx-2">|</span>
+          )}
+          {searchTerm && (
+            <span className="bg-gray-100 px-2 py-1 rounded-full">
+              Tìm kiếm: "{searchTerm}"
+            </span>
+          )}
+          {roleFilter && (
+            <span className="bg-gray-100 px-2 py-1 rounded-full">
+              Vai trò: {roleFilter === 'admin' ? 'Admin' : roleFilter === 'consultant' ? 'Tư vấn viên' : 'Khách hàng'}
+            </span>
+          )}
+          {statusFilter && (
+            <span className="bg-gray-100 px-2 py-1 rounded-full">
+              Trạng thái: {statusFilter === 'active' ? 'Đang hoạt động' : 'Đã khóa'}
+            </span>
+          )}
+          {genderFilter && (
+            <span className="bg-gray-100 px-2 py-1 rounded-full">
+              Giới tính: {genderFilter === 'nam' ? 'Nam' : 'Nữ'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
         <table className="min-w-full bg-white table-fixed">
           <thead>
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
-              <th className="px-4 py-3 rounded-tl-lg w-1/5">Tên tài khoản</th>
+              <th className="px-4 py-3 rounded-tl-lg w-1/5">Họ tên</th>
               <th className="px-4 py-3 w-1/5">Email</th>
-              <th className="px-4 py-3 w-1/5">Họ tên</th>
+              <th className="px-4 py-3 w-1/5">Tên tài khoản</th>
               <th className="px-4 py-3 w-1/6">Vai trò</th>
               <th className="px-4 py-3 w-1/6">Trạng thái</th>
               <th className="px-4 py-3 rounded-tr-lg w-1/6">Thao tác</th>
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm">
-            {accounts.length > 0 ? (
-              accounts.map((account) => (
+            {filteredAccounts.length > 0 ? (
+              filteredAccounts.map((account) => (
                 <tr key={account._id} className="border-b border-gray-200 hover:bg-purple-50">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
@@ -520,17 +758,17 @@ const AccountList: React.FC = () => {
                         <img
                           className="h-10 w-10 rounded-full object-cover"
                           src={account.photoUrl || '/avarta.png'}
-                          alt={account.username}
+                          alt={account.fullName || account.username}
                         />
                       </div>
                       <div>
-                        <p className="font-medium">{account.username}</p>
+                        <p className="font-medium">{account.fullName || 'Chưa cập nhật'}</p>
                         <p className="text-xs text-gray-500">{account.gender || 'Chưa cập nhật'}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{account.email}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{account.fullName || 'Chưa cập nhật'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{account.username}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${getRoleBadgeClass(account.role)}`}>
                       {account.role}
@@ -596,7 +834,7 @@ const AccountList: React.FC = () => {
             ) : (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  Không có tài khoản nào
+                  Không tìm thấy tài khoản nào phù hợp với bộ lọc
                 </td>
               </tr>
             )}
@@ -639,28 +877,6 @@ const AccountList: React.FC = () => {
                   {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Tên tài khoản</label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={updateForm.username}
-                    onChange={handleUpdateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={updateForm.email}
-                    onChange={handleUpdateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700">Họ tên</label>
                   <input
                     type="text"
@@ -671,15 +887,32 @@ const AccountList: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                  <label className="block text-sm font-medium text-gray-700">Tên tài khoản</label>
                   <input
                     type="text"
-                    name="phoneNumber"
-                    value={updateForm.phoneNumber}
-                    onChange={handleUpdateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    name="username"
+                    value={updateForm.username}
+                    disabled
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100 cursor-not-allowed"
+                    required
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={updateForm.email}
+                    disabled
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100 cursor-not-allowed"
+                    required
+                  />
+                </div>
+                <PhoneNumberInput
+                  value={updateForm.phoneNumber}
+                  onChange={handleUpdateFormChange}
+                  excludeId={selectedAccount?._id}
+                />
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Giới tính</label>
                   <select
@@ -854,16 +1087,16 @@ const AccountList: React.FC = () => {
                     <p className="mt-1">{accountDetail._id}</p>
                   </div>
                   <div>
+                    <p className="text-sm font-medium text-gray-500">Họ tên</p>
+                    <p className="mt-1">{accountDetail.fullName || 'Chưa cập nhật'}</p>
+                  </div>
+                  <div>
                     <p className="text-sm font-medium text-gray-500">Tên tài khoản</p>
                     <p className="mt-1">{accountDetail.username}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Email</p>
                     <p className="mt-1">{accountDetail.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Họ tên</p>
-                    <p className="mt-1">{accountDetail.fullName || 'Chưa cập nhật'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Số điện thoại</p>
@@ -944,6 +1177,19 @@ const AccountList: React.FC = () => {
           <div className="bg-white rounded-lg w-full max-w-md p-6">
             <h2 className="text-xl font-semibold mb-4">Tạo tài khoản mới</h2>
             <form onSubmit={handleCreateAccount} className="space-y-4">
+              {/* Full Name field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={createForm.fullName}
+                  onChange={handleCreateFormChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
               {/* Username field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">Tên đăng nhập</label>
@@ -1006,19 +1252,6 @@ const AccountList: React.FC = () => {
                 {formErrors.confirmPassword && (
                   <p className="mt-1 text-sm text-red-600">{formErrors.confirmPassword}</p>
                 )}
-              </div>
-
-              {/* Full Name field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={createForm.fullName}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
               </div>
 
               {/* Phone Number field */}

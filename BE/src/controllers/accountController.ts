@@ -59,6 +59,23 @@ export const updateAccount = async (
       return;
     }
 
+    // Không cho phép cập nhật email
+    if (req.body.email) {
+      delete req.body.email;
+    }
+
+    // Kiểm tra trùng số điện thoại (nếu cập nhật phoneNumber)
+    if (req.body.phoneNumber) {
+      const existedPhone = await Account.findOne({
+        phoneNumber: req.body.phoneNumber,
+        _id: { $ne: req.params.id }
+      });
+      if (existedPhone) {
+        res.status(400).json({ message: "Số điện thoại đã tồn tại" });
+        return;
+      }
+    }
+
     // Kiểm tra nếu đang cố chuyển từ consultant sang customer
     if (currentAccount.role === "consultant" && req.body.role === "customer") {
       res.status(400).json({ message: "Không thể chuyển từ tư vấn viên sang khách hàng" });
@@ -72,6 +89,17 @@ export const updateAccount = async (
     if (!updated) {
       res.status(404).json({ message: "Không tìm thấy tài khoản để cập nhật" });
       return;
+    }
+
+    // Đồng bộ trạng thái consultant nếu là consultant
+    let consultantStatusMsg = '';
+    if (updated.role === 'consultant' && typeof req.body.isDisabled === 'boolean') {
+      const consultant = await Consultant.findOne({ accountId: updated._id });
+      if (consultant) {
+        consultant.status = req.body.isDisabled ? 'inactive' : 'active';
+        await consultant.save();
+        consultantStatusMsg = `Trạng thái tư vấn viên đã chuyển thành ${consultant.status === 'inactive' ? 'ngưng hoạt động' : 'hoạt động'}`;
+      }
     }
 
     // Kiểm tra nếu role được cập nhật thành consultant
@@ -94,7 +122,10 @@ export const updateAccount = async (
       }
     }
     
-    res.status(200).json(updated);
+    res.status(200).json({
+      ...updated.toObject(),
+      consultantStatusMsg
+    });
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi cập nhật", error });
   }
