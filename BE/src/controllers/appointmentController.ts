@@ -64,3 +64,11 @@ export const getAppointmentByConsultantId = async (req: Request, res: Response) 
         res.status(500).json({ message: err.message });
     }
 }
+export const getAppointmentBySlotTimeId = async (req: Request, res: Response) => {
+    try {
+        const appointment = await Appointment.find({ slotTime_id: req.params.id }).populate("slotTime_id").populate("user_id").populate("consultant_id").populate("service_id");
+        res.status(200).json(appointment);
+    } catch (err: any) {
+        res.status(500).json({ message: err.message });
+    }
+}

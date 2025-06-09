@@ -3,6 +3,7 @@ import { getSlotTimeByConsultantIdApi, createSlotTimeApi, updateSlotTimeApi, upd
 import { addDays, startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
 
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const timeSlots = [
@@ -30,8 +31,11 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; time: string; slot?: SlotTime } | null>(null);
-  const [editMode, setEditMode] = useState(false);
   const [status, setStatus] = useState('available');
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedSlots, setSelectedSlots] = useState<{[key: string]: boolean}>({}); // key: `${day}-${slot}`
+  const [appointmentDetail, setAppointmentDetail] = useState<any>(null);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
 
   const today = new Date();
   const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
@@ -62,28 +66,105 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
     return isWithinInterval(d, { start: weekStart, end: weekEnd });
   });
 
-  const handleSlotClick = (day: string, time: string) => {
-    // Kiểm tra slot đã có chưa
-    const slotObj = slotTimesOfWeek.find(st => {
-      let dayOfWeek, hour;
-      try {
-        dayOfWeek = format(parseISO(st.start_time), 'EEE');
-        hour = format(parseISO(st.start_time), 'HH:00');
-      } catch {
-        const d = new Date(st.start_time);
-        dayOfWeek = format(d, 'EEE');
-        hour = format(d, 'HH:00');
-      }
-      return dayOfWeek === day && hour === time;
+  // Chọn/bỏ chọn slot lẻ
+  const toggleSlot = (day: string, slot: string) => {
+    const key = `${day}-${slot}`;
+    setSelectedSlots(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Chọn/bỏ chọn cả ngày
+  const toggleFullDay = (day: string) => {
+    const allSelected = timeSlots.every(slot => selectedSlots[`${day}-${slot}`]);
+    const newSelected = { ...selectedSlots };
+    timeSlots.forEach(slot => {
+      newSelected[`${day}-${slot}`] = !allSelected;
     });
-    if (slotObj) {
-      setSelectedSlot({ day, time, slot: slotObj });
-      setEditMode(true);
-      setStatus(slotObj.status);
-    } else {
-      setSelectedSlot({ day, time });
-      setEditMode(false);
-      setStatus('available');
+    setSelectedSlots(newSelected);
+  };
+
+  // Lưu tất cả các slot đã chọn để tạo mới
+  const handleSaveAllSelectedSlots = async () => {
+    setIsSaving(true);
+    try {
+      for (const day of weekDays) {
+        for (const slot of timeSlots) {
+          const key = `${day}-${slot}`;
+          if (selectedSlots[key]) {
+            // Kiểm tra slot đã tồn tại chưa
+            const slotHour = parseInt(slot.split(':')[0], 10);
+            const dayIdx = weekDays.indexOf(day);
+            const start = addDays(weekStart, dayIdx);
+            start.setHours(slotHour, 0, 0, 0);
+            const end = addDays(weekStart, dayIdx);
+            end.setHours(slotHour + 1, 0, 0, 0);
+            const existingSlot = slotTimes.filter(st => {
+              let dayOfWeek, hour;
+              try {
+                dayOfWeek = format(parseISO(st.start_time), 'EEE');
+                hour = format(parseISO(st.start_time), 'HH:00');
+              } catch {
+                const d = new Date(st.start_time);
+                dayOfWeek = format(d, 'EEE');
+                hour = format(d, 'HH:00');
+              }
+              return dayOfWeek === day && hour === slot;
+            });
+            if (!existingSlot.length) {
+              await createSlotTimeApi({
+                consultant_id: consultantId,
+                start_time: start.toISOString(),
+                end_time: end.toISOString(),
+                status: 'available'
+              });
+            }
+          }
+        }
+      }
+      setSelectedSlots({});
+      await fetchSlotTimes();
+      toast.success('Đã lưu tất cả slot đã chọn!');
+    } catch (err: unknown) {
+      console.error('Lỗi khi lưu lịch:', err);
+      toast.error('Có lỗi khi lưu lịch!');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteAllSelectedSlots = async () => {
+    setIsSaving(true);
+    try {
+      for (const day of weekDays) {
+        for (const slot of timeSlots) {
+          const key = `${day}-${slot}`;
+          if (selectedSlots[key]) {
+            // Tìm slotObj
+            const slotObj = slotTimesOfWeek.find(st => {
+              let dayOfWeek, hour;
+              try {
+                dayOfWeek = format(parseISO(st.start_time), 'EEE');
+                hour = format(parseISO(st.start_time), 'HH:00');
+              } catch {
+                const d = new Date(st.start_time);
+                dayOfWeek = format(d, 'EEE');
+                hour = format(d, 'HH:00');
+              }
+              return dayOfWeek === day && hour === slot;
+            });
+            if (slotObj) {
+              await deleteSlotTimeApi(slotObj._id);
+            }
+          }
+        }
+      }
+      setSelectedSlots({});
+      await fetchSlotTimes();
+      toast.success('Đã xóa tất cả slot đã chọn!');
+    } catch (err: unknown) {
+      console.error('Lỗi khi xóa lịch:', err);
+      toast.error('Có lỗi khi xóa lịch!');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -96,7 +177,7 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
     const end = addDays(weekStart, dayIdx);
     end.setHours(slotHour + 1, 0, 0, 0);
     try {
-      if (editMode && selectedSlot.slot) {
+      if (selectedSlot.slot) {
         await updateSlotTimeApi(selectedSlot.slot._id, {
           start_time: start.toISOString(),
           end_time: end.toISOString(),
@@ -120,15 +201,30 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
   };
 
   const handleDelete = async () => {
-    if (editMode && selectedSlot?.slot) {
+    if (selectedSlot?.slot) {
       try {
         await deleteSlotTimeApi(selectedSlot.slot._id);
         await fetchSlotTimes();
         setSelectedSlot(null);
         toast.success('Xóa ca làm việc thành công!');
-      } catch (error: any) {
-        toast.error(error.response.data.message);
+      } catch (err: unknown) {
+        console.error('Lỗi khi xóa ca làm việc:', err);
+        toast.error('Có lỗi khi xóa ca làm việc!');
       }
+    }
+  };
+
+  const handleBookedSlotClick = async (slotTimeId: string) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/appointments/slotTime/${slotTimeId}`);
+      if (res.data && res.data.length > 0) {
+        setAppointmentDetail(res.data[0]);
+        setShowAppointmentModal(true);
+      } else {
+        toast.error('Không tìm thấy thông tin cuộc hẹn!');
+      }
+    } catch (err) {
+      toast.error('Lỗi khi lấy thông tin cuộc hẹn!');
     }
   };
 
@@ -136,44 +232,81 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-2xl shadow-xl relative">
-        <button className="absolute top-2 right-2 text-gray-400 hover:text-blue-600 text-2xl" onClick={onClose}>&times;</button>
+      <div className="bg-white rounded-2xl p-4 w-full max-w-2xl shadow-xl relative transform transition-all duration-300 ease-in-out">
+        <button 
+          className="absolute top-2 right-2 text-gray-400 hover:text-blue-600 text-2xl transition-colors duration-200 z-10" 
+          onClick={onClose}
+        >
+          &times;
+        </button>
         <h4 className="text-xl font-bold text-blue-700 mb-4">Quản lý lịch làm việc</h4>
-        <div className="mb-4 flex justify-between items-center">
+        <div className="mb-3 flex justify-between items-center">
           <button
-            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors duration-200 flex items-center gap-2 text-sm"
             onClick={() => setCurrentWeek(w => w - 1)}
             disabled={currentWeek === 0}
           >
-            &larr; Tuần trước
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Tuần trước
           </button>
-          <span className="font-semibold text-blue-600">
+          <span className="font-semibold text-blue-600 text-base">
             {format(weekStart, 'dd/MM/yyyy')} - {format(weekEnd, 'dd/MM/yyyy')}
           </span>
           <button
-            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors duration-200 flex items-center gap-2 text-sm"
             onClick={() => setCurrentWeek(w => w + 1)}
           >
-            Tuần sau &rarr;
+            Tuần sau
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+        <div className="mb-2 flex justify-end gap-2">
+          <button
+            className={`px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition-all duration-200 text-sm ${Object.values(selectedSlots).every(v => !v) || isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={handleSaveAllSelectedSlots}
+            disabled={Object.values(selectedSlots).every(v => !v) || isSaving}
+          >
+            {isSaving ? 'Đang tạo...' : 'Tạo lịch'}
+          </button>
+          <button
+            className={`px-4 py-2 rounded-lg bg-red-600 text-white font-semibold shadow hover:bg-red-700 transition-all duration-200 text-sm ${Object.values(selectedSlots).every(v => !v) || isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={handleDeleteAllSelectedSlots}
+            disabled={Object.values(selectedSlots).every(v => !v) || isSaving}
+          >
+            {isSaving ? 'Đang xóa...' : 'Xóa'}
           </button>
         </div>
         {loading ? (
-          <div className="text-center py-8">Đang tải...</div>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
         ) : error ? (
           <div className="text-center text-red-600 py-8">{error}</div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="grid grid-cols-8">
+            <div className="grid grid-cols-8 gap-1">
               <div></div>
               {weekDays.map(day => (
-                <div key={day} className="text-center font-bold text-gray-600 py-2 bg-gray-50 border-t border-gray-100">
-                  {day}
+                <div key={day} className="text-center font-bold text-gray-600 py-2 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-base">{day}</span>
+                    <button
+                      onClick={() => toggleFullDay(day)}
+                      className={`px-2 py-1 text-xs rounded-full transition-all duration-200 border ${timeSlots.every(slot => selectedSlots[`${day}-${slot}`]) ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-gray-500 border-gray-200 hover:bg-green-50'}`}
+                    >
+                      {timeSlots.every(slot => selectedSlots[`${day}-${slot}`]) ? 'Đã chọn' : 'Chọn cả ngày'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
             {timeSlots.map(slot => (
-              <div key={slot} className="grid grid-cols-8">
-                <div className="text-right pr-2 font-semibold text-gray-400 py-2 border-t border-gray-100 text-sm bg-white flex items-center justify-end">
+              <div key={slot} className="grid grid-cols-8 gap-1 mt-1">
+                <div className="text-right pr-2 font-semibold text-gray-400 py-1 text-xs bg-white flex items-center justify-end">
                   {slot}
                 </div>
                 {weekDays.map(day => {
@@ -190,14 +323,47 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
                     return dayOfWeek === day && hour === slot;
                   });
                   const isBooked = slotObj?.status === 'booked';
+                  const key = `${day}-${slot}`;
+                  const isSelected = selectedSlots[key];
                   return (
                     <button
                       key={day + slot}
-                      className={`h-14 w-full flex items-center justify-center border-t border-gray-100 transition-all rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 ${isBooked ? 'bg-red-200 text-red-700 cursor-not-allowed' : slotObj ? 'bg-blue-100 text-blue-700' : 'bg-white hover:bg-blue-50'}`}
-                      onClick={() => handleSlotClick(day, slot)}
+                      className={`h-10 w-full flex items-center justify-center rounded-lg transition-all duration-200 text-xs border ${
+                        isBooked 
+                          ? 'bg-red-100 text-red-700 cursor-pointer border-red-100' 
+                          : isSelected
+                            ? 'bg-green-200 text-green-800 border-green-400'
+                            : slotObj
+                              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-100'
+                              : 'bg-white hover:bg-blue-50 border-gray-100'
+                      }`}
+                      onClick={() => isBooked ? handleBookedSlotClick(slotObj._id) : toggleSlot(day, slot)}
                       type="button"
                     >
-                      {isBooked ? 'Đã đặt' : slotObj ? 'Đã tạo' : ''}
+                      {isBooked ? (
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Đã đặt
+                        </span>
+                      ) : isSelected ? (
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3 h-3 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Đã chọn
+                        </span>
+                      ) : slotObj ? (
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Đã tạo
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">Trống</span>
+                      )}
                     </button>
                   );
                 })}
@@ -208,21 +374,74 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
         {/* Modal chỉnh sửa slot */}
         {selectedSlot && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-xs shadow-xl relative">
-              <button className="absolute top-2 right-2 text-gray-400 hover:text-blue-600 text-2xl" onClick={() => setSelectedSlot(null)}>&times;</button>
-              <h5 className="text-lg font-bold mb-2">{editMode ? 'Chỉnh sửa' : 'Tạo'} ca làm việc</h5>
-              <div className="mb-2 text-gray-500 text-sm">{selectedSlot.day} - {selectedSlot.time}</div>
+            <div className="bg-white rounded-xl p-4 w-full max-w-xs shadow-xl relative transform transition-all duration-300 ease-in-out">
+              <button 
+                className="absolute top-2 right-2 text-gray-400 hover:text-blue-600 text-2xl transition-colors duration-200" 
+                onClick={() => setSelectedSlot(null)}
+              >
+                &times;
+              </button>
+              <h5 className="text-base font-bold mb-2">{selectedSlot.slot ? 'Chỉnh sửa' : 'Tạo'} ca làm việc</h5>
+              <div className="mb-2 text-gray-500 text-xs">{selectedSlot.day} - {selectedSlot.time}</div>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Trạng thái</label>
-                <select value={status} onChange={e => setStatus(e.target.value)} className="w-full border rounded px-2 py-1">
+                <label className="block text-xs font-medium mb-1">Trạng thái</label>
+                <select 
+                  value={status} 
+                  onChange={e => setStatus(e.target.value)} 
+                  className="w-full border rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 text-xs"
+                >
                   <option value="available">Có thể đặt</option>
                   <option value="booked">Đã đặt</option>
                 </select>
               </div>
               <div className="flex justify-end gap-2">
-                {editMode && <button onClick={handleDelete} className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">Xóa</button>}
-                <button onClick={handleSave} className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Lưu</button>
+                {selectedSlot.slot && (
+                  <button 
+                    onClick={handleDelete} 
+                    className="px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors duration-200 text-xs"
+                  >
+                    Xóa
+                  </button>
+                )}
+                <button 
+                  onClick={handleSave} 
+                  className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-xs"
+                >
+                  Lưu
+                </button>
               </div>
+            </div>
+          </div>
+        )}
+        {/* Modal hiển thị chi tiết appointment */}
+        {showAppointmentModal && appointmentDetail && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl relative">
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-blue-600 text-2xl"
+                onClick={() => setShowAppointmentModal(false)}
+              >
+                &times;
+              </button>
+              <h3 className="text-lg font-bold mb-4 text-blue-700">Chi tiết cuộc hẹn</h3>
+              <div className="mb-2"><b>Khách hàng:</b> {appointmentDetail.user_id?.fullName || appointmentDetail.user_id?.username || appointmentDetail.user_id?.email || 'Ẩn danh'}</div>
+              <div className="mb-2"><b>Dịch vụ:</b> {appointmentDetail.service_id?.name || appointmentDetail.service_id?.title || '--'}</div>
+              
+              <div className="mb-2">
+                <b>Thời gian:</b>{' '}
+                {appointmentDetail.slotTime_id?.start_time && appointmentDetail.slotTime_id?.end_time
+                  ? `${new Date(appointmentDetail.slotTime_id.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(appointmentDetail.slotTime_id.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ${new Date(appointmentDetail.slotTime_id.start_time).toLocaleDateString()}`
+                  : '--'}
+              </div>
+              <div className="mb-2"><b>Trạng thái:</b> {appointmentDetail.status || '--'}</div>
+              
+              <div className="mb-2"><b>Lí do khách ghi: </b> {appointmentDetail.reason || '--'}</div> 
+              <div className="mb-2">
+                <b>Được đặt vào ngày :</b>{' '}
+  {appointmentDetail.dateBooking
+    ? new Date(appointmentDetail.dateBooking).toLocaleDateString()
+    : '--'}
+</div>
             </div>
           </div>
         )}
