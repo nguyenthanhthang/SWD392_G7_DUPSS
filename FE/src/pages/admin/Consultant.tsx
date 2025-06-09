@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
 import ConsultantScheduleModal from '../../components/admin/ConsultantScheduleModal';
 
+
+// Interface cho dữ liệu tư vấn viên
 interface IConsultant {
   _id: string;
   accountId: {
@@ -22,6 +25,19 @@ interface IConsultant {
   status: 'active' | 'inactive' | 'isDeleted';
   createdAt: string;
   updatedAt: string;
+}
+
+// Interface cho dữ liệu chứng chỉ
+interface ICertificate {
+  _id: string;
+  consultant_id: any;
+  title: string;
+  type: string;
+  issuedBy: number;
+  issueDate: string;
+  expireDate?: string;
+  description?: string;
+  fileUrl: string;
 }
 
 interface IUser {
@@ -51,12 +67,25 @@ interface IFormData {
   status: 'active' | 'inactive' | 'isDeleted';
 }
 
+// Form data cho chứng chỉ
+interface ICertificateFormData {
+  consultant_id: string;
+  title: string;
+  type: string;
+  issuedBy: number;
+  issueDate: string;
+  expireDate: string;
+  description: string;
+  fileUrl: string;
+}
+
 const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
   return (
     <div className="relative group">
       {children}
-      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+      <div className="absolute z-10 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded py-1 px-2 -top-10 left-1/2 transform -translate-x-1/2 w-max">
         {text}
+        <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-2 h-2 bg-gray-800 rotate-45"></div>
       </div>
     </div>
   );
@@ -82,9 +111,44 @@ const Consultant: React.FC = () => {
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [selectedConsultantId, setSelectedConsultantId] = useState<string | null>(null);
+
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
+  // State cho chứng chỉ
+  const [certificates, setCertificates] = useState<ICertificate[]>([]);
+  const [certificateLoading, setCertificateLoading] = useState(false);
+  const [certificateError, setCertificateError] = useState<string | null>(null);
+  const [isCertificateModalOpen, setIsCertificateModalOpen] = useState(false);
+  const [isCreateCertificateModalOpen, setIsCreateCertificateModalOpen] = useState(false);
+  const [isUpdateCertificateModalOpen, setIsUpdateCertificateModalOpen] = useState(false);
+  const [isDeleteCertificateModalOpen, setIsDeleteCertificateModalOpen] = useState(false);
+  const [selectedCertificate, setSelectedCertificate] = useState<ICertificate | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [certificateFormData, setCertificateFormData] = useState<ICertificateFormData>({
+    consultant_id: '',
+    title: '',
+    type: '',
+    issuedBy: 0,
+    issueDate: '',
+    expireDate: '',
+    description: '',
+    fileUrl: ''
+  });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // State cho quản lý lịch làm việc
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  
+  // Hàm xử lý mở modal xem ảnh chứng chỉ to
+  const handleOpenImagePreview = (imageUrl: string) => {
+    setPreviewImage(imageUrl);
+  };
+
+  // Hàm xử lý đóng modal xem ảnh chứng chỉ to
+  const handleCloseImagePreview = () => {
+    setPreviewImage(null);
+  };
 
   const fetchConsultants = async () => {
     try {
@@ -277,26 +341,303 @@ const Consultant: React.FC = () => {
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
     setAvatarPreview(URL.createObjectURL(file));
-    setIsUploadingAvatar(true);
+    
     try {
+      setIsUploadingAvatar(true);
       const formData = new FormData();
       formData.append('image', file);
-      const res = await api.post('/uploads/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+
+      const response = await api.post('/uploads/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
-      const url = res.data.imageUrl;
-      setFormData(prev => ({
+
+      if (selectedConsultant && response.data.imageUrl) {
+        // Cập nhật avatar cho consultant
+        await api.put(`/users/${selectedConsultant.accountId._id}`, {
+          photoUrl: response.data.imageUrl
+        });
+        
+        toast.success('Cập nhật ảnh đại diện thành công!');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Có lỗi xảy ra khi tải ảnh lên!');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  // Hàm xử lý upload file cho chứng chỉ
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    
+    // Validate file type (chỉ cho phép ảnh)
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Chỉ chấp nhận file ảnh (JPG, PNG, GIF)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước file không được vượt quá 5MB');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await api.post('/uploads/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setCertificateFormData(prev => ({
         ...prev,
-        photoUrl: url
+        fileUrl: response.data.imageUrl
       }));
-      setIsUploadingAvatar(false);
+      
       toast.success('Tải ảnh lên thành công!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Có lỗi xảy ra khi tải ảnh lên');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Xử lý khi nhấn nút chọn file
+  const handleSelectFile = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Fetch certificates từ API theo consultant_id
+  const fetchCertificatesByConsultant = async (consultantId: string) => {
+    if (!consultantId) {
+      return;
+    }
+    
+    try {
+      setCertificateLoading(true);
+      const response = await api.get(`/certificates/consultant/${consultantId}`);
+      setCertificates(response.data);
+      setCertificateError(null);
     } catch (err) {
-      setIsUploadingAvatar(false);
-      toast.error('Tải ảnh lên thất bại!');
+      // Nếu không có chứng chỉ, hiển thị danh sách trống thay vì thông báo lỗi
+      setCertificates([]);
+      setCertificateError(null);
+    } finally {
+      setCertificateLoading(false);
+    }
+  };
+
+  // Format certificate date
+  const formatCertificateDate = (dateString: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('vi-VN');
+  };
+
+  // Get issuer name from id
+  const getIssuerName = (issuerId: number) => {
+    switch(issuerId) {
+      case 1000:
+        return "FPT University";
+      case 1001:
+        return "Công ty ABC";
+      case 1002:
+        return "Tổ chức XYZ";
+      case 1003:
+        return "Hiệp hội nghề nghiệp";
+      case 1004:
+        return "Trung tâm đào tạo";
+      default:
+        return `Đơn vị ${issuerId}`;
+    }
+  };
+
+  // Handle certificate form input change
+  const handleCertificateInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setCertificateFormData(prev => ({
+      ...prev,
+      [name]: name === 'issuedBy' ? Number(value) : value
+    }));
+  };
+
+  // Open certificate modal
+  const handleOpenCertificateModal = (consultant: IConsultant) => {
+    setSelectedConsultant(consultant);
+    fetchCertificatesByConsultant(consultant._id);
+    setIsCertificateModalOpen(true);
+  };
+
+  // Close certificate modal
+  const handleCloseCertificateModal = () => {
+    setIsCertificateModalOpen(false);
+    setSelectedConsultant(null);
+    setCertificates([]);
+  };
+
+  // Hàm xử lý mở modal lịch làm việc
+  const handleOpenScheduleModal = (consultant: IConsultant) => {
+    setSelectedConsultant(consultant);
+    setIsScheduleModalOpen(true);
+  };
+
+  // Hàm xử lý đóng modal lịch làm việc
+  const handleCloseScheduleModal = () => {
+    setIsScheduleModalOpen(false);
+    setSelectedConsultant(null);
+  };
+
+  // Open create certificate modal
+  const handleOpenCreateCertificateModal = () => {
+    if (!selectedConsultant) return;
+    
+    const today = new Date().toISOString().slice(0, 10);
+    
+    setCertificateFormData({
+      consultant_id: selectedConsultant._id,
+      title: '',
+      type: '',
+      issuedBy: 1000, // Giá trị mặc định là FPT University
+      issueDate: today,
+      expireDate: '',
+      description: '',
+      fileUrl: ''
+    });
+    setIsCreateCertificateModalOpen(true);
+  };
+
+  // Close create certificate modal
+  const handleCloseCreateCertificateModal = () => {
+    setIsCreateCertificateModalOpen(false);
+  };
+
+  // Handle create certificate
+  const handleCreateCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form
+    if (!certificateFormData.consultant_id || !certificateFormData.title || !certificateFormData.type || 
+        !certificateFormData.issueDate || !certificateFormData.fileUrl) {
+      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc!');
+      return;
+    }
+
+    try {
+      const response = await api.post('/certificates', certificateFormData);
+      
+      setCertificates(prev => [...prev, response.data]);
+      
+      handleCloseCreateCertificateModal();
+      toast.success('Tạo chứng chỉ thành công!');
+    } catch (error: any) {
+      toast.error(`Có lỗi xảy ra khi tạo chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
+    }
+  };
+
+  // Open update certificate modal
+  const handleOpenUpdateCertificateModal = (certificate: ICertificate) => {
+    setSelectedCertificate(certificate);
+    
+    // Format dates for input fields
+    const formatDateForInput = (dateString: string) => {
+      if (!dateString) return '';
+      return new Date(dateString).toISOString().slice(0, 10);
+    };
+    
+    setCertificateFormData({
+      consultant_id: typeof certificate.consultant_id === 'object' && certificate.consultant_id._id 
+        ? certificate.consultant_id._id 
+        : certificate.consultant_id,
+      title: certificate.title,
+      type: certificate.type,
+      issuedBy: certificate.issuedBy,
+      issueDate: formatDateForInput(certificate.issueDate),
+      expireDate: formatDateForInput(certificate.expireDate || ''),
+      description: certificate.description || '',
+      fileUrl: certificate.fileUrl
+    });
+    setIsUpdateCertificateModalOpen(true);
+  };
+
+  // Close update certificate modal
+  const handleCloseUpdateCertificateModal = () => {
+    setIsUpdateCertificateModalOpen(false);
+    setSelectedCertificate(null);
+  };
+
+  // Handle update certificate
+  const handleUpdateCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCertificate) return;
+
+    // Validate form
+    if (!certificateFormData.consultant_id || !certificateFormData.title || !certificateFormData.type || 
+        !certificateFormData.issueDate || !certificateFormData.fileUrl) {
+      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc!');
+      return;
+    }
+
+    try {
+      const response = await api.put(`/certificates/${selectedCertificate._id}`, certificateFormData);
+      
+      setCertificates(prev =>
+        prev.map(cert =>
+          cert._id === selectedCertificate._id ? response.data : cert
+        )
+      );
+      
+      handleCloseUpdateCertificateModal();
+      toast.success('Cập nhật chứng chỉ thành công!');
+    } catch (error: any) {
+      toast.error(`Có lỗi xảy ra khi cập nhật chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
+    }
+  };
+
+  // Open delete certificate modal
+  const handleOpenDeleteCertificateModal = (certificate: ICertificate) => {
+    setSelectedCertificate(certificate);
+    setIsDeleteCertificateModalOpen(true);
+  };
+
+  // Close delete certificate modal
+  const handleCloseDeleteCertificateModal = () => {
+    setIsDeleteCertificateModalOpen(false);
+    setSelectedCertificate(null);
+  };
+
+  // Handle delete certificate
+  const handleDeleteCertificate = async () => {
+    if (!selectedCertificate) return;
+
+    try {
+      await api.delete(`/certificates/${selectedCertificate._id}`);
+      
+      setCertificates(prev =>
+        prev.filter(cert => cert._id !== selectedCertificate._id)
+      );
+      
+      handleCloseDeleteCertificateModal();
+      toast.success('Xóa chứng chỉ thành công!');
+    } catch (error: any) {
+      toast.error(`Có lỗi xảy ra khi xóa chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
     }
   };
 
@@ -337,22 +678,31 @@ const Consultant: React.FC = () => {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-indigo-500">Quản lý tư vấn viên</h1>
+        <button
+          onClick={handleOpenCreateModal}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center shadow-md transition-all duration-200"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Thêm tư vấn viên
+        </button>
       </div>
 
-      <div className="overflow-x-auto">
+            <div className="overflow-x-auto shadow-md rounded-lg">
         <table className="min-w-full bg-white">
           <thead>
-            <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
+            <tr className="bg-gradient-to-r from-indigo-50 to-blue-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
               <th className="px-4 py-3 rounded-tl-lg">Họ và tên</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3">Lịch làm việc</th>
-              <th className="px-4 py-3 rounded-tr-lg">Thao tác</th>
+              <th className="px-4 py-3 text-center">Lịch làm việc</th>
+              <th className="px-4 py-3 rounded-tr-lg text-center">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="text-gray-600 text-sm">
+          <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
             {consultants.map(consultant => (
-              <tr key={consultant._id} className="border-b border-gray-200 hover:bg-purple-50">
+              <tr key={consultant._id} className="hover:bg-indigo-50 transition-colors duration-150">
                 <td className="px-4 py-3 font-medium flex items-center">
                   <img src={consultant.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-10 h-10 rounded-full object-cover mr-2 inline-block" />
                   {consultant.accountId.fullName}
@@ -362,43 +712,73 @@ const Consultant: React.FC = () => {
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
                       consultant.status === 'active'
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-green-100 text-green-800 border border-green-200'
                         : consultant.status === 'inactive'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
+                        ? 'bg-red-100 text-red-800 border border-red-200'
+                        : 'bg-gray-100 text-gray-800 border border-gray-200'
                     }`}
                   >
                     {consultant.status === 'active' ? 'Hoạt động' : consultant.status === 'inactive' ? 'Không hoạt động' : 'Đã xóa'}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => { setSelectedConsultantId(consultant._id); setScheduleModalOpen(true); }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-semibold shadow-md transition-all"
+                                            <td className="px-4 py-3 text-center">
+                  <button 
+                    onClick={() => handleOpenScheduleModal(consultant)}
+                    className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs border border-blue-200 hover:bg-blue-100 transition-colors"
                   >
-                    Lịch làm việc
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Xem lịch
                   </button>
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => { setSelectedConsultant(consultant); setIsDetailModalOpen(true); }}
-                    className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 mr-2"
-                    title="Xem chi tiết"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleOpenUpdateModal(consultant)}
-                    className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                    title="Chỉnh sửa"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center justify-center space-x-2">
+                    <Tooltip text="Xem chi tiết">
+                      <button
+                        onClick={() => { setSelectedConsultant(consultant); setIsDetailModalOpen(true); }}
+                        className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+
+                    <Tooltip text="Chỉnh sửa">
+                      <button
+                        onClick={() => handleOpenUpdateModal(consultant)}
+                        className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+
+                    <Tooltip text="Quản lý chứng chỉ">
+                      <button
+                        onClick={() => handleOpenCertificateModal(consultant)}
+                        className="p-2 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+
+                    <Tooltip text="Lịch làm việc">
+                      <button
+                        onClick={() => handleOpenScheduleModal(consultant)}
+                        className="p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -558,13 +938,7 @@ const Consultant: React.FC = () => {
         </div>
       )}
 
-      {scheduleModalOpen && selectedConsultantId && (
-        <ConsultantScheduleModal
-          consultantId={selectedConsultantId}
-          open={scheduleModalOpen}
-          onClose={() => setScheduleModalOpen(false)}
-        />
-      )}
+
 
       {isDetailModalOpen && selectedConsultant && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -611,6 +985,687 @@ const Consultant: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
+      {/* Modal quản lý chứng chỉ */}
+      {isCertificateModalOpen && selectedConsultant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
+              <div className="flex items-center">
+                <img 
+                  src={selectedConsultant.accountId.photoUrl || '/avarta.png'} 
+                  alt={selectedConsultant.accountId.fullName} 
+                  className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-indigo-200"
+                />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800">Quản lý chứng chỉ</h2>
+                  <p className="text-gray-600">{selectedConsultant.accountId.fullName}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseCertificateModal}
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex justify-end mb-6">
+              <button
+                onClick={handleOpenCreateCertificateModal}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center shadow-md transition-all duration-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Thêm chứng chỉ
+              </button>
+            </div>
+
+            {/* Hiển thị trạng thái loading */}
+            {certificateLoading && (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+              </div>
+            )}
+
+            {/* Hiển thị thông báo lỗi */}
+            {certificateError && !certificateLoading && (
+              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+                <div className="flex items-center">
+                  <svg className="h-6 w-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p>{certificateError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Hiển thị thông báo không có dữ liệu */}
+            {!certificateLoading && !certificateError && certificates.length === 0 && (
+              <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded flex items-center">
+                <svg className="h-6 w-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p>Chưa có chứng chỉ nào cho tư vấn viên này. Hãy thêm chứng chỉ mới!</p>
+              </div>
+            )}
+
+            {/* Bảng chứng chỉ */}
+            {!certificateLoading && !certificateError && certificates.length > 0 && (
+              <div className="overflow-x-auto shadow-md rounded-lg">
+                <table className="min-w-full bg-white">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-indigo-50 to-blue-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
+                      <th className="px-4 py-3 rounded-tl-lg">Tiêu đề</th>
+                      <th className="px-4 py-3">Loại</th>
+                      <th className="px-4 py-3">Ngày cấp</th>
+                      <th className="px-4 py-3">Ngày hết hạn</th>
+                      <th className="px-4 py-3">Cấp bởi</th>
+                      <th className="px-4 py-3 rounded-tr-lg text-center">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
+                    {certificates.map((certificate) => (
+                      <tr key={certificate._id} className="hover:bg-indigo-50 transition-colors duration-150">
+                        <td className="px-4 py-3 font-medium">
+                          <a 
+                            href={certificate.fileUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:text-indigo-900 hover:underline flex items-center"
+                          >
+                            {certificate.title}
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        </td>
+                        <td className="px-4 py-3">{certificate.type}</td>
+                        <td className="px-4 py-3">{formatCertificateDate(certificate.issueDate)}</td>
+                        <td className="px-4 py-3">{certificate.expireDate ? formatCertificateDate(certificate.expireDate) : 'Không có'}</td>
+                        <td className="px-4 py-3">{getIssuerName(certificate.issuedBy)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center space-x-2">
+                            <Tooltip text="Xem ảnh chứng chỉ">
+                              <a
+                                href={certificate.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 relative group"
+                                onClick={(e) => {
+                                  // Ngăn chặn mở link nếu người dùng chỉ muốn xem trước
+                                  if (e.ctrlKey || e.metaKey) {
+                                    // Cho phép mở trong tab mới khi nhấn Ctrl/Cmd + Click
+                                    return;
+                                  }
+                                  e.preventDefault();
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                  />
+                                </svg>
+                                <div className="absolute hidden group-hover:block transition-opacity bg-white p-3 rounded-md shadow-lg -top-48 left-1/2 transform -translate-x-1/2 z-50 border border-indigo-100">
+                                  <div className="text-center mb-1 text-xs text-gray-500">Xem trước chứng chỉ</div>
+                                  <img 
+                                    src={certificate.fileUrl} 
+                                    alt="Xem trước chứng chỉ" 
+                                    className="h-40 w-auto max-w-[280px] object-contain border border-gray-200 rounded cursor-pointer hover:border-indigo-300"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenImagePreview(certificate.fileUrl);
+                                    }}
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.onerror = null;
+                                      target.src = '/avarta.png'; // Sử dụng ảnh placeholder có sẵn
+                                    }}
+                                  />
+                                </div>
+                              </a>
+                            </Tooltip>
+                            
+                            <Tooltip text="Cập nhật">
+                              <button
+                                onClick={() => handleOpenUpdateCertificateModal(certificate)}
+                                className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                              </button>
+                            </Tooltip>
+
+                            <Tooltip text="Xóa">
+                              <button
+                                onClick={() => handleOpenDeleteCertificateModal(certificate)}
+                                className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
+                            </Tooltip>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal tạo chứng chỉ mới */}
+      {isCreateCertificateModalOpen && selectedConsultant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Thêm chứng chỉ mới</h2>
+              <button
+                onClick={handleCloseCreateCertificateModal}
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCertificate} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề chứng chỉ</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={certificateFormData.title}
+                  onChange={handleCertificateInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  required
+                  placeholder="Nhập tiêu đề chứng chỉ"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Loại chứng chỉ</label>
+                <input
+                  type="text"
+                  name="type"
+                  value={certificateFormData.type}
+                  onChange={handleCertificateInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  required
+                  placeholder="Ví dụ: Kỹ năng, Ngoại ngữ, Chuyên môn..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Đơn vị cấp</label>
+                <select
+                  name="issuedBy"
+                  value={certificateFormData.issuedBy}
+                  onChange={handleCertificateInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  required
+                >
+                  <option value="">-- Chọn đơn vị cấp --</option>
+                  <option value="1000">FPT University</option>
+                  <option value="1001">Công ty ABC</option>
+                  <option value="1002">Tổ chức XYZ</option>
+                  <option value="1003">Hiệp hội nghề nghiệp</option>
+                  <option value="1004">Trung tâm đào tạo</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ngày cấp</label>
+                  <input
+                    type="date"
+                    name="issueDate"
+                    value={certificateFormData.issueDate}
+                    onChange={handleCertificateInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ngày hết hạn (nếu có)</label>
+                  <input
+                    type="date"
+                    name="expireDate"
+                    value={certificateFormData.expireDate}
+                    onChange={handleCertificateInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                <textarea
+                  name="description"
+                  value={certificateFormData.description}
+                  onChange={handleCertificateInputChange}
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  placeholder="Mô tả chi tiết về chứng chỉ này"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh chứng chỉ</label>
+                <div className="mt-1 flex items-center">
+                  {certificateFormData.fileUrl ? (
+                    <div className="flex flex-col space-y-2 w-full">
+                      <div className="flex items-center justify-between">
+                        <a
+                          href={certificateFormData.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-600 hover:text-indigo-900 flex items-center"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Xem ảnh đã tải lên
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setCertificateFormData(prev => ({ ...prev, fileUrl: '' }))}
+                          className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="mt-2 border rounded-md p-1 bg-gray-50">
+                        <img 
+                          src={certificateFormData.fileUrl} 
+                          alt="Xem trước chứng chỉ" 
+                          className="w-full max-h-60 object-contain rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = '/avarta.png';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSelectFile}
+                      className="w-full px-4 py-3 bg-gray-50 text-gray-700 rounded-md hover:bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300"
+                      disabled={uploading}
+                    >
+                      {uploading ? (
+                        <span className="flex items-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Đang tải...
+                        </span>
+                      ) : (
+                        <span className="flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Nhấp để chọn ảnh chứng chỉ
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Tải lên ảnh chứng chỉ để làm bằng chứng xác thực. Chỉ chấp nhận file JPG, PNG, GIF (tối đa 5MB).</p>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-8 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={handleCloseCreateCertificateModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-colors"
+                  disabled={uploading}
+                >
+                  Tạo chứng chỉ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal cập nhật chứng chỉ */}
+      {isUpdateCertificateModalOpen && selectedCertificate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Cập nhật chứng chỉ</h2>
+              <button
+                onClick={handleCloseUpdateCertificateModal}
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateCertificate} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề chứng chỉ</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={certificateFormData.title}
+                  onChange={handleCertificateInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  required
+                  placeholder="Nhập tiêu đề chứng chỉ"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Loại chứng chỉ</label>
+                <input
+                  type="text"
+                  name="type"
+                  value={certificateFormData.type}
+                  onChange={handleCertificateInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  required
+                  placeholder="Ví dụ: Kỹ năng, Ngoại ngữ, Chuyên môn..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Đơn vị cấp</label>
+                <select
+                  name="issuedBy"
+                  value={certificateFormData.issuedBy}
+                  onChange={handleCertificateInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  required
+                >
+                  <option value="">-- Chọn đơn vị cấp --</option>
+                  <option value="1000">FPT University</option>
+                  <option value="1001">Công ty ABC</option>
+                  <option value="1002">Tổ chức XYZ</option>
+                  <option value="1003">Hiệp hội nghề nghiệp</option>
+                  <option value="1004">Trung tâm đào tạo</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ngày cấp</label>
+                  <input
+                    type="date"
+                    name="issueDate"
+                    value={certificateFormData.issueDate}
+                    onChange={handleCertificateInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ngày hết hạn (nếu có)</label>
+                  <input
+                    type="date"
+                    name="expireDate"
+                    value={certificateFormData.expireDate}
+                    onChange={handleCertificateInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                <textarea
+                  name="description"
+                  value={certificateFormData.description}
+                  onChange={handleCertificateInputChange}
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  placeholder="Mô tả chi tiết về chứng chỉ này"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh chứng chỉ</label>
+                <div className="mt-1 flex items-center">
+                  {certificateFormData.fileUrl ? (
+                    <div className="flex flex-col space-y-2 w-full">
+                      <div className="flex items-center justify-between">
+                        <a
+                          href={certificateFormData.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-600 hover:text-indigo-900 flex items-center"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Xem ảnh đã tải lên
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setCertificateFormData(prev => ({ ...prev, fileUrl: '' }))}
+                          className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="mt-2 border rounded-md p-1 bg-gray-50">
+                        <img 
+                          src={certificateFormData.fileUrl} 
+                          alt="Xem trước chứng chỉ" 
+                          className="w-full max-h-60 object-contain rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = '/avarta.png';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSelectFile}
+                      className="w-full px-4 py-3 bg-gray-50 text-gray-700 rounded-md hover:bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300"
+                      disabled={uploading}
+                    >
+                      {uploading ? (
+                        <span className="flex items-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Đang tải...
+                        </span>
+                      ) : (
+                        <span className="flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Nhấp để chọn ảnh chứng chỉ
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Tải lên ảnh chứng chỉ để làm bằng chứng xác thực. Chỉ chấp nhận file JPG, PNG, GIF (tối đa 5MB).</p>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-8 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={handleCloseUpdateCertificateModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-colors"
+                  disabled={uploading}
+                >
+                  Cập nhật
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xóa chứng chỉ */}
+      {isDeleteCertificateModalOpen && selectedCertificate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Xác nhận xóa</h2>
+              <button
+                onClick={handleCloseDeleteCertificateModal}
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">
+                    Bạn có chắc chắn muốn xóa chứng chỉ "<span className="font-semibold">{selectedCertificate.title}</span>" không?
+                  </p>
+                  <p className="text-sm text-red-700 mt-2">
+                    Hành động này không thể hoàn tác.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={handleCloseDeleteCertificateModal}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteCertificate}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md shadow-sm transition-colors flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Xóa chứng chỉ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xem ảnh chứng chỉ to */}
+      {previewImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="relative max-w-3xl max-h-[90vh] overflow-auto">
+            <button
+              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center"
+              onClick={handleCloseImagePreview}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img src={previewImage} alt="Certificate" className="max-w-full max-h-[90vh]" />
+          </div>
+        </div>
+      )}
+
+      {/* Modal quản lý lịch làm việc */}
+      {selectedConsultant && (
+        <ConsultantScheduleModal
+          consultantId={selectedConsultant._id}
+          open={isScheduleModalOpen}
+          onClose={handleCloseScheduleModal}
+        />
+      )}
+      {/* Kết thúc modal quản lý lịch làm việc */}
     </div>
   );
 };
