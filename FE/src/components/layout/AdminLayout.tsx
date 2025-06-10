@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import AdminHeader from './AdminHeader';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -105,6 +106,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </svg>
       ),
     },
+    {
+      path: "/admin/blogs",
+      name: "Quản lý bài viết",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+          />
+        </svg>
+      ),
+    },
   ];
 
   const consultantMenuItems = [
@@ -153,60 +168,49 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const baseUrl = user?.role === "admin" ? "/admin" : "/consultant-portal";
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-center h-16 border-b">
-            <Link to={baseUrl} className="text-xl font-bold text-gray-800">
-              {user?.role === "admin" ? "DUPSS Admin" : "DUPSS Consultant"}
-            </Link>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto">
-            <ul className="p-4 space-y-2">
-              {menuItems.map((item) => (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors ${
-                      isActive(item.path)
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {item.icon}
-                    <span>{item.name}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* User Info */}
-          <div className="p-4 border-t">
-            <div className="flex items-center space-x-3">
-              <img
-                src={user?.photoUrl || "/avatar-placeholder.png"}
-                alt={user?.fullName}
-                className="w-10 h-10 rounded-full"
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-800">
-                  {user?.fullName}
-                </p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
-              </div>
+    <div className="min-h-screen bg-gray-100">
+      {/* Admin Header */}
+      <AdminHeader />
+      <div className="flex">
+        {/* Sidebar */}
+        <div className="w-64 min-h-screen bg-white shadow-sm flex flex-col justify-between">
+          <div>
+            {/* Logo */}
+            <div className="flex items-center justify-center h-16">
+              <Link to={baseUrl} className="text-xl font-bold text-indigo-600">
+                {user?.role === "admin" ? "DUPSS Admin" : "DUPSS Consultant"}
+              </Link>
             </div>
+            {/* Navigation */}
+            <nav className="flex-1 overflow-y-auto">
+              <ul className="p-4 space-y-2">
+                {menuItems.map((item) => (
+                  <li key={item.path}>
+                    <Link
+                      to={item.path}
+                      className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors ${
+                        isActive(item.path)
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      {item.icon}
+                      <span>{item.name}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+          {/* Footer */}
+          <div className="p-4 border-t">
+            <div className="text-center text-xs text-gray-400">@2025 HOPEHUB</div>
           </div>
         </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-6">{children}</div>
+        {/* Main Content */}
+        <main className="flex-1 pt-20">
+          <div className="px-4">{children}</div>
+        </main>
       </div>
     </div>
   );

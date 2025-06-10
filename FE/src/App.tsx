@@ -24,6 +24,7 @@ import AboutUsPage from "./pages/AboutUsPage";
 import ServicePage from "./pages/ServicePage";
 import AppointmentsPage from "./pages/Appointments";
 import PaymentHistory from "./pages/PaymentHistory";
+import BlogManagement from "./pages/admin/BlogManagement";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import { useEffect } from "react";
@@ -143,6 +144,7 @@ function AppContent() {
                   <Route path="services" element={<Service />} />
                   <Route path="events" element={<EventManagement />} />
                   <Route path="consultants" element={<Consultant />} />
+                  <Route path="blogs" element={<BlogManagement />} />
                 </Routes>
               </AdminLayout>
             </AdminRoute>
