@@ -65,6 +65,7 @@ const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
 
 // Component con cho input số điện thoại + icon trạng thái
 const PhoneNumberInput: React.FC<{
+  
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   excludeId?: string;
