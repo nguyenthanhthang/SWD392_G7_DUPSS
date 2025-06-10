@@ -75,43 +75,6 @@ function ConsultantRoute({ children }: { children: React.ReactNode }) {
   return user?.role === "consultant" ? <>{children}</> : null;
 }
 
-function App() {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Routes dành cho Admin */}
-          <Route path="/admin"element={ <ProtectedRoute requiredRoles={['admin']}> <MainLayout> <AdminDashboard /> </MainLayout> </ProtectedRoute>}/>
-          <Route path="/admin/users" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><AccountList /></MainLayout></ProtectedRoute>}/>
-          <Route path="/admin/blogs"element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Quản lý blog</div></MainLayout></ProtectedRoute>}/>
-          <Route path="/admin/consultants" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Consultant /></MainLayout></ProtectedRoute>}/>
-          <Route path="/admin/reports" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><div className="p-6 bg-white rounded-lg shadow-sm">Báo cáo thống kê</div></MainLayout></ProtectedRoute>}/>
-          <Route path="/admin/services"element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Service /></MainLayout></ProtectedRoute>}/>
-
-          
-          {/* Routes cho User */}
-          <Route path="/" element={<Home />} />
-          <Route path="/quizz" element={<QuizzPage />} />
-          <Route path="/consulting" element={<ConsultingPage />} />
-          <Route path="/consultant/:id" element={<ConsultantDetailPage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/blogs" element={<BlogPage />} />
-          <Route path="/about-us" element={<AboutUsPage />} />
-          <Route path="/service" element={<ServicePage />} /> 
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/appointments" element={<AppointmentsPage />} />
-          <Route path="/payment-history" element={<PaymentHistory />} />
-          
-          {/* Routes cho Authentication */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Routes>
-      </BrowserRouter>
-      <AppContent />
-    </AuthProvider>
-  );
-}
-
 function AppContent() {
   const { loading } = useAuth();
 
@@ -202,6 +165,14 @@ function AppContent() {
         />
       </Routes>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
