@@ -20,7 +20,7 @@ export interface IAccount extends Document {
 // Schema Mongoose
 const accountSchema = new Schema<IAccount>(
   {
-    fullName: { type: String, required: true },
+    fullName: { type: String },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     username: { type: String, required: true, unique: true },

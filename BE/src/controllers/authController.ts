@@ -4,7 +4,7 @@ import Account from "../models/Account"; // Đảm bảo đúng đường dẫn 
 import { randomText, signToken } from "../utils/index"; // Đảm bảo đúng đường dẫn hàm signToken
 import { ValidationError } from "../errors/ValidationError"; // Đảm bảo đúng đường dẫn
 import { Types } from "mongoose";
-import { sendVerificationEmail } from "../services/email";
+import { sendVerificationEmail, sendResetPasswordEmail } from "../services/email";
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -265,7 +265,7 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
     });
   }
 };
-
+ 
 export const sendNewVerifyEmail = async (req: Request, res: Response) => {
   const { email, username } = req.body;
   try {
@@ -285,7 +285,7 @@ export const sendNewVerifyEmail = async (req: Request, res: Response) => {
     const verificationTokenExpiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     user.verificationToken = verificationToken;
-    user.verificationTokenExpiresAt = verificationTokenExpiresAt as any;
+    user.verificationTokenExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
 
@@ -322,5 +322,30 @@ export const checkOTP = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.log(error);
     return res.status(500).json({ message: error.message });
+  }
+};
+
+export const sendResetPasswordEmailController = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    if (!email) return res.status(400).json({ message: "Email là bắt buộc" });
+    const formatEmail = email.trim().toLowerCase();
+    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formatEmail)) {
+      return res.status(400).json({ message: "Email không hợp lệ" });
+    }
+    const user = await Account.findOne({ email: formatEmail });
+    if (!user) return res.status(404).json({ message: "Người dùng không tồn tại" });
+    if (user.isDisabled) {
+      return res.status(403).json({ message: "Tài khoản đã bị khóa. Vui lòng liên hệ admin để được hỗ trợ" });
+    }
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+    await sendResetPasswordEmail(formatEmail, user.username, verificationToken);
+    return res.status(200).json({ message: "Mã OTP đã được gửi đến email của bạn" });
+  } catch (error: any) {
+    console.error("Send reset password email error:", error);
+    return res.status(500).json({ message: "Đã xảy ra lỗi. Vui lòng thử lại sau" });
   }
 };

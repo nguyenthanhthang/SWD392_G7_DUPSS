@@ -6,7 +6,7 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import type { CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
-import { sendNewVerifyEmailApi, changePasswordApi } from '../api';
+import { sendResetPasswordEmailApi, changePasswordApi } from '../api';
 import { Eye, EyeOff } from 'lucide-react';
 import type { AxiosError } from 'axios';
 
@@ -44,7 +44,7 @@ function LoginPage() {
       } else {
         const from =
           location.state &&
-          typeof location.state === "object" &&
+          typeof location.state === "object" && 
           "from" in location.state
             ? (location.state.from as { pathname: string }).pathname
             : "/";
@@ -93,10 +93,19 @@ function LoginPage() {
   const handleForgotSendOtp = async () => {
     setForgotError(''); setForgotLoading(true);
     try {
-      await sendNewVerifyEmailApi(forgotEmail, forgotEmail.split('@')[0]);
+      if (!forgotEmail) {
+        setForgotError('Vui lòng nhập email!');
+        return;
+      }
+      if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(forgotEmail)) {
+        setForgotError('Email không hợp lệ!');
+        return;
+      }
+      await sendResetPasswordEmailApi(forgotEmail);
       setForgotStep('otp');
-    } catch {
-      setForgotError('Không gửi được OTP, kiểm tra email!');
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ message?: string }>;
+      setForgotError(axiosErr?.response?.data?.message || 'Không gửi được OTP, kiểm tra email!');
     }
     setForgotLoading(false);
   };
@@ -104,10 +113,19 @@ function LoginPage() {
   const handleForgotVerifyOtp = async () => {
     setForgotError(''); setForgotLoading(true);
     try {
+      if (!forgotOtp) {
+        setForgotError('Vui lòng nhập mã OTP!');
+        return;
+      }
+      if (!/^\d{6}$/.test(forgotOtp)) {
+        setForgotError('Mã OTP phải có 6 chữ số!');
+        return;
+      }
       await fetch('/api/auth/check-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyCode: forgotOtp }) });
       setForgotStep('newpass');
-    } catch {
-      setForgotError('OTP không đúng hoặc đã hết hạn!');
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ message?: string }>;
+      setForgotError(axiosErr?.response?.data?.message || 'OTP không đúng hoặc đã hết hạn!');
     }
     setForgotLoading(false);
   };

@@ -70,6 +70,7 @@ export const loginWithGoogleApi = async (
   return res.data;
 };
 
+// Gửi OTP xác thực đăng ký (chỉ dùng cho đăng ký)
 export const sendOtpApi = async (email: string, username: string) => {
   const res = await api.post("/auth/send-new-verify-email", {
     email,
@@ -198,11 +199,6 @@ export const registerEventApi = async (eventId: string, userId: string) => {
   const res = await api.post(`/events/${eventId}/register`, { userId });
   return res.data;
 };
-// Gửi OTP về email
-export const sendNewVerifyEmailApi = async (email: string, username: string) => {
-  const res = await api.post('/auth/send-new-verify-email', { email, username });
-  return res.data;
-};
 
 export const unregisterEventApi = async (eventId: string, userId: string) => {
   const res = await api.post(`/events/${eventId}/unregister`, { userId });
@@ -265,6 +261,12 @@ export const changePasswordApi = async (email: string, password: string, confirm
 
 export const getAppointmentByUserIdApi = async (userId: string) => {
   const res = await api.get(`/appointments/user/${userId}`);
+  return res.data;
+};
+
+// Gửi OTP quên mật khẩu
+export const sendResetPasswordEmailApi = async (email: string) => {
+  const res = await api.post('/auth/send-reset-password-email', { email });
   return res.data;
 };
 

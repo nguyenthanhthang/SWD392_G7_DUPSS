@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendNewVerifyEmailApi } from '../api';
+import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi } from '../api';
 import whaleLogo from '../assets/whale.png';
 import AppointmentsPage from './Appointments';
 import PaymentsTable  from './PaymentHistory';
@@ -138,7 +138,7 @@ export default function Profile() {
     setPwdError('');
     setPwdLoading(true);
     try {
-      await sendNewVerifyEmailApi(pwdEmail, user?.username || '');
+      await sendResetPasswordEmailApi(pwdEmail);
       setPwdStep('otp');
     } catch {
       setPwdError('Không gửi được OTP, kiểm tra email!');
