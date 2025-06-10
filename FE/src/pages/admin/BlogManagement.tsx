@@ -30,6 +30,27 @@ const BlogManagement: React.FC = () => {
   const [authorFilter, setAuthorFilter] = useState('');
   const { user } = useAuth();
 
+  // Filtered blogs
+  const filteredBlogs = blogs.filter(blog => {
+    const matchesSearch =
+      searchTerm === '' ||
+      blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      blog.author.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === '' ||
+      (statusFilter === 'published' && blog.published) ||
+      (statusFilter === 'draft' && !blog.published);
+    const matchesAuthor =
+      authorFilter === '' || blog.author === authorFilter;
+    return matchesSearch && matchesStatus && matchesAuthor;
+  });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 8;
+  const totalPages = Math.ceil(filteredBlogs.length / rowsPerPage);
+  const paginatedBlogs = filteredBlogs.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   // Fetch blogs
   const fetchBlogs = async () => {
     setLoading(true);
@@ -46,21 +67,6 @@ const BlogManagement: React.FC = () => {
   useEffect(() => {
     fetchBlogs();
   }, []);
-
-  // Filtered blogs
-  const filteredBlogs = blogs.filter(blog => {
-    const matchesSearch =
-      searchTerm === '' ||
-      blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      blog.author.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === '' ||
-      (statusFilter === 'published' && blog.published) ||
-      (statusFilter === 'draft' && !blog.published);
-    const matchesAuthor =
-      authorFilter === '' || blog.author === authorFilter;
-    return matchesSearch && matchesStatus && matchesAuthor;
-  });
 
   // Handle open modal
   const handleAddNew = () => {
@@ -247,7 +253,7 @@ const BlogManagement: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+      <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
         <table className="min-w-full bg-white table-fixed">
           <thead>
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
@@ -260,9 +266,9 @@ const BlogManagement: React.FC = () => {
               <th className="px-4 py-3 rounded-tr-lg w-1/6">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="text-gray-600 text-sm">
-            {filteredBlogs.length > 0 ? (
-              filteredBlogs.map(blog => (
+          <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
+            {paginatedBlogs.length > 0 ? (
+              paginatedBlogs.map(blog => (
                 <tr key={blog._id} className="border-b border-gray-200 hover:bg-purple-50">
                   <td className="px-4 py-3 whitespace-nowrap font-medium">{blog.title}</td>
                   {/*
@@ -331,6 +337,33 @@ const BlogManagement: React.FC = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center items-center mt-4 gap-2">
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          Trước
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            onClick={() => setCurrentPage(i + 1)}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          Sau
+        </button>
       </div>
 
       {/* Modal Thêm/Sửa Blog */}

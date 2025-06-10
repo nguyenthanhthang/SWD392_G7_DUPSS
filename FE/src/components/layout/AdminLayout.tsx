@@ -208,7 +208,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </div>
         {/* Main Content */}
-        <main className="flex-1 pt-20">
+        <main className="flex-1 pt-4">
           <div className="px-4">{children}</div>
         </main>
       </div>

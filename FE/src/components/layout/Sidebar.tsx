@@ -65,7 +65,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
           </button>
         </div>
 
-        {/* Menu Items */}
+        {/* Menu Items (scrollable) */}
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-2 px-3">
             {menuItems.map((item) => (
@@ -98,33 +98,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
           </ul>
         </nav>
 
-        {/* User Info */}
-        {!isCollapsed && user && (
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center">
-              <img
-                src={user.photoUrl || 'https://ui-avatars.com/api/?name=User&background=eee&color=555'}
-                alt={user.fullName || user.username}
-                className="w-8 h-8 rounded-full"
-              />
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">{user.fullName || user.username}</p>
-                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Collapsed User Avatar */}
-        {isCollapsed && user && (
-          <div className="p-4 border-t border-gray-200 flex justify-center">
-            <img
-              src={user.photoUrl || 'https://ui-avatars.com/api/?name=User&background=eee&color=555'}
-              alt={user.fullName || user.username}
-              className="w-8 h-8 rounded-full"
-            />
-          </div>
-        )}
+        {/* Footer HOPEHUB luôn cố định dưới cùng */}
+        <div className="p-4 border-t">
+          <div className="text-center text-xs text-gray-400">@2025 HOPEHUB</div>
+        </div>
       </div>
     </div>
   );

@@ -140,6 +140,12 @@ const Consultant: React.FC = () => {
   // State cho quản lý lịch làm việc
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 8;
+  const totalPages = Math.ceil(consultants.length / rowsPerPage);
+  const paginatedConsultants = consultants.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  
   // Hàm xử lý mở modal xem ảnh chứng chỉ to
   const handleOpenImagePreview = (imageUrl: string) => {
     setPreviewImage(imageUrl);
@@ -689,7 +695,7 @@ const Consultant: React.FC = () => {
         </button>
       </div>
 
-            <div className="overflow-x-auto shadow-md rounded-lg">
+            <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
         <table className="min-w-full bg-white">
           <thead>
             <tr className="bg-gradient-to-r from-indigo-50 to-blue-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
@@ -701,7 +707,7 @@ const Consultant: React.FC = () => {
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
-            {consultants.map(consultant => (
+            {paginatedConsultants.map(consultant => (
               <tr key={consultant._id} className="hover:bg-indigo-50 transition-colors duration-150">
                 <td className="px-4 py-3 font-medium flex items-center">
                   <img src={consultant.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-10 h-10 rounded-full object-cover mr-2 inline-block" />
@@ -784,6 +790,32 @@ const Consultant: React.FC = () => {
             ))}
           </tbody>
         </table>
+      </div>
+      {/* Pagination */}
+      <div className="flex justify-center items-center mt-4 gap-2">
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          Trước
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            onClick={() => setCurrentPage(i + 1)}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          Sau
+        </button>
       </div>
 
       {/* Modal Cập nhật tư vấn viên */}
@@ -1063,7 +1095,7 @@ const Consultant: React.FC = () => {
 
             {/* Bảng chứng chỉ */}
             {!certificateLoading && !certificateError && certificates.length > 0 && (
-              <div className="overflow-x-auto shadow-md rounded-lg">
+              <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
                 <table className="min-w-full bg-white">
                   <thead>
                     <tr className="bg-gradient-to-r from-indigo-50 to-blue-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
