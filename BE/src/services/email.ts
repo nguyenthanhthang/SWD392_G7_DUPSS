@@ -83,7 +83,7 @@ export const sendResetPasswordEmail = async (
     html: `
     <!DOCTYPE html>
     <html lang="vi">
-    <head>
+    <head> 
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Khôi phục mật khẩu</title>
@@ -108,10 +108,10 @@ export const sendResetPasswordEmail = async (
           <div class="otp">${resetToken}</div>
           <p>Mã này sẽ hết hạn sau 10 phút.</p>
           <p>Nếu bạn không yêu cầu khôi phục mật khẩu, vui lòng bỏ qua email này.</p>
-          <p>Trân trọng,<br>Đội ngũ GenKiKoi</p>
+          <p>Trân trọng,<br>Đội ngũ HopeHub</p>
         </div>
         <div class="footer">
-          <p>© 2023 GenKiKoi. Tất cả các quyền được bảo lưu.</p>
+          <p>© 2023 HopeHub. Tất cả các quyền được bảo lưu.</p>
         </div>
       </div>
     </body>
@@ -259,9 +259,9 @@ export const sendPasswordChangeAlert = async (
   username: string
 ) => {
   const mailOptions = {
-    from: "GenKiKoi",
+    from: "HopeHub",
     to: email,
-    subject: "Cảnh báo bảo mật - GenKiKoi",
+    subject: "Cảnh báo bảo mật - HopeHub",
     html: `
     <!DOCTYPE html>
     <html lang="vi">
@@ -281,7 +281,7 @@ export const sendPasswordChangeAlert = async (
     <body>
       <div class="container">
         <div class="header">
-          <h1>GenKiKoi</h1>
+          <h1>HopeHub</h1>
         </div>
         <div class="content">
           <h2>Thông báo thay đổi mật khẩu</h2>
@@ -294,10 +294,10 @@ export const sendPasswordChangeAlert = async (
               <li>Liên hệ với bộ phận hỗ trợ của chúng tôi</li>
             </ol>
           </div>
-          <p>Trân trọng,<br>Đội ngũ GenKiKoi</p>
+          <p>Trân trọng,<br>Đội ngũ HopeHub</p>
         </div>
         <div class="footer">
-          <p>© 2023 GenKiKoi. Tất cả các quyền được bảo lưu.</p>
+          <p>© 2023 HopeHub. Tất cả các quyền được bảo lưu.</p>
           <p>Hotline hỗ trợ: 0352195876</p>
         </div>
       </div>

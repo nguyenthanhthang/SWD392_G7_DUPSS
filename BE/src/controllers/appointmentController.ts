@@ -14,8 +14,9 @@ export const createAppointment = async (req: Request, res: Response) => {
         }
 
         const savedAppointment = await newAppointment.save();
+        await SlotTime.findByIdAndUpdate(req.body.slotTime_id, { status: "booked" });
         res.status(201).json(savedAppointment);
-    } catch (err: any) {
+    } catch (err: any) { 
         res.status(400).json({ message: err.message });
     }
 }   
@@ -58,6 +59,14 @@ export const getAppointmentByUserId = async (req: Request, res: Response) => {
 export const getAppointmentByConsultantId = async (req: Request, res: Response) => {
     try {
         const appointment = await Appointment.find({ consultant_id: req.params.id }).populate("user_id").populate("consultant_id").populate("service_id");
+        res.status(200).json(appointment);
+    } catch (err: any) {
+        res.status(500).json({ message: err.message });
+    }
+}
+export const getAppointmentBySlotTimeId = async (req: Request, res: Response) => {
+    try {
+        const appointment = await Appointment.find({ slotTime_id: req.params.id }).populate("slotTime_id").populate("user_id").populate("consultant_id").populate("service_id");
         res.status(200).json(appointment);
     } catch (err: any) {
         res.status(500).json({ message: err.message });
