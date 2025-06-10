@@ -14,11 +14,11 @@ export interface IAppointment {
 }
 export const AppointmentSchema: Schema = new Schema ({
     slotTime_id: { type: Schema.Types.ObjectId, ref: "SlotTime", required: true },
-    user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user_id: { type: Schema.Types.ObjectId, ref: "Account", required: true },
     consultant_id: { type: Schema.Types.ObjectId, ref: "Consultant", required: true },
     service_id: { type: Schema.Types.ObjectId, ref: "Service", required: true },
     dateBooking: { type: Date, required: true },
-    reason: { type: String, required: false },
+    reason: { type: String, required: false }, 
     note: { type: String, required: false },
     status: { type: String, required: true, default: "pending", enum: ["pending", "confirmed", "cancelled", "completed"] },
   
