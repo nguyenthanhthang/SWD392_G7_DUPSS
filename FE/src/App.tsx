@@ -27,6 +27,7 @@ import PaymentHistory from "./pages/PaymentHistory";
 import BlogManagement from "./pages/admin/BlogManagement";
 
 import AdminDashboard from "./pages/admin/Dashboard";
+import ConsultantDashboard from "./pages/consultant/ConsultantDashboard";
 import { useEffect } from "react";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -153,15 +154,14 @@ function AppContent() {
 
         {/* Consultant Routes */}
         <Route
-          path="/consultant-portal/*"
+          path="/consultant/*"
           element={
             <ConsultantRoute>
-              <AdminLayout>
                 <Routes>
+                  <Route path="" element={<ConsultantDashboard />} /> 
                   <Route path="events" element={<EventManagement />} />
                   <Route path="consultants" element={<Consultant />} />
                 </Routes>
-              </AdminLayout>
             </ConsultantRoute>
           }
         />

@@ -35,12 +35,12 @@ function LoginPage() {
   const [showForgotConfirm, setShowForgotConfirm] = useState(false);
   const [forgotToast, setForgotToast] = useState<string|null>(null);
 
-  useEffect(() => {
+  useEffect(() => { 
     if (user) {
       if (user.role === "admin") {
         navigate("/admin", { replace: true });
       } else if (user.role === "consultant") {
-        navigate("/consultant-portal/events", { replace: true });
+        navigate("/consultant", { replace: true });
       } else {
         const from =
           location.state &&
