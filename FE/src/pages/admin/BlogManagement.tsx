@@ -31,6 +31,7 @@ const BlogManagement: React.FC = () => {
   const [authorFilter, setAuthorFilter] = useState('');
   const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
 
   // Filtered blogs
@@ -173,6 +174,8 @@ const BlogManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (isSubmitting) return; // Prevent double submit
+    
     // Validate form
     const errors: {[key: string]: string} = {};
     
@@ -221,6 +224,7 @@ const BlogManagement: React.FC = () => {
     setFormErrors({});
     
     try {
+      setIsSubmitting(true); // Set submitting state to true
       let blogData: any = {
         title: formData.title,
         content: formData.content,
@@ -250,6 +254,8 @@ const BlogManagement: React.FC = () => {
       setTimeout(() => {
         setNotification(null);
       }, 3000);
+    } finally {
+      setIsSubmitting(false); // Reset submitting state
     }
   };
 
@@ -643,9 +649,10 @@ const BlogManagement: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+                  disabled={isSubmitting}
+                  className={`px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {editingBlog ? 'Cập nhật' : 'Tạo mới'}
+                  {isSubmitting ? 'Đang xử lý...' : (editingBlog ? 'Cập nhật' : 'Tạo mới')}
                 </button>
               </div>
             </form>
