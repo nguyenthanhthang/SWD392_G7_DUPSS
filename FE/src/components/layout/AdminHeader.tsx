@@ -56,7 +56,7 @@ function AdminHeader({ isSidebarCollapsed = false }: AdminHeaderProps) {
   };
 
   return (
-    <header className={`relative z-40 transition-all duration-300`} style={{minHeight: 100}}>
+    <header className={`relative z-30 transition-all duration-300`} style={{minHeight: 100}}>
       {/* SVG background sóng */}
       <div className="absolute inset-0 w-full h-full pointer-events-none select-none" aria-hidden="true">
         <svg viewBox="0 0 1600 200" width="100%" height="100%" preserveAspectRatio="none" className="w-full h-full">

@@ -1,6 +1,11 @@
 import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import Heading from '@tiptap/extension-heading';
+import BulletList from '@tiptap/extension-bullet-list';
+import OrderedList from '@tiptap/extension-ordered-list';
+import ListItem from '@tiptap/extension-list-item';
 
 interface EditorProps {
   value: string;
@@ -10,7 +15,21 @@ interface EditorProps {
 
 const Editor: React.FC<EditorProps> = ({ value, onChange, height = 400 }) => {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
+      }),
+      Heading.configure({
+        levels: [1, 2, 3],
+      }),
+      Underline,
+      BulletList,
+      OrderedList,
+      ListItem,
+    ],
     content: value,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
@@ -21,56 +40,50 @@ const Editor: React.FC<EditorProps> = ({ value, onChange, height = 400 }) => {
     <div style={{ border: '1px solid #ccc', padding: '10px', minHeight: height }}>
       <div style={{ marginBottom: '10px' }}>
         <button
+          type="button"
           onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
           className={editor?.isActive('heading', { level: 1 }) ? 'is-active' : ''}
         >
           H1
         </button>
         <button
+          type="button"
           onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
           className={editor?.isActive('heading', { level: 2 }) ? 'is-active' : ''}
         >
           H2
         </button>
         <button
+          type="button"
           onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
           className={editor?.isActive('heading', { level: 3 }) ? 'is-active' : ''}
         >
           H3
         </button>
         <button
+          type="button"
           onClick={() => editor?.chain().focus().toggleBold().run()}
           className={editor?.isActive('bold') ? 'is-active' : ''}
         >
           Bold
         </button>
         <button
+          type="button"
           onClick={() => editor?.chain().focus().toggleItalic().run()}
           className={editor?.isActive('italic') ? 'is-active' : ''}
         >
           Italic
         </button>
         <button
-          onClick={() => editor?.chain().focus().toggleUnderline().run()}
+          type="button"
+          onClick={() => editor?.chain().focus().toggleUnderline?.().run()}
           className={editor?.isActive('underline') ? 'is-active' : ''}
         >
           Underline
         </button>
-        <button
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          className={editor?.isActive('bulletList') ? 'is-active' : ''}
-        >
-          • List
-        </button>
-        <button
-          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          className={editor?.isActive('orderedList') ? 'is-active' : ''}
-        >
-          1. List
-        </button>
       </div>
       <EditorContent editor={editor} />
-      <style jsx>{`
+      <style>{`
         button {
           margin-right: 5px;
           padding: 5px 10px;
@@ -90,6 +103,28 @@ const Editor: React.FC<EditorProps> = ({ value, onChange, height = 400 }) => {
         .ProseMirror:focus {
           outline: none;
           border-color: #4299e1;
+        }
+        .ProseMirror h1 {
+          font-size: 2em;
+          font-weight: bold;
+          line-height: 1.5;
+          margin: 16px 0;
+        }
+        .ProseMirror h2 {
+          font-size: 1.5em;
+          font-weight: bold;
+          line-height: 1.5;
+          margin: 14px 0;
+        }
+        .ProseMirror h3 {
+          font-size: 1.17em;
+          font-weight: bold;
+          line-height: 1.5;
+          margin: 12px 0;
+        }
+        .ProseMirror p {
+          margin: 8px 0;
+          line-height: 1.5;
         }
       `}</style>
     </div>

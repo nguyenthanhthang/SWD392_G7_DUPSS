@@ -29,6 +29,8 @@ const BlogManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [authorFilter, setAuthorFilter] = useState('');
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const { user } = useAuth();
 
   // Filtered blogs
@@ -97,12 +99,27 @@ const BlogManagement: React.FC = () => {
     setFormData({});
     setFile(null);
     setFilePreview(null);
+    setFormErrors({});
   };
 
   // Handle file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) {
+      // Validate image
+      const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validImageTypes.includes(f.type)) {
+        setFormErrors(prev => ({ ...prev, image: 'Ảnh phải có định dạng JPG, JPEG, PNG hoặc WEBP' }));
+      } else if (f.size > 2 * 1024 * 1024) {
+        setFormErrors(prev => ({ ...prev, image: 'Ảnh không được quá 2MB' }));
+      } else {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.image;
+          return newErrors;
+        });
+      }
+      
       setFile(f);
       setFilePreview(URL.createObjectURL(f));
       setFormData({ ...formData, image: f });
@@ -112,6 +129,41 @@ const BlogManagement: React.FC = () => {
   // Handle form change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    
+    // Validate the field that was just changed
+    const field = e.target.name;
+    let error = '';
+    
+    if (field === 'title') {
+      if (!e.target.value || e.target.value.trim() === '') {
+        error = 'Tiêu đề không được để trống';
+      } else if (e.target.value.trim().length < 5) {
+        error = 'Tiêu đề phải có ít nhất 5 ký tự';
+      } else if (e.target.value.trim().length > 150) {
+        error = 'Tiêu đề không được quá 150 ký tự';
+      }
+    }
+    
+    if (field === 'author') {
+      if (!e.target.value || e.target.value.trim() === '') {
+        error = 'Tác giả không được để trống';
+      } else if (e.target.value.trim().length < 3) {
+        error = 'Tên tác giả phải có ít nhất 3 ký tự';
+      } else if (e.target.value.trim().length > 50) {
+        error = 'Tên tác giả không được quá 50 ký tự';
+      }
+    }
+    
+    // Update only this field's error
+    if (error) {
+      setFormErrors(prev => ({ ...prev, [field]: error }));
+    } else {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
   };
   const handleSwitch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, published: e.target.checked });
@@ -120,6 +172,54 @@ const BlogManagement: React.FC = () => {
   // Handle submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form
+    const errors: {[key: string]: string} = {};
+    
+    // Validate title
+    if (!formData.title || formData.title.trim() === '') {
+      errors.title = 'Tiêu đề không được để trống';
+    } else if (formData.title.trim().length < 5) {
+      errors.title = 'Tiêu đề phải có ít nhất 5 ký tự';
+    } else if (formData.title.trim().length > 150) {
+      errors.title = 'Tiêu đề không được quá 150 ký tự';
+    }
+    
+    // Validate author
+    if (!formData.author || formData.author.trim() === '') {
+      errors.author = 'Tác giả không được để trống';
+    } else if (formData.author.trim().length < 3) {
+      errors.author = 'Tên tác giả phải có ít nhất 3 ký tự';
+    } else if (formData.author.trim().length > 50) {
+      errors.author = 'Tên tác giả không được quá 50 ký tự';
+    }
+    
+    // Validate content
+    if (!formData.content || formData.content.trim() === '') {
+      errors.content = 'Nội dung không được để trống';
+    } else if (formData.content.replace(/<[^>]*>/g, '').trim().length < 50) {
+      errors.content = 'Nội dung phải có ít nhất 50 ký tự';
+    }
+    
+    // Validate image
+    if (file) {
+      const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validImageTypes.includes(file.type)) {
+        errors.image = 'Ảnh phải có định dạng JPG, JPEG, PNG hoặc WEBP';
+      } else if (file.size > 2 * 1024 * 1024) {
+        errors.image = 'Ảnh không được quá 2MB';
+      }
+    }
+    
+    // If there are errors, show them and stop submission
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    // Clear errors if no problems
+    setFormErrors({});
+    
     try {
       let blogData: any = {
         title: formData.title,
@@ -135,15 +235,21 @@ const BlogManagement: React.FC = () => {
       }
       if (editingBlog) {
         await updateBlogApi(editingBlog._id, blogData);
-        message.success('Cập nhật blog thành công');
+        setNotification({type: 'success', message: 'Cập nhật blog thành công'});
       } else {
         await createBlogApi(blogData);
-        message.success('Tạo blog mới thành công');
+        setNotification({type: 'success', message: 'Tạo blog mới thành công'});
       }
       handleCloseModal();
       fetchBlogs();
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
     } catch (error) {
-      message.error('Không thể lưu blog');
+      setNotification({type: 'error', message: 'Không thể lưu blog'});
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
     }
   };
 
@@ -151,10 +257,16 @@ const BlogManagement: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteBlogApi(id);
-      message.success('Xóa blog thành công');
+      setNotification({type: 'success', message: 'Xóa blog thành công'});
       fetchBlogs();
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
     } catch {
-      message.error('Không thể xóa blog');
+      setNotification({type: 'error', message: 'Không thể xóa blog'});
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
     }
   };
 
@@ -166,8 +278,52 @@ const BlogManagement: React.FC = () => {
       <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">Bản nháp</span>
     );
 
+  // Handle toggle publish status
+  const handleTogglePublish = async (blog: Blog) => {
+    try {
+      await updateBlogApi(blog._id, {
+        ...blog,
+        published: !blog.published
+      });
+      setNotification({type: 'success', message: `Blog đã ${!blog.published ? 'xuất bản' : 'chuyển về bản nháp'} thành công`});
+      fetchBlogs();
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+    } catch (error) {
+      setNotification({type: 'error', message: 'Không thể thay đổi trạng thái blog'});
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+    }
+  };
+
   return (
     <div className="p-4 bg-white rounded-lg shadow-sm mt-4">
+      {/* Hiển thị thông báo */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${
+          notification.type === 'success' ? 'bg-green-100 text-green-800 border-l-4 border-green-500' : 
+          'bg-red-100 text-red-800 border-l-4 border-red-500'
+        }`}>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {notification.type === 'success' ? (
+                <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium">{notification.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold text-indigo-400">Quản lý bài viết</h1>
         <button
@@ -290,7 +446,22 @@ const BlogManagement: React.FC = () => {
                     )}
                   </td>
                   */}
-                  <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(blog.published)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      {getStatusBadge(blog.published)}
+                      <div className="flex items-center ml-2">
+                        <label className="inline-flex relative items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={blog.published}
+                            onChange={() => handleTogglePublish(blog)}
+                          />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">{new Date(blog.createdAt).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center space-x-3">
@@ -366,8 +537,8 @@ const BlogManagement: React.FC = () => {
 
       {/* Modal Thêm/Sửa Blog */}
       {modalVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-xl font-semibold">{editingBlog ? 'Sửa blog' : 'Thêm blog mới'}</h2>
               <button
@@ -379,6 +550,16 @@ const BlogManagement: React.FC = () => {
                 </svg>
               </button>
             </div>
+            {Object.keys(formErrors).length > 0 && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm font-medium text-red-600">Vui lòng kiểm tra lại thông tin nhập liệu:</p>
+                <ul className="mt-2 list-disc list-inside text-sm text-red-600">
+                  {Object.values(formErrors).map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Tiêu đề</label>
@@ -387,9 +568,13 @@ const BlogManagement: React.FC = () => {
                   name="title"
                   value={formData.title || ''}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  style={{ borderColor: formErrors.title ? '#f56565' : '#e2e8f0' }}
                   required
                 />
+                {formErrors.title && (
+                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.title}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Tác giả</label>
@@ -398,29 +583,39 @@ const BlogManagement: React.FC = () => {
                   name="author"
                   value={formData.author || ''}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  style={{ borderColor: formErrors.author ? '#f56565' : '#e2e8f0' }}
                   required
                 />
+                {formErrors.author && (
+                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.author}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nội dung</label>
                 <Editor
                   value={formData.content || ''}
-                  onChange={content => setFormData({ ...formData, content })}
+                  onChange={content => {
+                    setFormData({ ...formData, content });
+                    
+                    // Validate content
+                    if (!content || content.trim() === '') {
+                      setFormErrors(prev => ({ ...prev, content: 'Nội dung không được để trống' }));
+                    } else if (content.replace(/<[^>]*>/g, '').trim().length < 50) {
+                      setFormErrors(prev => ({ ...prev, content: 'Nội dung phải có ít nhất 50 ký tự' }));
+                    } else {
+                      setFormErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.content;
+                        return newErrors;
+                      });
+                    }
+                  }}
                   height={300}
                 />
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="published"
-                  checked={formData.published || false}
-                  onChange={handleSwitch}
-                  className="mr-2"
-                />
-                <label htmlFor="published" className="text-sm font-medium text-gray-700">
-                  Đã xuất bản
-                </label>
+                {formErrors.content && (
+                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.content}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Ảnh đại diện blog</label>
@@ -429,7 +624,11 @@ const BlogManagement: React.FC = () => {
                   accept="image/*"
                   onChange={handleFileChange}
                   className="mt-1 block w-full text-sm"
+                  style={{ color: formErrors.image ? '#f56565' : 'inherit' }}
                 />
+                {formErrors.image && (
+                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.image}</p>
+                )}
                 {filePreview && (
                   <img src={filePreview} alt="Preview" className="mt-2 w-32 h-20 object-cover rounded border" />
                 )}
