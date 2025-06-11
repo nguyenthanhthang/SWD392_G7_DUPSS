@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import AdminHeader from './AdminHeader';
 import Sidebar from './Sidebar';
+import Footer from './Footer';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface MainLayoutProps {
@@ -19,12 +20,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       {isAdminPage ? <AdminHeader isSidebarCollapsed={isSidebarCollapsed} /> : <Header />}
 
       {/* Main Content */}
-      <div className="flex">
+      <div className="flex flex-grow">
         {/* Sidebar - chỉ hiển thị ở trang admin */}
         {isAdminPage && user && (
           <Sidebar 
@@ -38,6 +39,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           {children}
         </main>
       </div>
+      
+      {/* Footer - không hiển thị ở trang admin */}
+      {!isAdminPage && <Footer />}
     </div>
   );
 };

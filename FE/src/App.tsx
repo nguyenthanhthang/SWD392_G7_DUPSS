@@ -16,6 +16,7 @@ import Home from "./pages/Home";
 import QuizzPage from "./pages/QuizzPage";
 import ConsultingPage from "./pages/ConsultingPage";
 import BlogPage from "./pages/BlogPage";
+import BlogDetailPage from "./pages/BlogDetailPage";
 import AccountList from "./pages/admin/AccountList";
 import ConsultantDetailPage from "./pages/ConsultantDetailPage";
 import Service from "./pages/admin/Service";
@@ -95,6 +96,7 @@ function AppContent() {
         <Route path="/consulting" element={<ConsultingPage />} />
         <Route path="/consultant/:id" element={<ConsultantDetailPage />} />
         <Route path="/blogs" element={<BlogPage />} />
+        <Route path="/blogs/:id" element={<BlogDetailPage />} />
         <Route path="/about-us" element={<AboutUsPage />} />
         <Route path="/service" element={<ServicePage />} />
 
