@@ -75,7 +75,15 @@ const BlogManagement: React.FC = () => {
   // Handle open modal
   const handleAddNew = () => {
     setEditingBlog(null);
-    setFormData({ title: '', content: '', author: user?.username || 'Admin', tags: '', published: false });
+    setFormData({ 
+      title: '', 
+      content: '', 
+      author: user?.username || 'Admin', 
+      tags: '', 
+      published: false,
+      image: '',
+      thumbnail: ''
+    });
     setFile(null);
     setFilePreview(null);
     setModalVisible(true);
@@ -123,7 +131,62 @@ const BlogManagement: React.FC = () => {
       
       setFile(f);
       setFilePreview(URL.createObjectURL(f));
-      setFormData({ ...formData, image: f });
+      
+      // Tạo thumbnail từ ảnh gốc
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Tạo canvas để resize ảnh
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Kích thước thumbnail
+          const maxWidth = 300;
+          const maxHeight = 200;
+          
+          // Tính toán kích thước mới giữ nguyên tỷ lệ
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          
+          // Vẽ ảnh đã resize lên canvas
+          canvas.width = width;
+          canvas.height = height;
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Chuyển canvas thành blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              // Tạo file thumbnail từ blob
+              const thumbnailFile = new File([blob], 'thumbnail_' + f.name, {
+                type: f.type,
+                lastModified: Date.now()
+              });
+              
+              // Cập nhật formData với cả ảnh gốc và thumbnail
+              setFormData(prev => ({
+                ...prev,
+                image: f,
+                thumbnail: thumbnailFile
+              }));
+            }
+          }, f.type, 0.7); // Chất lượng 70%
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(f);
     }
   };
 
@@ -214,9 +277,28 @@ const BlogManagement: React.FC = () => {
       }
     }
     
+    // Validate tags
+    const tagString = formData.tags || '';
+    const tagArr = tagString.split(',').map((t: any) => t.trim()).filter(Boolean);
+    if (tagArr.length === 0) {
+      setFormErrors((prev: any) => ({ ...prev, tags: 'Vui lòng nhập ít nhất 1 tag.' }));
+    }
+    if (tagArr.length > 5) {
+      errors.tags = 'Chỉ được nhập tối đa 5 tag.';
+    }
+    for (let tag of tagArr) {
+      if (tag.length > 20) {
+        errors.tags = 'Mỗi tag không quá 20 ký tự.';
+      }
+      if (!/^[a-zA-Z0-9-_]+$/.test(tag)) {
+        errors.tags = 'Tag chỉ được chứa chữ cái, số, dấu gạch ngang hoặc gạch dưới.';
+      }
+    }
+    
     // If there are errors, show them and stop submission
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
+      setIsSubmitting(false);
       return;
     }
     
@@ -638,6 +720,19 @@ const BlogManagement: React.FC = () => {
                 {filePreview && (
                   <img src={filePreview} alt="Preview" className="mt-2 w-32 h-20 object-cover rounded border" />
                 )}
+              </div>
+              <div className="form-group">
+                <label htmlFor="tags">Tags (phân tách bằng dấu phẩy)</label>
+                <input
+                  type="text"
+                  id="tags"
+                  name="tags"
+                  value={formData.tags || ''}
+                  onChange={e => setFormData({ ...formData, tags: e.target.value })}
+                  placeholder="Ví dụ: suc-khoe, tam-ly, dinh-duong"
+                  className="form-control"
+                />
+                {formErrors.tags && <div className="text-danger" style={{ fontSize: 13 }}>{formErrors.tags}</div>}
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button

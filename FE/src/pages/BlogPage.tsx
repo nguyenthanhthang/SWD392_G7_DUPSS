@@ -21,6 +21,8 @@ function BlogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchAuthor, setSearchAuthor] = useState('');
+  const [searchTag, setSearchTag] = useState('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,12 +49,16 @@ function BlogPage() {
     fetchBlogs();
   }, []);
 
-  // Filter blogs based on search term
-  const filteredBlogs = blogs.filter(blog =>
-    blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    blog.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    blog.author.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter blogs based on search term, author, and tag
+  const filteredBlogs = blogs.filter(blog => {
+    const matchTitleContentAuthor =
+      blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      blog.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      blog.author.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchAuthor = searchAuthor.trim() === '' || blog.author.toLowerCase().includes(searchAuthor.toLowerCase());
+    const matchTag = searchTag.trim() === '' || (blog.tags && blog.tags.some(tag => tag.toLowerCase().includes(searchTag.toLowerCase())));
+    return matchTitleContentAuthor && matchAuthor && matchTag;
+  });
 
   // Get current blogs for pagination
   const indexOfLastBlog = currentPage * blogsPerPage;
@@ -98,7 +104,7 @@ function BlogPage() {
   return (
     <MainLayout>
       {/* Hero Section - Updated with softer colors */}
-      <div className="bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-300 py-16">
+      <div className="bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-300 py-8">
         <div className="container mx-auto px-4 relative">
           {/* Decorative circles */}
           <div className="absolute top-0 left-10 w-20 h-20 rounded-full bg-white opacity-10"></div>
@@ -114,7 +120,7 @@ function BlogPage() {
 
       <div className="container mx-auto px-4 py-12 bg-gray-50">
         {/* Search Bar - Improved design */}
-        <div className="max-w-md mx-auto mb-10">
+        <div className="max-w-2xl mx-auto mb-10 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <input
               type="text"
@@ -122,6 +128,34 @@ function BlogPage() {
               className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
+              <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm theo tác giả..."
+              className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+              value={searchAuthor}
+              onChange={(e) => setSearchAuthor(e.target.value)}
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
+              <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm theo tag..."
+              className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+              value={searchTag}
+              onChange={(e) => setSearchTag(e.target.value)}
             />
             <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
               <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
