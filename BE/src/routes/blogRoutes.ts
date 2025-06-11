@@ -6,6 +6,7 @@ import {
   updateBlog,
   deleteBlog,
 } from '../controllers/blogController';
+const upload = require('../middleware/uploadImage');
 
 const router = express.Router();
 
@@ -13,10 +14,10 @@ const router = express.Router();
 router.get('/', getAllBlogs);
 // Lấy blog theo id
 router.get('/:id', getBlogById);
-// Tạo blog mới
-router.post('/', createBlog);
-// Cập nhật blog
-router.put('/:id', updateBlog);
+// Tạo blog mới (có upload ảnh)
+router.post('/', upload.single('image'), createBlog);
+// Cập nhật blog (có upload ảnh)
+router.put('/:id', upload.single('image'), updateBlog);
 // Xóa blog
 router.delete('/:id', deleteBlog);
 

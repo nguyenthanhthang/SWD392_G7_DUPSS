@@ -10,6 +10,7 @@ interface Blog {
   title: string;
   content: string;
   author: string;
+  image?: string;
   thumbnail?: string;
   tags?: string[];
   published: boolean;
@@ -84,8 +85,9 @@ const BlogManagement: React.FC = () => {
       author: blog.author,
       tags: blog.tags?.join(', ') || '',
       published: blog.published,
+      image: blog.image || '',
     });
-    setFilePreview(blog.thumbnail || null);
+    setFilePreview(blog.image || null);
     setFile(null);
     setModalVisible(true);
   };
@@ -103,6 +105,7 @@ const BlogManagement: React.FC = () => {
     if (f) {
       setFile(f);
       setFilePreview(URL.createObjectURL(f));
+      setFormData({ ...formData, image: f });
     }
   };
 
@@ -118,23 +121,18 @@ const BlogManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let thumbnailUrl = editingBlog?.thumbnail;
-      if (file) {
-        const form = new FormData();
-        form.append('image', file);
-        const uploadRes = await api.post('/uploads/image', form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        thumbnailUrl = uploadRes.data.url;
-      }
-      const blogData = {
+      let blogData: any = {
         title: formData.title,
         content: formData.content,
         author: formData.author || user?.username || 'Admin',
         published: formData.published || false,
         tags: formData.tags ? formData.tags.split(',').map((tag: string) => tag.trim()) : [],
-        thumbnail: thumbnailUrl,
       };
+      if (file) {
+        blogData.image = file;
+      } else if (formData.image && typeof formData.image === 'string') {
+        blogData.image = formData.image;
+      }
       if (editingBlog) {
         await updateBlogApi(editingBlog._id, blogData);
         message.success('Cập nhật blog thành công');
@@ -423,6 +421,18 @@ const BlogManagement: React.FC = () => {
                 <label htmlFor="published" className="text-sm font-medium text-gray-700">
                   Đã xuất bản
                 </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Ảnh đại diện blog</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="mt-1 block w-full text-sm"
+                />
+                {filePreview && (
+                  <img src={filePreview} alt="Preview" className="mt-2 w-32 h-20 object-cover rounded border" />
+                )}
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button

@@ -4,6 +4,7 @@ export interface IBlog extends Document {
   title: string;
   content: string;
   author: string;
+  image?: string;
   thumbnail?: string;
   tags?: string[];
   published: boolean;
@@ -16,11 +17,15 @@ const BlogSchema: Schema = new Schema(
     title: { type: String, required: true },
     content: { type: String, required: true },
     author: { type: String, required: true },
+    image: { type: String },
     thumbnail: { type: String },
     tags: [{ type: String }],
     published: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    versionKey: false
+  }
 );
 
 export default mongoose.model<IBlog>('Blog', BlogSchema); 

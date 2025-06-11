@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import Blog from '../models/Blog';
 
+// Thêm type cho req.file
+interface MulterRequest extends Request {
+  file?: any;
+}
+
 export const getAllBlogs = async (req: Request, res: Response) => {
   try {
     const blogs = await Blog.find().sort({ createdAt: -1 });
@@ -20,10 +25,14 @@ export const getBlogById = async (req: Request, res: Response) => {
   }
 };
 
-export const createBlog = async (req: Request, res: Response) => {
+export const createBlog = async (req: MulterRequest, res: Response) => {
   try {
-    const { title, content, author, thumbnail, tags, published } = req.body;
-    const newBlog = new Blog({ title, content, author, thumbnail, tags, published });
+    const { title, content, author, tags, published } = req.body;
+    let imageUrl = req.body.image;
+    if (req.file && req.file.path) {
+      imageUrl = req.file.path;
+    }
+    const newBlog = new Blog({ title, content, author, tags, published, image: imageUrl });
     await newBlog.save();
     res.status(201).json(newBlog);
   } catch (error) {
@@ -31,9 +40,13 @@ export const createBlog = async (req: Request, res: Response) => {
   }
 };
 
-export const updateBlog = async (req: Request, res: Response) => {
+export const updateBlog = async (req: MulterRequest, res: Response) => {
   try {
-    const blog = await Blog.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    let updateData = { ...req.body };
+    if (req.file && req.file.path) {
+      updateData.image = req.file.path;
+    }
+    const blog = await Blog.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!blog) return res.status(404).json({ message: 'Không tìm thấy blog' });
     res.json(blog);
   } catch (error) {

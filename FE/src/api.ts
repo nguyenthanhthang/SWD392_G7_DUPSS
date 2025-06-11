@@ -281,31 +281,44 @@ export const getBlogByIdApi = async (id: string) => {
   return res.data;
 };
 
-export const createBlogApi = async (data: {
-  title: string;
-  content: string;
-  author: string;
-  thumbnail?: string;
-  tags?: string[];
-  published: boolean;
-}) => {
-  const res = await api.post("/blogs", data);
-  return res.data;
+export const createBlogApi = async (data: any) => {
+  // Nếu có file (data.image là File), gửi FormData
+  if (data.image instanceof File) {
+    const form = new FormData();
+    form.append('title', data.title);
+    form.append('content', data.content);
+    form.append('author', data.author);
+    form.append('published', data.published);
+    if (data.tags) form.append('tags', JSON.stringify(data.tags));
+    form.append('image', data.image);
+    const res = await api.post('/blogs', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } else {
+    // Không có file, gửi JSON bình thường
+    const res = await api.post('/blogs', data);
+    return res.data;
+  }
 };
 
-export const updateBlogApi = async (
-  id: string,
-  data: Partial<{
-    title: string;
-    content: string;
-    author: string;
-    thumbnail?: string;
-    tags?: string[];
-    published: boolean;
-  }>
-) => {
-  const res = await api.put(`/blogs/${id}`, data);
-  return res.data;
+export const updateBlogApi = async (id: string, data: any) => {
+  if (data.image instanceof File) {
+    const form = new FormData();
+    form.append('title', data.title);
+    form.append('content', data.content);
+    form.append('author', data.author);
+    form.append('published', data.published);
+    if (data.tags) form.append('tags', JSON.stringify(data.tags));
+    form.append('image', data.image);
+    const res = await api.put(`/blogs/${id}`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } else {
+    const res = await api.put(`/blogs/${id}`, data);
+    return res.data;
+  }
 };
 
 export const deleteBlogApi = async (id: string) => {
