@@ -52,6 +52,11 @@ const EventManagement = () => {
   const [processedCodes] = useState(new Set<string>());
   const { user } = useAuth();
   const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 8;
+  const totalPages = Math.ceil(events.length / rowsPerPage);
+  const paginatedEvents = events.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   useEffect(() => {
     fetchEvents();
@@ -483,7 +488,7 @@ const EventManagement = () => {
 
       {/* Event Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.length === 0 ? (
+        {paginatedEvents.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -506,138 +511,190 @@ const EventManagement = () => {
             </p>
           </div>
         ) : (
-          events
-            .filter((event) => filter === "all" || event.status === filter)
-            .map((event) => (
-              <div
-                key={event._id}
-                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200"
-              >
-                {/* Event Image */}
-                <div className="aspect-video relative">
-                  <img
-                    src={
-                      event.image ||
-                      `https://placehold.co/600x400/e9ecef/495057?text=${encodeURIComponent(
-                        event.title
-                      )}`
-                    }
-                    alt={event.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-4 right-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                        event.status
-                      )}`}
+          paginatedEvents.map((event) => (
+            <div
+              key={event._id}
+              className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200"
+            >
+              {/* Event Image */}
+              <div className="aspect-video relative">
+                <img
+                  src={
+                    event.image ||
+                    `https://placehold.co/600x400/e9ecef/495057?text=${encodeURIComponent(
+                      event.title
+                    )}`
+                  }
+                  alt={event.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-4 right-4">
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                      event.status
+                    )}`}
+                  >
+                    {getStatusText(event.status)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Event Content */}
+              <div className="p-5">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {event.title}
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  {event.description}
+                </p>
+
+                {/* Event Details */}
+                <div className="space-y-3">
+                  <div className="flex items-center text-sm">
+                    <svg
+                      className="w-5 h-5 text-gray-400 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      {getStatusText(event.status)}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <span className="text-gray-600">
+                      {formatDate(event.startDate)} -{" "}
+                      {formatDate(event.endDate)}
+                    </span>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <svg
+                      className="w-5 h-5 text-gray-400 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    <span className="text-gray-600">{event.location}</span>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <svg
+                      className="w-5 h-5 text-gray-400 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    <span className="text-gray-600">
+                      {event.participants || 0} người tham gia
                     </span>
                   </div>
                 </div>
 
-                {/* Event Content */}
-                <div className="p-5">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {event.title}
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    {event.description}
-                  </p>
-
-                  {/* Event Details */}
-                  <div className="space-y-3">
-                    <div className="flex items-center text-sm">
-                      <svg
-                        className="w-5 h-5 text-gray-400 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <span className="text-gray-600">
-                        {formatDate(event.startDate)} -{" "}
-                        {formatDate(event.endDate)}
-                      </span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <svg
-                        className="w-5 h-5 text-gray-400 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      <span className="text-gray-600">{event.location}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <svg
-                        className="w-5 h-5 text-gray-400 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      <span className="text-gray-600">
-                        {event.participants || 0} người tham gia
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="mt-6 flex space-x-3">
-                    <button
-                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium ${
-                        event.status === "completed"
-                          ? "bg-gray-50 text-gray-600 hover:bg-gray-100"
-                          : event.status === "upcoming"
-                          ? "bg-blue-50 text-blue-600 opacity-50 cursor-not-allowed"
-                          : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                      }`}
-                      onClick={() => handleEventSelect(event)}
-                    >
-                      {event.status === "completed"
-                        ? "Xem lịch sử"
+                {/* Action Buttons */}
+                <div className="mt-6 flex space-x-3">
+                  <button
+                    className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium ${
+                      event.status === "completed"
+                        ? "bg-gray-50 text-gray-600 hover:bg-gray-100"
                         : event.status === "upcoming"
-                        ? "Chưa bắt đầu"
-                        : "Check-in"}
-                    </button>
-                    <button className="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
-                      Xóa
-                    </button>
-                  </div>
+                        ? "bg-blue-50 text-blue-600 opacity-50 cursor-not-allowed"
+                        : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                    }`}
+                    onClick={() => handleEventSelect(event)}
+                  >
+                    {event.status === "completed"
+                      ? "Xem lịch sử"
+                      : event.status === "upcoming"
+                      ? "Chưa bắt đầu"
+                      : "Check-in"}
+                  </button>
+                  <button className="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+                    Xóa
+                  </button>
                 </div>
               </div>
-            ))
+            </div>
+          ))
         )}
       </div>
 
       <QRScannerModal />
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Pagination */}
+      <div className="flex justify-center items-center mt-4 gap-2">
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          Trước
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            onClick={() => setCurrentPage(i + 1)}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          Sau
+        </button>
+      </div>
+
+      {/* Bọc bảng trong vùng cuộn riêng */}
+      <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
+            {paginatedEvents.map(event => (
+              <tr key={event._id}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">{event.title}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{event.description}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{event.location}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{event.participants}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{event.status}</div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

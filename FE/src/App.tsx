@@ -24,6 +24,8 @@ import AboutUsPage from "./pages/AboutUsPage";
 import ServicePage from "./pages/ServicePage";
 import AppointmentsPage from "./pages/Appointments";
 import PaymentHistory from "./pages/PaymentHistory";
+import BlogManagement from "./pages/admin/BlogManagement";
+
 import AdminDashboard from "./pages/admin/Dashboard";
 import ConsultantDashboard from "./pages/consultant/ConsultantDashboard";
 import { useEffect } from "react";
@@ -73,14 +75,6 @@ function ConsultantRoute({ children }: { children: React.ReactNode }) {
   }
 
   return user?.role === "consultant" ? <>{children}</> : null;
-}
-
-function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
 }
 
 function AppContent() {
@@ -151,6 +145,7 @@ function AppContent() {
                   <Route path="services" element={<Service />} />
                   <Route path="events" element={<EventManagement />} />
                   <Route path="consultants" element={<Consultant />} />
+                  <Route path="blogs" element={<BlogManagement />} />
                 </Routes>
               </AdminLayout>
             </AdminRoute>
@@ -172,6 +167,14 @@ function AppContent() {
         />
       </Routes>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

@@ -11,6 +11,16 @@ const timeSlots = [
   '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
 ];
 
+const weekDayNames = {
+  'Mon': 'Thứ Hai',
+  'Tue': 'Thứ Ba',
+  'Wed': 'Thứ Tư',
+  'Thu': 'Thứ Năm',
+  'Fri': 'Thứ Sáu',
+  'Sat': 'Thứ Bảy',
+  'Sun': 'Chủ Nhật'
+};
+
 interface SlotTime {
   _id: string;
   consultant_id: string;
@@ -44,7 +54,7 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
   useEffect(() => {
     if (open) fetchSlotTimes();
     // eslint-disable-next-line
-  }, [consultantId, open]);
+  }, [consultantId, open, currentWeek]);
 
   const fetchSlotTimes = async () => {
     setLoading(true);
@@ -182,14 +192,14 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
           start_time: start.toISOString(),
           end_time: end.toISOString(),
         });
-        await updateStatusSlotTimeApi(selectedSlot.slot._id, status);
+        // Mặc định status vẫn giữ nguyên giá trị cũ
         toast.success('Cập nhật ca làm việc thành công!');
       } else {
         await createSlotTimeApi({
           consultant_id: consultantId,
           start_time: start.toISOString(),
           end_time: end.toISOString(),
-          status,
+          status: 'available', // Mặc định trạng thái là có sẵn
         });
         toast.success('Tạo ca làm việc thành công!');
       }
@@ -280,12 +290,25 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
             {isSaving ? 'Đang xóa...' : 'Xóa'}
           </button>
         </div>
+
+        <div className="bg-blue-50 p-2 rounded-lg mb-4 text-sm text-blue-700">
+          <p>
+            <span className="font-semibold">Hướng dẫn:</span> Nhấp vào ô trống để tạo ca làm việc mới, nhấp vào ca đã tạo để chỉnh sửa.
+            Ca màu đỏ đã được đặt và không thể xóa.
+          </p>
+        </div>
+        
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         ) : error ? (
-          <div className="text-center text-red-600 py-8">{error}</div>
+          <div className="text-center text-red-600 py-8 bg-red-50 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p>{error}</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <div className="grid grid-cols-8 gap-1">
@@ -371,6 +394,7 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
             ))}
           </div>
         )}
+        
         {/* Modal chỉnh sửa slot */}
         {selectedSlot && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">

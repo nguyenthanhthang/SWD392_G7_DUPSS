@@ -65,6 +65,7 @@ const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
 
 // Component con cho input số điện thoại + icon trạng thái
 const PhoneNumberInput: React.FC<{
+  
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   excludeId?: string;
@@ -178,6 +179,11 @@ const AccountList: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 8;
+  const totalPages = Math.ceil(accounts.length / rowsPerPage);
+  const paginatedAccounts = accounts.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   useEffect(() => {
     // Hàm để lấy danh sách tài khoản
@@ -600,7 +606,7 @@ const AccountList: React.FC = () => {
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm">
+    <div className="p-4 bg-white rounded-lg mt-4">
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -736,7 +742,7 @@ const AccountList: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+      <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
         <table className="min-w-full bg-white table-fixed">
           <thead>
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
@@ -748,98 +754,117 @@ const AccountList: React.FC = () => {
               <th className="px-4 py-3 rounded-tr-lg w-1/6">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="text-gray-600 text-sm">
-            {filteredAccounts.length > 0 ? (
-              filteredAccounts.map((account) => (
-                <tr key={account._id} className="border-b border-gray-200 hover:bg-purple-50">
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 flex-shrink-0 mr-3">
-                        <img
-                          className="h-10 w-10 rounded-full object-cover"
-                          src={account.photoUrl || '/avarta.png'}
-                          alt={account.fullName || account.username}
-                        />
-                      </div>
-                      <div>
-                        <p className="font-medium">{account.fullName || 'Chưa cập nhật'}</p>
-                        <p className="text-xs text-gray-500">{account.gender || 'Chưa cập nhật'}</p>
-                      </div>
+          <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
+            {paginatedAccounts.map((account) => (
+              <tr key={account._id} className="border-b border-gray-200 hover:bg-purple-50">
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 flex-shrink-0 mr-3">
+                      <img
+                        className="h-10 w-10 rounded-full object-cover"
+                        src={account.photoUrl || '/avarta.png'}
+                        alt={account.fullName || account.username}
+                      />
                     </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{account.email}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{account.username}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getRoleBadgeClass(account.role)}`}>
-                      {account.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${account.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                      {account.isDisabled ? 'Bị khóa' : 'Hoạt động'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center space-x-3">
-                      {/* Chỉ hiện nút khóa/mở khóa cho các tài khoản không phải admin */}
-                      {!isAdminAccount(account) && (
-                        <Tooltip text={account.isDisabled ? 'Mở khóa' : 'Khóa'}>
-                          <button 
-                            onClick={() => openConfirmToggleModal(account._id, account.isDisabled)}
-                            className={`p-2 rounded-full ${
-                              account.isDisabled 
-                                ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                                : 'bg-red-100 text-red-600 hover:bg-red-200'
-                            }`}
-                          >
-                            {account.isDisabled ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                            )}
-                          </button>
-                        </Tooltip>
-                      )}
-                      
-                      <Tooltip text="Cập nhật">
+                    <div>
+                      <p className="font-medium">{account.fullName || 'Chưa cập nhật'}</p>
+                      <p className="text-xs text-gray-500">{account.gender || 'Chưa cập nhật'}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">{account.email}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{account.username}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span className={`px-2 py-1 text-xs rounded-full ${getRoleBadgeClass(account.role)}`}>
+                    {account.role}
+                  </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span className={`px-2 py-1 text-xs rounded-full ${account.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                    {account.isDisabled ? 'Bị khóa' : 'Hoạt động'}
+                  </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="flex items-center space-x-3">
+                    {/* Chỉ hiện nút khóa/mở khóa cho các tài khoản không phải admin */}
+                    {!isAdminAccount(account) && (
+                      <Tooltip text={account.isDisabled ? 'Mở khóa' : 'Khóa'}>
                         <button 
-                          onClick={() => handleOpenUpdateModal(account)}
-                          className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                          onClick={() => openConfirmToggleModal(account._id, account.isDisabled)}
+                          className={`p-2 rounded-full ${
+                            account.isDisabled 
+                              ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                              : 'bg-red-100 text-red-600 hover:bg-red-200'
+                          }`}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
+                          {account.isDisabled ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                          )}
                         </button>
                       </Tooltip>
-                      
-                      <Tooltip text="Chi tiết">
-                        <button 
-                          onClick={() => handleOpenDetailModal(account._id)}
-                          className="p-2 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                      </Tooltip>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  Không tìm thấy tài khoản nào phù hợp với bộ lọc
+                    )}
+                    
+                    <Tooltip text="Cập nhật">
+                      <button 
+                        onClick={() => handleOpenUpdateModal(account)}
+                        className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                    
+                    <Tooltip text="Chi tiết">
+                      <button 
+                        onClick={() => handleOpenDetailModal(account._id)}
+                        className="p-2 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
                 </td>
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center items-center mt-4 gap-2">
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          Trước
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            onClick={() => setCurrentPage(i + 1)}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          Sau
+        </button>
       </div>
 
       {/* Modal Cập nhật tài khoản */}

@@ -2,9 +2,9 @@ import React from "react";
 
 const Dashboard = () => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-4">
       {/* Revenue Forecast */}
-      <div className="bg-white dark:bg-darkgray p-6 rounded-lg shadow-sm">
+      <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">Dự báo doanh thu</h2>
 
@@ -63,7 +63,7 @@ const Dashboard = () => {
       {/* Cards Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* New Customers */}
-        <div className="bg-white dark:bg-darkgray p-6 rounded-lg shadow-sm">
+        <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
           <div className="flex space-x-4 mb-4">
             <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center">
               <svg
@@ -101,7 +101,7 @@ const Dashboard = () => {
         </div>
 
         {/* Total Income */}
-        <div className="col-span-2 bg-white dark:bg-darkgray p-6 rounded-lg shadow-sm">
+        <div className="col-span-2 bg-white dark:bg-darkgray p-6 rounded-lg">
           <div className="flex space-x-4 mb-6">
             <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
               <svg
@@ -148,7 +148,7 @@ const Dashboard = () => {
       </div>
 
       {/* Daily Activities */}
-      <div className="bg-white dark:bg-darkgray p-6 rounded-lg shadow-sm">
+      <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
         <h2 className="text-xl font-semibold mb-6">Hoạt động hàng ngày</h2>
 
         <div className="space-y-6">

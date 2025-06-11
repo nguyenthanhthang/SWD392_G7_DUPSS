@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
@@ -9,7 +9,7 @@ interface IService {
   name: string;
   description: string;
   price: number;
-  duration: number; // Thời lượng tính bằng phút
+  image: string; // Thêm trường image thay vì duration
   status: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
@@ -40,19 +40,79 @@ const Service: React.FC = () => {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<IService | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: 0,
-    duration: 30,
+    image: '', // Thêm trường image thay vì duration
     status: 'active' as 'active' | 'inactive'
   });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 8;
+  const totalPages = Math.ceil(services.length / rowsPerPage);
+  const paginatedServices = services.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   useEffect(() => {
     fetchServices();
   }, []);
+
+  // Hàm xử lý upload ảnh
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Chỉ chấp nhận file hình ảnh (JPG, PNG, GIF)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước file không được vượt quá 5MB');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await api.post('/uploads/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        image: response.data.imageUrl
+      }));
+      
+      toast.success('Tải ảnh lên thành công!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Có lỗi xảy ra khi tải ảnh lên');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Xử lý khi nhấn nút chọn file
+  const handleSelectImage = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   // Fetch services from API
   const fetchServices = async () => {
@@ -93,7 +153,7 @@ const Service: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'price' || name === 'duration' ? Number(value) : value
+      [name]: name === 'price' ? Number(value) : value
     }));
   };
 
@@ -103,7 +163,7 @@ const Service: React.FC = () => {
       name: '',
       description: '',
       price: 0,
-      duration: 30,
+      image: '',
       status: 'active'
     });
     setIsCreateModalOpen(true);
@@ -116,7 +176,7 @@ const Service: React.FC = () => {
       name: '',
       description: '',
       price: 0,
-      duration: 30,
+      image: '',
       status: 'active'
     });
   };
@@ -126,7 +186,7 @@ const Service: React.FC = () => {
     e.preventDefault();
     
     // Validate form
-    if (!formData.name || !formData.description || formData.price <= 0 || formData.duration <= 0) {
+    if (!formData.name || !formData.description || formData.price <= 0 || !formData.image) {
       toast.error('Vui lòng điền đầy đủ thông tin!');
       return;
     }
@@ -148,7 +208,7 @@ const Service: React.FC = () => {
       name: service.name,
       description: service.description,
       price: service.price,
-      duration: service.duration,
+      image: service.image,
       status: service.status
     });
     setIsUpdateModalOpen(true);
@@ -162,7 +222,7 @@ const Service: React.FC = () => {
       name: '',
       description: '',
       price: 0,
-      duration: 30,
+      image: '',
       status: 'active'
     });
   };
@@ -216,17 +276,15 @@ const Service: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        </div>
+      <div className="p-6 bg-white rounded-lg flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm">
+      <div className="p-6 bg-white rounded-lg">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           <p>{error}</p>
         </div>
@@ -235,7 +293,7 @@ const Service: React.FC = () => {
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm">
+    <div className="p-6 bg-white rounded-lg mt-4">
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -247,6 +305,15 @@ const Service: React.FC = () => {
         draggable
         pauseOnHover
         theme="colored"
+      />
+
+      {/* Input file ẩn */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageUpload}
+        className="hidden"
+        accept="image/jpeg, image/png, image/gif, image/jpg"
       />
 
       {/* Tiêu đề và nút thêm mới */}
@@ -264,26 +331,34 @@ const Service: React.FC = () => {
       </div>
 
       {/* Bảng dịch vụ */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
         <table className="min-w-full bg-white">
           <thead>
             <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
               <th className="px-4 py-3 rounded-tl-lg">Tên dịch vụ</th>
               <th className="px-4 py-3">Mô tả</th>
               <th className="px-4 py-3">Giá</th>
-              <th className="px-4 py-3">Thời lượng</th>
+              <th className="px-4 py-3">Hình ảnh</th>
               <th className="px-4 py-3">Trạng thái</th>
               <th className="px-4 py-3">Ngày tạo</th>
               <th className="px-4 py-3 rounded-tr-lg">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="text-gray-600 text-sm">
-            {services.map((service) => (
+          <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
+            {paginatedServices.map((service) => (
               <tr key={service._id} className="border-b border-gray-200 hover:bg-purple-50">
                 <td className="px-4 py-3 font-medium">{service.name}</td>
                 <td className="px-4 py-3 max-w-xs truncate">{service.description}</td>
                 <td className="px-4 py-3">{formatCurrency(service.price)}</td>
-                <td className="px-4 py-3">{service.duration} phút</td>
+                <td className="px-4 py-3">
+                  {service.image && (
+                    <img 
+                      src={service.image} 
+                      alt={service.name} 
+                      className="w-12 h-12 object-cover rounded-md"
+                    />
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
@@ -349,6 +424,33 @@ const Service: React.FC = () => {
         </table>
       </div>
 
+      {/* Pagination */}
+      <div className="flex justify-center items-center mt-4 gap-2">
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          Trước
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            onClick={() => setCurrentPage(i + 1)}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          Sau
+        </button>
+      </div>
+
       {/* Modal Tạo dịch vụ mới */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -405,15 +507,36 @@ const Service: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Thời lượng (phút)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh</label>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={handleSelectImage}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
+                    disabled={uploading}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {uploading ? 'Đang tải lên...' : 'Chọn ảnh'}
+                  </button>
+                  {formData.image && (
+                    <span className="text-sm text-green-600"></span>
+                  )}
+                </div>
+                {formData.image && (
+                  <div className="mt-3">
+                    <img 
+                      src={formData.image}
+                      alt="Preview"
+                      className="w-full h-40 object-cover rounded-md"
+                    />
+                  </div>
+                )}
                 <input
-                  type="number"
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  min="15"
-                  step="15"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  type="hidden"
+                  name="image"
+                  value={formData.image}
                   required
                 />
               </div>
@@ -442,6 +565,7 @@ const Service: React.FC = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+                  disabled={!formData.image || uploading}
                 >
                   Tạo dịch vụ
                 </button>
@@ -507,15 +631,36 @@ const Service: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Thời lượng (phút)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh</label>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={handleSelectImage}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
+                    disabled={uploading}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {uploading ? 'Đang tải lên...' : 'Chọn ảnh'}
+                  </button>
+                  {formData.image && (
+                    <span className="text-sm text-green-600"></span>
+                  )}
+                </div>
+                {formData.image && (
+                  <div className="mt-3">
+                    <img 
+                      src={formData.image}
+                      alt="Preview"
+                      className="w-full h-40 object-cover rounded-md"
+                    />
+                  </div>
+                )}
                 <input
-                  type="number"
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  min="15"
-                  step="15"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  type="hidden"
+                  name="image"
+                  value={formData.image}
                   required
                 />
               </div>
@@ -544,6 +689,7 @@ const Service: React.FC = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+                  disabled={!formData.image || uploading}
                 >
                   Cập nhật
                 </button>

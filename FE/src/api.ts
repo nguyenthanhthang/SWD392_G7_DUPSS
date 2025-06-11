@@ -270,4 +270,47 @@ export const sendResetPasswordEmailApi = async (email: string) => {
   return res.data;
 };
 
+// Blog APIs
+export const getAllBlogsApi = async () => {
+  const res = await api.get("/blogs");
+  return res.data;
+};
+
+export const getBlogByIdApi = async (id: string) => {
+  const res = await api.get(`/blogs/${id}`);
+  return res.data;
+};
+
+export const createBlogApi = async (data: {
+  title: string;
+  content: string;
+  author: string;
+  thumbnail?: string;
+  tags?: string[];
+  published: boolean;
+}) => {
+  const res = await api.post("/blogs", data);
+  return res.data;
+};
+
+export const updateBlogApi = async (
+  id: string,
+  data: Partial<{
+    title: string;
+    content: string;
+    author: string;
+    thumbnail?: string;
+    tags?: string[];
+    published: boolean;
+  }>
+) => {
+  const res = await api.put(`/blogs/${id}`, data);
+  return res.data;
+};
+
+export const deleteBlogApi = async (id: string) => {
+  const res = await api.delete(`/blogs/${id}`);
+  return res.data;
+};
+
 export default api;

@@ -1,5 +1,6 @@
 // src/components/layout/MainLayout.tsx
 
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
@@ -15,19 +16,25 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
   const { user } = useAuth();
   const isAdminPage = location.pathname.startsWith('/admin');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      {isAdminPage ? <AdminHeader /> : <Header />}
+      {isAdminPage ? <AdminHeader isSidebarCollapsed={isSidebarCollapsed} /> : <Header />}
 
       {/* Main Content */}
       <div className="flex">
         {/* Sidebar - chỉ hiển thị ở trang admin */}
-        {isAdminPage && user && <Sidebar />}
+        {isAdminPage && user && (
+          <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            setIsCollapsed={setIsSidebarCollapsed} 
+          />
+        )}
 
         {/* Content */}
-        <main className={`flex-1 ${isAdminPage ? 'ml-64' : ''} p-6 pt-16`}>
+        <main className={`flex-1 ${isAdminPage ? (isSidebarCollapsed ? 'ml-20' : 'ml-64') : ''} p-6 pt-16 transition-all duration-300`}>
           {children}
         </main>
       </div>
