@@ -2,9 +2,10 @@ import { useParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { useEffect, useState } from 'react';
-import { getConsultantByIdApi, getAllServicesApi, getAllCertificatesApi, getSlotTimeByConsultantIdApi } from '../api';
+import { getConsultantByIdApi, getAllServicesApi, getAllCertificatesApi, getSlotTimeByConsultantIdApi, createAppointmentApi } from '../api';
 import { addDays, startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
+import { useAuth } from '../contexts/AuthContext';
 
 // Mock data lịch dạng tuần: bookedSlots[day][hour] = { title, color, ... }
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -20,7 +21,7 @@ interface User {
   email: string;
   phoneNumber: string;
 }
-
+ 
 interface Consultant {
   _id: string;
   userId: string;
@@ -60,6 +61,8 @@ interface SlotTime {
   status: 'available' | 'booked';
 }
 
+const defaultCertificateImg = 'https://pvccardprinting.in/wp-content/uploads/2023/08/standard-certificates-printing.webp';
+
 function ConsultantDetailPage() {
   const { id } = useParams();
   const [consultant, setConsultant] = useState<Consultant | null>(null);
@@ -69,12 +72,16 @@ function ConsultantDetailPage() {
   // State cho modal booking
   const [showModal, setShowModal] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; time: string } | null>(null);
-  const [form, setForm] = useState({ name: '', phone: '', reason: '', serviceId: '' });
+  const [form, setForm] = useState({ reason: '', serviceId: '', note: '' });
   const [services, setServices] = useState<Service[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [slotTimes, setSlotTimes] = useState<SlotTime[]>([]);
   const [slotTimeError, setSlotTimeError] = useState<string | null>(null);
   const [currentWeek, setCurrentWeek] = useState(0); // 0: tuần này, 1: tuần sau
+  const { user } = useAuth();
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [selectedSlotObj, setSelectedSlotObj] = useState<SlotTime | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({ message: '', type: 'success', visible: false });
 
   // Tính ngày đầu và cuối tuần dựa trên currentWeek
   const today = new Date();
@@ -146,24 +153,76 @@ function ConsultantDetailPage() {
   }, [showModal]);
 
   const handleOpenModal = (day: string, time: string) => {
+    // Tìm slotObj tương ứng
+    const slotObj = slotTimesOfWeek.find(st => {
+      let dayOfWeek, hour;
+      try {
+        dayOfWeek = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'E').substring(0, 3);
+        hour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+      } catch {
+        const d = new Date(st.start_time);
+        dayOfWeek = format(d, 'E').substring(0, 3);
+        hour = format(d, 'HH:00');
+      }
+      return dayOfWeek === day && hour === time;
+    });
     setSelectedSlot({ day, time });
+    setSelectedSlotObj(slotObj || null);
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setForm({ name: '', phone: '', reason: '', serviceId: '' });
+    setForm({ reason: '', serviceId: '', note: '' });
     setSelectedSlot(null);
+    setSelectedSlotObj(null);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Hàm hiển thị notification
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type, visible: true });
+    setTimeout(() => {
+      setNotification(n => ({ ...n, visible: false }));
+    }, 3500);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Đã gửi yêu cầu đặt lịch cho ${consultant?.accountId?.fullName || ''} vào ${selectedSlot?.day} lúc ${selectedSlot?.time}\nHọ tên: ${form.name}\nSĐT: ${form.phone}\nLý do: ${form.reason}`);
-    handleCloseModal();
+    if (!user || !consultant || !selectedSlotObj) {
+      showNotification('Thiếu thông tin người dùng, chuyên gia hoặc slot!', 'error');
+      return;
+    }
+    setBookingLoading(true);
+    try {
+      const payload = {
+        slotTime_id: selectedSlotObj._id,
+        user_id: user._id,
+        consultant_id: consultant._id,
+        service_id: form.serviceId,
+        dateBooking: selectedSlotObj.start_time,
+        reason: form.reason,
+        note: form.note,
+      };
+      await createAppointmentApi(payload);
+      // Sau khi đặt lịch thành công, cập nhật trạng thái slot vừa đặt thành 'booked' trong slotTimes
+      setSlotTimes(prevSlotTimes => prevSlotTimes.map(st =>
+        st._id === selectedSlotObj._id ? { ...st, status: 'booked' } : st
+      ));
+      showNotification('Đặt lịch thành công!', 'success');
+      handleCloseModal();
+    } catch (err: unknown) {
+      let msg = '';
+      if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data) {
+        msg = (err.response.data as { message?: string }).message || '';
+      }
+      showNotification('Đặt lịch thất bại! ' + msg, 'error');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   if (loading) return <div className="text-center py-20 text-xl">Đang tải dữ liệu...</div>;
@@ -204,7 +263,12 @@ function ConsultantDetailPage() {
                       <div className="flex flex-col">
                         {certs.map(cert => (
                           <div key={cert._id} className="flex items-center gap-3 px-1 py-1 rounded-md transition-colors hover:bg-purple-50 group cursor-pointer">
-                            <img src={cert.fileUrl} alt={cert.title} className="w-10 h-10 object-cover rounded bg-black border border-gray-200 flex-shrink-0" />
+                            <img src={cert.fileUrl} alt={cert.title} className="w-10 h-10 object-cover rounded bg-black border border-gray-200 flex-shrink-0"
+                              onError={e => {
+                                const target = e.currentTarget;
+                                if (target.src !== defaultCertificateImg) target.src = defaultCertificateImg;
+                              }}
+                            />
                             <div className="font-medium text-sm text-black truncate max-w-[260px] group-hover:text-purple-700" title={cert.title}>{cert.title}</div>
                           </div>
                         ))}
@@ -317,24 +381,6 @@ function ConsultantDetailPage() {
             <h4 className="text-xl font-bold text-blue-700 mb-4">Đặt lịch khám với {consultant.accountId?.fullName || 'Chuyên gia'}</h4>
             <div className="mb-2 text-gray-500 text-sm">{selectedSlot?.day} - {selectedSlot?.time}</div>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <input
-                type="text"
-                name="name"
-                required
-                placeholder="Họ và tên"
-                className="border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                value={form.name}
-                onChange={handleChange}
-              />
-              <input
-                type="tel"
-                name="phone"
-                required
-                placeholder="Số điện thoại"
-                className="border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                value={form.phone}
-                onChange={handleChange}
-              />
               <select
                 name="serviceId"
                 required
@@ -356,12 +402,42 @@ function ConsultantDetailPage() {
                 onChange={handleChange}
                 rows={3}
               />
+              <textarea
+                name="note"
+                placeholder="Ghi chú (tuỳ chọn)"
+                className="border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                value={form.note}
+                onChange={handleChange}
+                rows={2}
+              />
               <div className="flex gap-4 justify-end mt-2">
                 <button type="button" onClick={handleCloseModal} className="px-4 py-2 rounded-xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300">Đóng</button>
-                <button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700">Xác nhận</button>
+                <button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700" disabled={bookingLoading}>{bookingLoading ? 'Đang gửi...' : 'Xác nhận'}</button>
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {notification.visible && (
+        <div
+          className={`fixed z-[9999] left-1/2 -translate-x-1/2 top-8 min-w-[320px] max-w-[90vw] px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 transition-all
+            ${notification.type === 'success' ? 'bg-green-50 border border-green-300 text-green-800' : 'bg-red-50 border border-red-300 text-red-800'}`}
+          style={{ animation: 'fadeInDown 0.3s' }}
+        >
+          {notification.type === 'success' ? (
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#22c55e" opacity="0.15"/><path d="M7 13l3 3 7-7" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          ) : (
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#ef4444" opacity="0.15"/><path d="M15 9l-6 6M9 9l6 6" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          )}
+          <span className="flex-1 font-medium text-base">{notification.message}</span>
+          <button
+            className="ml-2 text-xl text-gray-400 hover:text-gray-700 focus:outline-none"
+            onClick={() => setNotification(n => ({ ...n, visible: false }))}
+            aria-label="Đóng thông báo"
+          >
+            &times;
+          </button>
         </div>
       )}
       <Footer />

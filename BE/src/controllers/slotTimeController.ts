@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import SlotTime from "../models/SlotTime";
 import Appointment from "../models/Appointment";
+import Consultant from "../models/Consultant";
+import Account from "../models/Account";
 
 export const getAllSlotTime = async (req: Request, res: Response) => {
     try {
@@ -75,5 +77,74 @@ export const deleteSlotTime = async (req: Request, res: Response) => {
         res.status(200).json({ message: "Xóa slot time thành công",data:slotTime });
     } catch (error) {
         res.status(500).json({ message: "Xảy ra lỗi khi xóa slot time",error });
+    }
+}
+
+// API lấy danh sách tư vấn viên rảnh cho từng khung giờ trong một ngày
+export const getAvailableConsultantsByDay = async (req: Request, res: Response) => {
+    try {
+        const { date } = req.params; // yyyy-MM-dd
+        if (!date) return res.status(400).json({ message: "Thiếu tham số ngày" });
+
+        // Tính khoảng thời gian theo giờ Việt Nam (GMT+7)
+        const startOfDayVN = new Date(date + 'T00:00:00+07:00');
+        const endOfDayVN = new Date(date + 'T23:59:59.999+07:00');
+
+        console.log('startOfDayVN:', startOfDayVN);
+        console.log('endOfDayVN:', endOfDayVN);
+
+        // Lấy tất cả slot available trong ngày, KHÔNG loại trùng lặp
+        const slots = await SlotTime.find({
+            start_time: { $gte: startOfDayVN, $lte: endOfDayVN },
+            status: "available"
+        }).populate({
+            path: "consultant_id",
+            populate: { path: "accountId", model: "Account" }
+        });
+
+        console.log('Filtered slots:', slots);
+
+        // Group lại theo khung giờ chuẩn (08:00, 09:00,...)
+        const timeSlots = [
+            "08:00", "09:00", "10:00", "11:00",
+            "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"
+        ];
+
+        const result = timeSlots.map(slot => {
+            // Tìm tất cả slot có start_time đúng giờ này (theo giờ Việt Nam GMT+7)
+            const availableSlots = slots.filter(st => {
+                const d = new Date(st.start_time);
+                const hourVN = d.getHours();
+                const hourStr = hourVN.toString().padStart(2, '0') + ":00";
+                return hourStr === slot;
+            });
+
+            const availableConsultants = availableSlots.map(st => {
+                const consultant = st.consultant_id as any;
+                if (!consultant || !consultant.accountId) return null;
+                const acc = consultant.accountId as any;
+                return {
+                    _id: consultant._id,
+                    fullName: acc.fullName,
+                    photoUrl: acc.photoUrl,
+                    email: acc.email,
+                    phoneNumber: acc.phoneNumber,
+                    gender: acc.gender,
+                    introduction: consultant.introduction,
+                    experience: consultant.experience,
+                    contact: consultant.contact
+                };
+            }).filter(Boolean);
+
+            return {
+                time: slot,
+                status: availableConsultants.length > 0 ? "available" : "none",
+                availableConsultants
+            };
+        });
+
+        res.status(200).json({ date, slots: result });
+    } catch (error) {
+        res.status(500).json({ message: "Xảy ra lỗi khi lấy danh sách tư vấn viên rảnh theo ngày", error });
     }
 }

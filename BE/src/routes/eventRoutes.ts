@@ -10,6 +10,7 @@ import {
   getEventQRCode,
   checkInEvent,
   getEventAttendance,
+  getRegisteredEvents,
 } from "../controllers/eventController";
 
 const router = express.Router();
@@ -17,6 +18,7 @@ const router = express.Router();
 // CRUD routes
 router.post("/", createEvent);
 router.get("/", getAllEvents);
+router.get("/registered/:userId", getRegisteredEvents);
 router.get("/:id", getEventById);
 router.put("/:id", updateEvent);
 router.delete("/:id", deleteEvent);
