@@ -326,4 +326,9 @@ export const deleteBlogApi = async (id: string) => {
   return res.data;
 };
 
+export const getBlogsByAuthorApi = async (author: string) => {
+  const res = await api.get(`/blogs?author=${encodeURIComponent(author)}`);
+  return res.data;
+};
+
 export default api;

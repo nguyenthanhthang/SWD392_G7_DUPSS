@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi } from '../api';
+import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByAuthorApi } from '../api';
 import whaleLogo from '../assets/whale.png';
 import AppointmentsPage from './Appointments';
 import PaymentsTable  from './PaymentHistory';
@@ -45,6 +45,7 @@ export default function Profile() {
   const [pwdLoading, setPwdLoading] = useState(false);
   const [showPwdNew, setShowPwdNew] = useState(false);
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
+  const [blogs, setBlogs] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -60,6 +61,12 @@ export default function Profile() {
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    if (user?.fullName) {
+      getBlogsByAuthorApi(user.fullName).then(setBlogs).catch(() => setBlogs([]));
+    }
+  }, [user?.fullName]);
 
   const handleEdit = () => setEditMode(true);
 
@@ -368,6 +375,25 @@ export default function Profile() {
                         Change password
                       </button>
                     </div>
+                  </div>
+                  {/* Blog cá nhân */}
+                  <div className="mt-8">
+                    <div className="font-semibold text-gray-700 mb-4 text-lg">Bài viết của bạn</div>
+                    {blogs.length === 0 ? (
+                      <div className="text-gray-500 italic">Bạn chưa có bài viết nào.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {blogs.map(blog => (
+                          <div key={blog._id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm">
+                            <div>
+                              <div className="font-medium text-base text-gray-800">{blog.title}</div>
+                              <div className="text-xs text-gray-500 mt-1">{blog.published ? 'Đã xuất bản' : 'Chưa duyệt'} • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}</div>
+                            </div>
+                            <Link to={`/blogs/${blog._id}`} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

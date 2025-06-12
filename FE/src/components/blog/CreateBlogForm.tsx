@@ -43,6 +43,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel, in
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [userInfo, setUserInfo] = useState<any>(null);
   const [touched, setTouched] = useState<{[key: string]: boolean}>({});
+  const [anDanh, setAnDanh] = useState(false);
 
   useEffect(() => {
     const storedUserInfo = localStorage.getItem('userInfo');
@@ -52,6 +53,14 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel, in
       setTacGia(info.fullName || info.username || '');
     }
   }, [initialData]);
+
+  useEffect(() => {
+    if (anDanh) {
+      setTacGia('Ẩn danh');
+    } else if (userInfo && !initialData?.author) {
+      setTacGia(userInfo.fullName || userInfo.username || '');
+    }
+  }, [anDanh, userInfo, initialData]);
 
   // Cập nhật HTML khi editorState thay đổi
   useEffect(() => {
@@ -198,19 +207,34 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel, in
             />
             {touched.tieuDe && formErrors.tieuDe && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tieuDe}</p>}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Tác giả</label>
-            <input
-              type="text"
-              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
-              value={tacGia}
-              onChange={e => { setTacGia(e.target.value); }}
-              onBlur={() => handleBlur('tacGia')}
-              required
-              style={{ borderColor: touched.tacGia && formErrors.tacGia ? '#f56565' : '#e2e8f0' }}
-            />
-            {touched.tacGia && formErrors.tacGia && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tacGia}</p>}
-          </div>
+          {/* Ẩn trường tác giả nếu không phải admin */}
+          {isAdmin ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Tác giả</label>
+              <input
+                type="text"
+                className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
+                value={tacGia}
+                onChange={e => { setTacGia(e.target.value); }}
+                onBlur={() => handleBlur('tacGia')}
+                required
+                style={{ borderColor: touched.tacGia && formErrors.tacGia ? '#f56565' : '#e2e8f0' }}
+              />
+              {touched.tacGia && formErrors.tacGia && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tacGia}</p>}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 mb-2">
+              <input
+                id="anDanh"
+                type="checkbox"
+                checked={anDanh}
+                onChange={e => setAnDanh(e.target.checked)}
+                className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+              />
+              <label htmlFor="anDanh" className="text-sm text-gray-700 select-none cursor-pointer">Đăng ẩn danh</label>
+              <span className="text-gray-500 text-sm">{anDanh ? 'Ẩn danh' : tacGia}</span>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700">Nội dung</label>
             <div className="bg-white rounded-xl border border-gray-300 focus:border-cyan-500 focus:ring-cyan-500">
