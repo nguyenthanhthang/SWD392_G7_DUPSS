@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi } from '../api';
+import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByUserIdApi, updateBlogApi } from '../api';
 import whaleLogo from '../assets/whale.png';
 import AppointmentsPage from './Appointments';
 import PaymentsTable  from './PaymentHistory';
 import type { AxiosError } from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
+import BlogDetailView from '../components/blog/BlogDetailView';
+import CreateBlogForm from '../components/blog/CreateBlogForm';
 
 interface User {
   _id?: string;
@@ -23,6 +25,7 @@ interface User {
 
 const menuTabs = [
   { key: "profile", label: "User Profile" },
+  { key: "blogs", label: "Blogs" },
   { key: "Appointments", label: "Appointments" },
   { key: "payments", label: "Payments" },
 ];
@@ -45,6 +48,11 @@ export default function Profile() {
   const [pwdLoading, setPwdLoading] = useState(false);
   const [showPwdNew, setShowPwdNew] = useState(false);
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
+  const [blogs, setBlogs] = useState<any[]>([]);
+  const [blogDangXem, setBlogDangXem] = useState<any | null>(null);
+  const [modalBlog, setModalBlog] = useState(false);
+  const [blogDangSua, setBlogDangSua] = useState<any | null>(null);
+  const [modalEdit, setModalEdit] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -60,6 +68,12 @@ export default function Profile() {
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    if (user?._id) {
+      getBlogsByUserIdApi(user._id).then(setBlogs).catch(() => setBlogs([]));
+    }
+  }, [user?._id]);
 
   const handleEdit = () => setEditMode(true);
 
@@ -176,7 +190,14 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb] flex flex-col items-center py-4 px-2">
+    <div className="min-h-screen bg-[#f6f8fb] flex flex-col items-center py-4 px-2 relative overflow-x-hidden">
+      {/* Bóng tròn pastel/hologram hai bên */}
+      <div className="absolute top-10 left-[-80px] w-60 h-60 bg-cyan-200 rounded-full opacity-40 blur-2xl z-0"></div>
+      <div className="absolute top-1/3 left-[-100px] w-72 h-72 bg-pink-200 rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute bottom-20 left-[-60px] w-44 h-44 bg-blue-200 rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute top-20 right-[-80px] w-60 h-60 bg-cyan-200 rounded-full opacity-40 blur-2xl z-0"></div>
+      <div className="absolute top-1/2 right-[-100px] w-72 h-72 bg-pink-200 rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute bottom-10 right-[-60px] w-44 h-44 bg-blue-200 rounded-full opacity-35 blur-2xl z-0"></div>
       <div className="bg-white rounded-3xl shadow-sm flex flex-col w-full max-w-6xl overflow-hidden relative">
         {/* Main content container */}
         <div className="flex flex-row w-full">
@@ -371,6 +392,65 @@ export default function Profile() {
                   </div>
                 </div>
               )}
+              {tab === 'blogs' && (
+                <div className="p-7">
+                  <div className="font-semibold text-gray-700 mb-4 text-lg">Bài viết của bạn</div>
+                  {/* Bài viết đã xuất bản */}
+                  <div className="mb-8">
+                    <div className="font-semibold text-green-700 mb-2">Bài viết đã xuất bản</div>
+                    {blogs.filter(blog => blog.published).length === 0 ? (
+                      <div className="text-gray-500 italic">Bạn chưa có bài viết nào đã xuất bản.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {blogs.filter(blog => blog.published).map(blog => (
+                          <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
+                            <div>
+                              <div className="font-medium text-base text-gray-800">{blog.title}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Đã xuất bản • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
+                              <button onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} className="text-indigo-600 hover:underline text-sm font-medium">Chỉnh sửa</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Bài viết chưa duyệt */}
+                  <div>
+                    <div className="font-semibold text-yellow-700 mb-2">Bài viết chưa duyệt</div>
+                    {blogs.filter(blog => !blog.published).length === 0 ? (
+                      <div className="text-gray-500 italic">Bạn không có bài viết nào đang chờ duyệt.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {blogs.filter(blog => !blog.published).map(blog => (
+                          <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
+                            <div>
+                              <div className="font-medium text-base text-gray-800">{blog.title}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Chưa duyệt • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
+                              <button onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} className="text-indigo-600 hover:underline text-sm font-medium">Chỉnh sửa</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {tab === 'Appointments' && (
                 <div className="w-full">
                   <AppointmentsPage />
@@ -465,6 +545,38 @@ export default function Profile() {
               </>
             )}
             <button className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm" onClick={()=>setShowPwdModal(false)}>Hủy</button>
+          </div>
+        </div>
+      )}
+      {/* Modal xem chi tiết blog */}
+      {modalBlog && blogDangXem && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+            <BlogDetailView blog={blogDangXem} onClose={() => setModalBlog(false)} />
+          </div>
+        </div>
+      )}
+      {/* Modal chỉnh sửa blog */}
+      {modalEdit && blogDangSua && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+            <CreateBlogForm
+              initialData={{
+                title: blogDangSua.title,
+                content: blogDangSua.content,
+                author: blogDangSua.author,
+                topics: blogDangSua.topics?.join(', ') || '',
+                image: blogDangSua.image || '',
+                published: blogDangSua.published,
+              }}
+              onCancel={() => setModalEdit(false)}
+              onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(user?._id) getBlogsByUserIdApi(user._id).then(setBlogs); }}
+              onSubmit={async (data) => {
+                const dataUpdate = { ...data };
+                if (blogDangSua.published) dataUpdate.published = false;
+                await updateBlogApi(blogDangSua._id, dataUpdate);
+              }}
+            />
           </div>
         </div>
       )}

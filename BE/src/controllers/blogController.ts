@@ -68,12 +68,21 @@ export const getBlogById = async (req: Request, res: Response) => {
 
 export const createBlog = async (req: MulterRequest, res: Response) => {
   try {
-    const { title, content, author, tags, published } = req.body;
+    const { title, content, author, topics, published } = req.body;
     let imageUrl = req.body.image;
     if (req.file && req.file.path) {
       imageUrl = req.file.path;
     }
-    const newBlog = new Blog({ title, content, author, tags, published, image: imageUrl });
+    // Nếu topics là string (từ form-data), parse thành mảng
+    let topicsArr = topics;
+    if (typeof topics === 'string') {
+      try {
+        topicsArr = JSON.parse(topics);
+      } catch {
+        topicsArr = topics.split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
+    }
+    const newBlog = new Blog({ title, content, author, topics: topicsArr, published, image: imageUrl });
     await newBlog.save();
     res.status(201).json(newBlog);
   } catch (error) {
@@ -110,6 +119,20 @@ export const deleteBlog = async (req: Request, res: Response) => {
     const blog = await Blog.findByIdAndDelete(req.params.id);
     if (!blog) return res.status(404).json({ message: 'Không tìm thấy blog' });
     res.json({ message: 'Xóa blog thành công' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+export const getBlogsByUserId = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    // Lấy user từ bảng Account
+    const user = await import('../models/Account').then(m => m.default.findById(userId));
+    if (!user) return res.json([]);
+    // Lấy blog theo author là fullName hoặc username
+    const blogs = await Blog.find({ author: { $in: [user.fullName, user.username] } }).sort({ createdAt: -1 });
+    res.json(blogs);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server' });
   }

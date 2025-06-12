@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getAllBlogsApi } from '../api';
 import MainLayout from '../components/layout/MainLayout';
 import CreateBlogForm from '../components/blog/CreateBlogForm';
-import { Toaster } from 'react-hot-toast';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Blog {
   _id: string;
@@ -13,7 +12,7 @@ interface Blog {
   author: string;
   image?: string;
   thumbnail?: string;
-  tags?: string[];
+  topics?: string[];
   published: boolean;
   createdAt: string;
   updatedAt: string;
@@ -26,7 +25,7 @@ function BlogPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchAuthor, setSearchAuthor] = useState('');
-  const [searchTag, setSearchTag] = useState('');
+  const [searchTopic, setSearchTopic] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -91,15 +90,15 @@ function BlogPage() {
     }
   };
 
-  // Filter blogs based on search term, author, and tag
+  // Filter blogs based on search term, author, and topic
   const filteredBlogs = blogs.filter(blog => {
     const matchTitleContentAuthor =
       blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       blog.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
       blog.author.toLowerCase().includes(searchTerm.toLowerCase());
     const matchAuthor = searchAuthor.trim() === '' || blog.author.toLowerCase().includes(searchAuthor.toLowerCase());
-    const matchTag = searchTag.trim() === '' || (blog.tags && blog.tags.some(tag => tag.toLowerCase().includes(searchTag.toLowerCase())));
-    return matchTitleContentAuthor && matchAuthor && matchTag;
+    const matchTopic = searchTopic.trim() === '' || (blog.topics && blog.topics.some(topic => topic.toLowerCase().includes(searchTopic.toLowerCase())));
+    return matchTitleContentAuthor && matchAuthor && matchTopic;
   });
 
   // Get current blogs for pagination
@@ -148,15 +147,20 @@ function BlogPage() {
       <Toaster position="top-center" />
       
       {/* Hero Section - Updated with softer colors */}
-      <div className="bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-300 py-8">
+      <div className="bg-gradient-to-r from-sky-200 via-pink-100 to-pink-200 py-8">
         <div className="container mx-auto px-4 relative">
           {/* Decorative circles */}
           <div className="absolute top-0 left-10 w-20 h-20 rounded-full bg-white opacity-10"></div>
           <div className="absolute bottom-5 right-20 w-16 h-16 rounded-full bg-white opacity-10"></div>
           <div className="absolute top-10 right-40 w-8 h-8 rounded-full bg-white opacity-10"></div>
+          {/* Pastel color bubbles */}
+          <div className="absolute top-8 left-1/4 w-24 h-24 rounded-full bg-pink-200 opacity-30 blur-xl"></div>
+          <div className="absolute top-20 right-1/4 w-32 h-32 rounded-full bg-blue-200 opacity-30 blur-xl"></div>
+          <div className="absolute bottom-10 left-1/3 w-20 h-20 rounded-full bg-green-200 opacity-20 blur-xl"></div>
+          <div className="absolute bottom-0 right-1/3 w-28 h-28 rounded-full bg-yellow-200 opacity-20 blur-xl"></div>
           
-          <h1 className="text-4xl md:text-5xl font-bold text-center mb-6 text-white drop-shadow-sm">Blog & Tin tức</h1>
-          <p className="text-xl text-center max-w-3xl mx-auto text-white drop-shadow-sm">
+          <h1 className="text-4xl md:text-5xl font-bold text-center mb-6 text-gray-800 drop-shadow-sm">Blog & Tin tức</h1>
+          <p className="text-xl text-center max-w-3xl mx-auto text-gray-800 drop-shadow-sm">
             Khám phá những bài viết bổ ích và cập nhật về tâm lý học, sức khỏe tinh thần và các phương pháp trị liệu mới nhất.
           </p>
         </div>
@@ -229,10 +233,10 @@ function BlogPage() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Tìm theo tag..."
+                  placeholder="Tìm theo chủ đề..."
                   className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
-                  value={searchTag}
-                  onChange={(e) => setSearchTag(e.target.value)}
+                  value={searchTopic}
+                  onChange={(e) => setSearchTopic(e.target.value)}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
                   <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,12 +312,12 @@ function BlogPage() {
                     <h3 className="text-xl font-bold mb-3 text-gray-800 group-hover:text-cyan-600 transition-colors">{blog.title}</h3>
                     <p className="text-gray-600 mb-4 text-sm flex-grow">{truncateContent(blog.content)}</p>
                     
-                    {/* Tags */}
-                    {blog.tags && blog.tags.length > 0 && (
+                    {/* Topics */}
+                    {blog.topics && blog.topics.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {blog.tags.slice(0, 3).map((tag, idx) => (
+                        {blog.topics.slice(0, 3).map((topic, idx) => (
                           <span key={idx} className="text-xs bg-cyan-50 text-cyan-600 px-2 py-1 rounded-full">
-                            {tag}
+                            {topic}
                           </span>
                         ))}
                       </div>

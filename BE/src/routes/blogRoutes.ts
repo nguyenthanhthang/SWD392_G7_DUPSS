@@ -5,6 +5,7 @@ import {
   createBlog,
   updateBlog,
   deleteBlog,
+  getBlogsByUserId,
 } from '../controllers/blogController';
 const upload = require('../middleware/uploadImage');
 
@@ -20,5 +21,7 @@ router.post('/', upload.single('image'), createBlog);
 router.put('/:id', upload.single('image'), updateBlog);
 // Xóa blog
 router.delete('/:id', deleteBlog);
+// Lấy blog theo userId
+router.get('/user/:userId', getBlogsByUserId);
 
 export default router; 
