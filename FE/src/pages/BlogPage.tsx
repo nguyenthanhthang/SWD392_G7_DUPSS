@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getAllBlogsApi } from '../api';
 import MainLayout from '../components/layout/MainLayout';
+import CreateBlogForm from '../components/blog/CreateBlogForm';
+import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface Blog {
   _id: string;
@@ -17,16 +20,33 @@ interface Blog {
 }
 
 function BlogPage() {
+  const navigate = useNavigate();
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchAuthor, setSearchAuthor] = useState('');
   const [searchTag, setSearchTag] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const blogsPerPage = 6;
+
+  // Check if user is logged in
+  useEffect(() => {
+    const storedUserInfo = localStorage.getItem('userInfo');
+    const token = localStorage.getItem('token');
+    
+    if (storedUserInfo && token) {
+      setUserInfo(JSON.parse(storedUserInfo));
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+    }
+  }, []);
 
   // Fetch blogs
   useEffect(() => {
@@ -47,7 +67,29 @@ function BlogPage() {
     };
 
     fetchBlogs();
-  }, []);
+  }, [showCreateForm]); // Refresh blogs after new post is created
+
+  // Handle login prompt for non-authenticated users
+  const handleCreateBlogClick = () => {
+    if (isLoggedIn) {
+      setShowCreateForm(true);
+    } else {
+      toast.error('Bạn cần đăng nhập để viết bài!', {
+        duration: 3000,
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+        icon: '🔒',
+      });
+      
+      // Redirect to login page after 2 seconds
+      setTimeout(() => {
+        navigate('/login', { state: { returnUrl: '/blogs' } });
+      }, 2000);
+    }
+  };
 
   // Filter blogs based on search term, author, and tag
   const filteredBlogs = blogs.filter(blog => {
@@ -103,6 +145,8 @@ function BlogPage() {
 
   return (
     <MainLayout>
+      <Toaster position="top-center" />
+      
       {/* Hero Section - Updated with softer colors */}
       <div className="bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-300 py-8">
         <div className="container mx-auto px-4 relative">
@@ -119,51 +163,86 @@ function BlogPage() {
       </div>
 
       <div className="container mx-auto px-4 py-12 bg-gray-50">
-        {/* Search Bar - Improved design */}
-        <div className="max-w-2xl mx-auto mb-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Tìm kiếm bài viết..."
-              className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
-              <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        {/* Create blog button - show different versions based on login state */}
+        {!showCreateForm && (
+          <div className="mb-8 flex justify-center">
+            <button
+              onClick={handleCreateBlogClick}
+              className={`${
+                isLoggedIn 
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600' 
+                  : 'bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600'
+              } text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 flex items-center`}
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {isLoggedIn ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v5m0 0l-3-3m3 3l3-3M12 9V4m0 0L9 7m3-3l3 3" />
+                )}
               </svg>
-            </div>
+              {isLoggedIn ? 'Viết bài blog mới' : 'Đăng nhập để viết bài'}
+            </button>
           </div>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Tìm theo tác giả..."
-              className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
-              value={searchAuthor}
-              onChange={(e) => setSearchAuthor(e.target.value)}
+        )}
+
+        {/* Create blog form */}
+        {showCreateForm ? (
+          <div className="mb-10">
+            <CreateBlogForm 
+              onSuccess={() => setShowCreateForm(false)} 
+              onCancel={() => setShowCreateForm(false)}
             />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
-              <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
           </div>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Tìm theo tag..."
-              className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
-              value={searchTag}
-              onChange={(e) => setSearchTag(e.target.value)}
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
-              <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+        ) : (
+          <>
+            {/* Search Bar - Improved design */}
+            <div className="max-w-2xl mx-auto mb-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm bài viết..."
+                  className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
+                  <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tìm theo tác giả..."
+                  className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                  value={searchAuthor}
+                  onChange={(e) => setSearchAuthor(e.target.value)}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
+                  <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tìm theo tag..."
+                  className="w-full px-5 py-4 rounded-full border-0 shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                  value={searchTag}
+                  onChange={(e) => setSearchTag(e.target.value)}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
+                  <svg className="h-5 w-5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
         {loading ? (
           <div className="flex justify-center items-center py-20">
