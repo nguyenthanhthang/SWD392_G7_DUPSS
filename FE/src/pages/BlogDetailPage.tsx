@@ -10,7 +10,7 @@ interface Blog {
   author: string;
   image?: string;
   thumbnail?: string;
-  tags?: string[];
+  topics?: string[];
   published: boolean;
   createdAt: string;
   updatedAt: string;
@@ -46,12 +46,12 @@ function BlogDetailPage() {
         document.title = `${blogData.title} | HopeHub Blog`;
 
         // Lấy bài viết liên quan theo tag
-        if (blogData.tags && blogData.tags.length > 0) {
+        if (blogData.topics && blogData.topics.length > 0) {
           const allBlogs = await getAllBlogsApi();
           const related = allBlogs.filter((b: Blog) =>
             b._id !== blogData._id &&
             b.published &&
-            b.tags && b.tags.some((tag: string) => blogData.tags.includes(tag))
+            b.topics && b.topics.some((tag: string) => blogData.topics.includes(tag))
           ).slice(0, 3);
           setRelatedBlogs(related);
         } else {
@@ -149,16 +149,9 @@ function BlogDetailPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-6 md:p-10">
             {/* Tags if available */}
-            {blog.tags && blog.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-8">
-                {blog.tags.map((tag, index) => (
-                  <span 
-                    key={index}
-                    className="inline-block bg-cyan-50 text-cyan-600 text-sm px-3 py-1 rounded-full"
-                  >
-                    {tag}
-                  </span>
-                ))}
+            {blog.topics && blog.topics.length > 0 && (
+              <div>
+                {blog.topics.map(topic => <span key={topic}>{topic}</span>)}
               </div>
             )}
             
@@ -283,8 +276,8 @@ function BlogDetailPage() {
                       <span className="text-xs text-gray-500 mb-1">{formatDate(item.createdAt)}</span>
                       <h4 className="font-semibold text-gray-800 mb-2 line-clamp-2">{item.title}</h4>
                       <div className="flex flex-wrap gap-1 mb-2">
-                        {item.tags && item.tags.slice(0,2).map((tag, idx) => (
-                          <span key={idx} className="text-xs bg-cyan-50 text-cyan-600 px-2 py-0.5 rounded-full">{tag}</span>
+                        {item.topics && item.topics.slice(0,2).map((topic, idx) => (
+                          <span key={idx} className="text-xs bg-cyan-50 text-cyan-600 px-2 py-0.5 rounded-full">{topic}</span>
                         ))}
                       </div>
                       <span className="text-xs text-cyan-600 mt-auto">Đọc tiếp &rarr;</span>

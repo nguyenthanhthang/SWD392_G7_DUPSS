@@ -1,19 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { createBlogApi } from '../../api';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+// @ts-ignore
+import { Editor } from 'react-draft-wysiwyg';
+import { EditorState, convertToRaw, ContentState } from 'draft-js';
+// @ts-ignore
+import draftToHtml from 'draftjs-to-html';
+import htmlToDraft from 'html-to-draftjs';
+import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
 
 interface CreateBlogFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  initialData?: {
+    title?: string;
+    content?: string;
+    author?: string;
+    topics?: string;
+    image?: string;
+    published?: boolean;
+  };
+  onSubmit?: (data: any) => Promise<void>;
+  isAdmin?: boolean;
 }
 
-const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) => {
-  const [tieuDe, setTieuDe] = useState('');
-  const [noiDung, setNoiDung] = useState('');
-  const [tacGia, setTacGia] = useState('');
-  const [tags, setTags] = useState('');
+const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel, initialData, onSubmit, isAdmin }) => {
+  const [tieuDe, setTieuDe] = useState(initialData?.title || '');
+  const [editorState, setEditorState] = useState(() => {
+    if (initialData?.content) {
+      const blocksFromHtml = htmlToDraft(initialData.content);
+      const { contentBlocks, entityMap } = blocksFromHtml;
+      const contentState = ContentState.createFromBlockArray(contentBlocks, entityMap);
+      return EditorState.createWithContent(contentState);
+    }
+    return EditorState.createEmpty();
+  });
+  const [noiDung, setNoiDung] = useState(initialData?.content || ''); // HTML string
+  const [tacGia, setTacGia] = useState(initialData?.author || '');
+  const [topics, setTopics] = useState(initialData?.topics || '');
   const [hinhAnh, setHinhAnh] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || null);
   const [dangTai, setDangTai] = useState(false);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -21,25 +46,29 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
 
   useEffect(() => {
     const storedUserInfo = localStorage.getItem('userInfo');
-    if (storedUserInfo) {
+    if (storedUserInfo && !initialData?.author) {
       const info = JSON.parse(storedUserInfo);
       setUserInfo(info);
       setTacGia(info.fullName || info.username || '');
     }
-  }, []);
+  }, [initialData]);
 
-  // Validate liên tục
+  // Cập nhật HTML khi editorState thay đổi
+  useEffect(() => {
+    const html = draftToHtml(convertToRaw(editorState.getCurrentContent()));
+    setNoiDung(html);
+  }, [editorState]);
+
   useEffect(() => {
     validateAll();
     // eslint-disable-next-line
-  }, [tieuDe, tacGia, noiDung, tags, hinhAnh]);
+  }, [tieuDe, tacGia, noiDung, topics, hinhAnh]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setHinhAnh(file);
       setTouched(prev => ({ ...prev, hinhAnh: true }));
-      // Create preview
       const reader = new FileReader();
       reader.onload = () => {
         setImagePreview(reader.result as string);
@@ -67,9 +96,11 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
     } else if (tacGia.trim().length > 50) {
       errors.tacGia = 'Tên tác giả không được quá 50 ký tự';
     }
-    if (!noiDung.trim()) {
+    // Validate nội dung: loại bỏ tag html để đếm ký tự thực
+    const plainText = noiDung.replace(/<[^>]*>/g, '').trim();
+    if (!plainText) {
       errors.noiDung = 'Nội dung không được để trống';
-    } else if (noiDung.trim().length < 50) {
+    } else if (plainText.length < 50) {
       errors.noiDung = 'Nội dung phải có ít nhất 50 ký tự';
     }
     if (hinhAnh) {
@@ -80,20 +111,9 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
         errors.hinhAnh = 'Ảnh không được quá 2MB';
       }
     }
-    const tagArr = tags.split(',').map(t => t.trim()).filter(Boolean);
-    if (tagArr.length === 0) {
-      errors.tags = 'Vui lòng nhập ít nhất 1 tag.';
-    }
-    if (tagArr.length > 5) {
-      errors.tags = 'Chỉ được nhập tối đa 5 tag.';
-    }
-    for (let tag of tagArr) {
-      if (tag.length > 20) {
-        errors.tags = 'Mỗi tag không quá 20 ký tự.';
-      }
-      if (!/^[a-zA-Z0-9-_]+$/.test(tag)) {
-        errors.tags = 'Tag chỉ được chứa chữ cái, số, dấu gạch ngang hoặc gạch dưới.';
-      }
+    const topicArr = topics.split(',').map(t => t.trim()).filter(Boolean);
+    if (topicArr.length === 0) {
+      errors.topics = 'Vui lòng nhập ít nhất 1 chủ đề.';
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -105,8 +125,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Đánh dấu tất cả trường là touched khi submit
-    setTouched({ tieuDe: true, tacGia: true, noiDung: true, tags: true, hinhAnh: true });
+    setTouched({ tieuDe: true, tacGia: true, noiDung: true, topics: true, hinhAnh: true });
     if (!validateAll()) return;
     setDangTai(true);
     try {
@@ -114,12 +133,18 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
         title: tieuDe,
         content: noiDung,
         author: tacGia,
-        tags: tags.split(',').map((tag: string) => tag.trim()),
-        published: false, // member tạo blog sẽ là false
+        topics: topics.split(',').map((topic: string) => topic.trim()),
+        published: isAdmin ? (initialData?.published ?? false) : false,
       };
       if (hinhAnh) blogData.image = hinhAnh;
-      await createBlogApi(blogData);
-      toast.success('Bài viết của bạn đã gửi thành công, vui lòng chờ admin duyệt!');
+      if (onSubmit) {
+        await onSubmit(blogData);
+      } else {
+        // fallback: gọi API tạo mới như cũ
+        const { createBlogApi } = await import('../../api');
+        await createBlogApi(blogData);
+        toast.success('Bài viết của bạn đã gửi thành công, vui lòng chờ admin duyệt!');
+      }
       onSuccess();
     } catch (error) {
       toast.error('Có lỗi xảy ra khi gửi bài viết. Vui lòng thử lại sau.');
@@ -129,18 +154,34 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-700 via-blue-500 to-purple-400 overflow-hidden">
-      {/* SVG minh họa background */}
-      <svg className="absolute left-0 top-0 w-full h-full pointer-events-none select-none" style={{zIndex:0}} viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="1200" cy="200" rx="340" ry="180" fill="#fff" fillOpacity="0.08" />
-        <ellipse cx="300" cy="800" rx="400" ry="120" fill="#fff" fillOpacity="0.10" />
-        <ellipse cx="900" cy="700" rx="200" ry="80" fill="#fff" fillOpacity="0.07" />
-        <ellipse cx="200" cy="200" rx="180" ry="80" fill="#fff" fillOpacity="0.06" />
-      </svg>
+    <div className="relative min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-sky-200 via-pink-100 to-pink-200 overflow-hidden">
+      {/* Pastel color bubbles */}
+      <div className="absolute top-8 left-1/4 w-32 h-32 rounded-full bg-pink-200 opacity-30 blur-xl"></div>
+      <div className="absolute top-20 right-1/4 w-40 h-40 rounded-full bg-blue-200 opacity-30 blur-xl"></div>
+      <div className="absolute bottom-10 left-1/3 w-24 h-24 rounded-full bg-green-200 opacity-20 blur-xl"></div>
+      <div className="absolute bottom-0 right-1/3 w-36 h-36 rounded-full bg-yellow-200 opacity-20 blur-xl"></div>
+      {/* Bubble animation */}
+      {[...Array(12)].map((_, i) => (
+        <div
+          key={i}
+          className={`absolute bottom-0 left-[${5 + i * 7}%] w-${(i%3+2)*3} h-${(i%3+2)*3} rounded-full bg-white opacity-30 animate-bubble`}
+          style={{ animationDelay: `${i * 0.8}s` }}
+        />
+      ))}
+      <style>{`
+        @keyframes bubble {
+          0% { transform: translateY(0) scale(1); opacity: 0.3; }
+          70% { opacity: 0.5; }
+          100% { transform: translateY(-600px) scale(1.2); opacity: 0; }
+        }
+        .animate-bubble {
+          animation: bubble 8s linear infinite;
+        }
+      `}</style>
       {/* Form card */}
       <div className="relative z-10 w-full max-w-xl bg-white/90 rounded-3xl shadow-2xl px-10 py-10 flex flex-col items-center backdrop-blur-md">
         <div className="mb-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-2 drop-shadow-lg">Tạo Blog Mới</h2>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-2 drop-shadow-lg">{initialData ? 'Sửa Blog' : 'Tạo Blog Mới'}</h2>
           <p className="text-lg text-gray-600 font-medium">Chia sẻ kiến thức, cảm xúc hoặc kinh nghiệm của bạn với cộng đồng HopeHub!</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6 w-full">
@@ -172,14 +213,52 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Nội dung</label>
-            <textarea
-              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 min-h-[120px]"
-              value={noiDung}
-              onChange={e => { setNoiDung(e.target.value); }}
-              onBlur={() => handleBlur('noiDung')}
-              required
-              style={{ borderColor: touched.noiDung && formErrors.noiDung ? '#f56565' : '#e2e8f0' }}
-            />
+            <div className="bg-white rounded-xl border border-gray-300 focus:border-cyan-500 focus:ring-cyan-500">
+              <Editor
+                editorState={editorState}
+                onEditorStateChange={(state: EditorState) => { setEditorState(state); setTouched(prev => ({ ...prev, noiDung: true })); }}
+                toolbar={{
+                  options: ['inline', 'blockType', 'list', 'textAlign', 'history', 'link', 'emoji', 'image'],
+                  inline: { 
+                    options: ['bold', 'italic', 'underline', 'strikethrough', 'monospace'],
+                    bold: { className: 'bordered-option-classname' },
+                    italic: { className: 'bordered-option-classname' },
+                    underline: { className: 'bordered-option-classname' },
+                    strikethrough: { className: 'bordered-option-classname' },
+                    monospace: { className: 'bordered-option-classname' },
+                  },
+                  blockType: { 
+                    inDropdown: true,
+                    options: ['Normal', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'Blockquote', 'Code'],
+                    className: 'bordered-option-classname',
+                  },
+                  list: { 
+                    inDropdown: false,
+                    options: ['unordered', 'ordered', 'indent', 'outdent'],
+                    className: 'bordered-option-classname',
+                  },
+                  textAlign: { 
+                    inDropdown: false,
+                    options: ['left', 'center', 'right', 'justify'],
+                    className: 'bordered-option-classname',
+                  },
+                  link: { 
+                    inDropdown: false,
+                    options: ['link', 'unlink'],
+                    className: 'bordered-option-classname',
+                  },
+                  history: { 
+                    inDropdown: false,
+                    options: ['undo', 'redo'],
+                    className: 'bordered-option-classname',
+                  },
+                }}
+                wrapperClassName="wysiwyg-wrapper"
+                editorClassName="wysiwyg-editor min-h-[180px] px-3 py-2"
+                toolbarClassName="wysiwyg-toolbar rounded-t-xl"
+                onBlur={() => handleBlur('noiDung')}
+              />
+            </div>
             {touched.noiDung && formErrors.noiDung && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.noiDung}</p>}
           </div>
           <div>
@@ -198,42 +277,32 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Tags (phân tách bằng dấu phẩy)</label>
+            <label className="block text-sm font-medium text-gray-700">Chủ đề (phân tách bằng dấu phẩy)</label>
             <input
               type="text"
-              value={tags}
-              onChange={e => { setTags(e.target.value); }}
-              onBlur={() => handleBlur('tags')}
-              placeholder="Ví dụ: suc-khoe, tam-ly, dinh-duong"
+              value={topics}
+              onChange={e => setTopics(e.target.value)}
+              onBlur={() => handleBlur('topics')}
+              placeholder="Ví dụ: sức khỏe, tâm lý, dinh dưỡng"
               className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
-              style={{ borderColor: touched.tags && formErrors.tags ? '#f56565' : '#e2e8f0' }}
+              style={{ borderColor: touched.topics && formErrors.topics ? '#f56565' : '#e2e8f0' }}
             />
-            {touched.tags && formErrors.tags && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tags}</p>}
+            {touched.topics && formErrors.topics && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.topics}</p>}
           </div>
-          <div className="flex justify-end space-x-4 mt-8">
+          <div className="flex justify-end space-x-3 mt-6">
             <button
               type="button"
               onClick={onCancel}
-              className="px-6 py-3 bg-gray-200 rounded-xl hover:bg-gray-300 transition text-base font-semibold"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-8 py-3 bg-gradient-to-r from-pink-500 to-indigo-500 text-white rounded-full hover:from-pink-600 hover:to-indigo-600 transition shadow-lg text-lg font-bold flex items-center disabled:opacity-50"
               disabled={dangTai}
+              className={`px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md ${dangTai ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {dangTai ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Đang gửi...
-                </>
-              ) : (
-                'Gửi bài'
-              )}
+              {dangTai ? 'Đang xử lý...' : (initialData ? 'Cập nhật' : 'Tạo mới')}
             </button>
           </div>
         </form>

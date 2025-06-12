@@ -6,7 +6,7 @@ export interface IBlog extends Document {
   author: string;
   image?: string;
   thumbnail?: string;
-  tags?: string[];
+  topics?: string[];
   published: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -19,7 +19,7 @@ const BlogSchema: Schema = new Schema(
     author: { type: String, required: true },
     image: { type: String },
     thumbnail: { type: String },
-    tags: [{ type: String }],
+    topics: [{ type: String }],
     published: { type: Boolean, default: false },
   },
   {

@@ -289,7 +289,7 @@ export const createBlogApi = async (data: any) => {
     form.append('content', data.content);
     form.append('author', data.author);
     form.append('published', data.published);
-    if (data.tags) form.append('tags', JSON.stringify(data.tags));
+    if (data.topics) form.append('topics', JSON.stringify(data.topics));
     form.append('image', data.image);
     const res = await api.post('/blogs', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -309,7 +309,7 @@ export const updateBlogApi = async (id: string, data: any) => {
     form.append('content', data.content);
     form.append('author', data.author);
     form.append('published', data.published);
-    if (data.tags) form.append('tags', JSON.stringify(data.tags));
+    if (data.topics) form.append('topics', JSON.stringify(data.topics));
     form.append('image', data.image);
     const res = await api.put(`/blogs/${id}`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },

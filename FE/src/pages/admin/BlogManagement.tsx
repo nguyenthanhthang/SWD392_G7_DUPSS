@@ -4,6 +4,7 @@ import { getAllBlogsApi, createBlogApi, updateBlogApi, deleteBlogApi } from '../
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import Editor from '../../components/Editor';
+import CreateBlogForm from '../../components/blog/CreateBlogForm';
 
 interface Blog {
   _id: string;
@@ -626,131 +627,41 @@ const BlogManagement: React.FC = () => {
       {/* Modal Thêm/Sửa Blog */}
       {modalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999]">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">{editingBlog ? 'Sửa blog' : 'Thêm blog mới'}</h2>
-              <button
-                onClick={handleCloseModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-            {Object.keys(formErrors).length > 0 && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm font-medium text-red-600">Vui lòng kiểm tra lại thông tin nhập liệu:</p>
-                <ul className="mt-2 list-disc list-inside text-sm text-red-600">
-                  {Object.values(formErrors).map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tiêu đề</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title || ''}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  style={{ borderColor: formErrors.title ? '#f56565' : '#e2e8f0' }}
-                  required
-                />
-                {formErrors.title && (
-                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.title}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tác giả</label>
-                <input
-                  type="text"
-                  name="author"
-                  value={formData.author || ''}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  style={{ borderColor: formErrors.author ? '#f56565' : '#e2e8f0' }}
-                  required
-                />
-                {formErrors.author && (
-                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.author}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nội dung</label>
-                <Editor
-                  value={formData.content || ''}
-                  onChange={content => {
-                    setFormData({ ...formData, content });
-                    
-                    // Validate content
-                    if (!content || content.trim() === '') {
-                      setFormErrors(prev => ({ ...prev, content: 'Nội dung không được để trống' }));
-                    } else if (content.replace(/<[^>]*>/g, '').trim().length < 50) {
-                      setFormErrors(prev => ({ ...prev, content: 'Nội dung phải có ít nhất 50 ký tự' }));
-                    } else {
-                      setFormErrors(prev => {
-                        const newErrors = { ...prev };
-                        delete newErrors.content;
-                        return newErrors;
-                      });
-                    }
-                  }}
-                  height={300}
-                />
-                {formErrors.content && (
-                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.content}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Ảnh đại diện blog</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="mt-1 block w-full text-sm"
-                  style={{ color: formErrors.image ? '#f56565' : 'inherit' }}
-                />
-                {formErrors.image && (
-                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.image}</p>
-                )}
-                {filePreview && (
-                  <img src={filePreview} alt="Preview" className="mt-2 w-32 h-20 object-cover rounded border" />
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="tags">Tags (phân tách bằng dấu phẩy)</label>
-                <input
-                  type="text"
-                  id="tags"
-                  name="tags"
-                  value={formData.tags || ''}
-                  onChange={e => setFormData({ ...formData, tags: e.target.value })}
-                  placeholder="Ví dụ: suc-khoe, tam-ly, dinh-duong"
-                  className="form-control"
-                />
-                {formErrors.tags && <div className="text-danger" style={{ fontSize: 13 }}>{formErrors.tags}</div>}
-              </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {isSubmitting ? 'Đang xử lý...' : (editingBlog ? 'Cập nhật' : 'Tạo mới')}
-                </button>
-              </div>
-            </form>
+          <div className="bg-white rounded-lg p-0 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CreateBlogForm
+              initialData={editingBlog ? {
+                title: editingBlog.title,
+                content: editingBlog.content,
+                author: editingBlog.author,
+                tags: editingBlog.tags?.join(', ') || '',
+                image: editingBlog.image || '',
+                published: editingBlog.published,
+              } : undefined}
+              isAdmin={true}
+              onCancel={handleCloseModal}
+              onSuccess={() => {
+                handleCloseModal();
+                fetchBlogs();
+              }}
+              onSubmit={async (data) => {
+                setIsSubmitting(true);
+                try {
+                  if (editingBlog) {
+                    await updateBlogApi(editingBlog._id, data);
+                    setNotification({type: 'success', message: 'Cập nhật blog thành công'});
+                  } else {
+                    await createBlogApi(data);
+                    setNotification({type: 'success', message: 'Tạo blog mới thành công'});
+                  }
+                  setTimeout(() => setNotification(null), 3000);
+                } catch (error) {
+                  setNotification({type: 'error', message: 'Không thể lưu blog'});
+                  setTimeout(() => setNotification(null), 3000);
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+            />
           </div>
         </div>
       )}
