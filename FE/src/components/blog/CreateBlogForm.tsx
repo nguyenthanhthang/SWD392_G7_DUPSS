@@ -129,102 +129,115 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel }) 
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-cyan-700">Tạo Bài Viết Mới</h2>
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Tiêu đề</label>
-          <input
-            type="text"
-            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm"
-            value={tieuDe}
-            onChange={e => { setTieuDe(e.target.value); }}
-            onBlur={() => handleBlur('tieuDe')}
-            required
-            style={{ borderColor: touched.tieuDe && formErrors.tieuDe ? '#f56565' : '#e2e8f0' }}
-          />
-          {touched.tieuDe && formErrors.tieuDe && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tieuDe}</p>}
+    <div className="relative min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-700 via-blue-500 to-purple-400 overflow-hidden">
+      {/* SVG minh họa background */}
+      <svg className="absolute left-0 top-0 w-full h-full pointer-events-none select-none" style={{zIndex:0}} viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="1200" cy="200" rx="340" ry="180" fill="#fff" fillOpacity="0.08" />
+        <ellipse cx="300" cy="800" rx="400" ry="120" fill="#fff" fillOpacity="0.10" />
+        <ellipse cx="900" cy="700" rx="200" ry="80" fill="#fff" fillOpacity="0.07" />
+        <ellipse cx="200" cy="200" rx="180" ry="80" fill="#fff" fillOpacity="0.06" />
+      </svg>
+      {/* Form card */}
+      <div className="relative z-10 w-full max-w-xl bg-white/90 rounded-3xl shadow-2xl px-10 py-10 flex flex-col items-center backdrop-blur-md">
+        <div className="mb-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-2 drop-shadow-lg">Tạo Blog Mới</h2>
+          <p className="text-lg text-gray-600 font-medium">Chia sẻ kiến thức, cảm xúc hoặc kinh nghiệm của bạn với cộng đồng HopeHub!</p>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Tác giả</label>
-          <input
-            type="text"
-            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm"
-            value={tacGia}
-            onChange={e => { setTacGia(e.target.value); }}
-            onBlur={() => handleBlur('tacGia')}
-            required
-            style={{ borderColor: touched.tacGia && formErrors.tacGia ? '#f56565' : '#e2e8f0' }}
-          />
-          {touched.tacGia && formErrors.tacGia && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tacGia}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Nội dung</label>
-          <textarea
-            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm min-h-[120px]"
-            value={noiDung}
-            onChange={e => { setNoiDung(e.target.value); }}
-            onBlur={() => handleBlur('noiDung')}
-            required
-            style={{ borderColor: touched.noiDung && formErrors.noiDung ? '#f56565' : '#e2e8f0' }}
-          />
-          {touched.noiDung && formErrors.noiDung && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.noiDung}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Ảnh đại diện blog</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            onBlur={() => handleBlur('hinhAnh')}
-            className="mt-1 block w-full text-sm"
-            style={{ color: touched.hinhAnh && formErrors.hinhAnh ? '#f56565' : 'inherit' }}
-          />
-          {touched.hinhAnh && formErrors.hinhAnh && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.hinhAnh}</p>}
-          {imagePreview && (
-            <img src={imagePreview} alt="Preview" className="mt-2 w-32 h-20 object-cover rounded border" />
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Tags (phân tách bằng dấu phẩy)</label>
-          <input
-            type="text"
-            value={tags}
-            onChange={e => { setTags(e.target.value); }}
-            onBlur={() => handleBlur('tags')}
-            placeholder="Ví dụ: suc-khoe, tam-ly, dinh-duong"
-            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm"
-            style={{ borderColor: touched.tags && formErrors.tags ? '#f56565' : '#e2e8f0' }}
-          />
-          {touched.tags && formErrors.tags && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tags}</p>}
-        </div>
-        <div className="flex justify-end space-x-4 mt-8">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-6 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
-          >
-            Hủy
-          </button>
-          <button
-            type="submit"
-            className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition shadow-md flex items-center disabled:opacity-50"
-            disabled={dangTai}
-          >
-            {dangTai ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Đang gửi...
-              </>
-            ) : (
-              'Gửi bài'
+        <form onSubmit={handleSubmit} className="space-y-6 w-full">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Tiêu đề</label>
+            <input
+              type="text"
+              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
+              value={tieuDe}
+              onChange={e => { setTieuDe(e.target.value); }}
+              onBlur={() => handleBlur('tieuDe')}
+              required
+              style={{ borderColor: touched.tieuDe && formErrors.tieuDe ? '#f56565' : '#e2e8f0' }}
+            />
+            {touched.tieuDe && formErrors.tieuDe && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tieuDe}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Tác giả</label>
+            <input
+              type="text"
+              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
+              value={tacGia}
+              onChange={e => { setTacGia(e.target.value); }}
+              onBlur={() => handleBlur('tacGia')}
+              required
+              style={{ borderColor: touched.tacGia && formErrors.tacGia ? '#f56565' : '#e2e8f0' }}
+            />
+            {touched.tacGia && formErrors.tacGia && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tacGia}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Nội dung</label>
+            <textarea
+              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 min-h-[120px]"
+              value={noiDung}
+              onChange={e => { setNoiDung(e.target.value); }}
+              onBlur={() => handleBlur('noiDung')}
+              required
+              style={{ borderColor: touched.noiDung && formErrors.noiDung ? '#f56565' : '#e2e8f0' }}
+            />
+            {touched.noiDung && formErrors.noiDung && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.noiDung}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Ảnh đại diện blog</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              onBlur={() => handleBlur('hinhAnh')}
+              className="mt-1 block w-full text-base"
+              style={{ color: touched.hinhAnh && formErrors.hinhAnh ? '#f56565' : 'inherit' }}
+            />
+            {touched.hinhAnh && formErrors.hinhAnh && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.hinhAnh}</p>}
+            {imagePreview && (
+              <img src={imagePreview} alt="Preview" className="mt-2 w-40 h-28 object-cover rounded-xl border mx-auto" />
             )}
-          </button>
-        </div>
-      </form>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Tags (phân tách bằng dấu phẩy)</label>
+            <input
+              type="text"
+              value={tags}
+              onChange={e => { setTags(e.target.value); }}
+              onBlur={() => handleBlur('tags')}
+              placeholder="Ví dụ: suc-khoe, tam-ly, dinh-duong"
+              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
+              style={{ borderColor: touched.tags && formErrors.tags ? '#f56565' : '#e2e8f0' }}
+            />
+            {touched.tags && formErrors.tags && <p className="mt-1 text-sm text-red-600 font-medium">{formErrors.tags}</p>}
+          </div>
+          <div className="flex justify-end space-x-4 mt-8">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-3 bg-gray-200 rounded-xl hover:bg-gray-300 transition text-base font-semibold"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="px-8 py-3 bg-gradient-to-r from-pink-500 to-indigo-500 text-white rounded-full hover:from-pink-600 hover:to-indigo-600 transition shadow-lg text-lg font-bold flex items-center disabled:opacity-50"
+              disabled={dangTai}
+            >
+              {dangTai ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Đang gửi...
+                </>
+              ) : (
+                'Gửi bài'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
