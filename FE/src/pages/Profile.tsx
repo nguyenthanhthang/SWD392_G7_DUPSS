@@ -190,7 +190,14 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb] flex flex-col items-center py-4 px-2">
+    <div className="min-h-screen bg-[#f6f8fb] flex flex-col items-center py-4 px-2 relative overflow-x-hidden">
+      {/* Bóng tròn pastel/hologram hai bên */}
+      <div className="absolute top-10 left-[-80px] w-60 h-60 bg-cyan-200 rounded-full opacity-40 blur-2xl z-0"></div>
+      <div className="absolute top-1/3 left-[-100px] w-72 h-72 bg-pink-200 rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute bottom-20 left-[-60px] w-44 h-44 bg-blue-200 rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute top-20 right-[-80px] w-60 h-60 bg-cyan-200 rounded-full opacity-40 blur-2xl z-0"></div>
+      <div className="absolute top-1/2 right-[-100px] w-72 h-72 bg-pink-200 rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute bottom-10 right-[-60px] w-44 h-44 bg-blue-200 rounded-full opacity-35 blur-2xl z-0"></div>
       <div className="bg-white rounded-3xl shadow-sm flex flex-col w-full max-w-6xl overflow-hidden relative">
         {/* Main content container */}
         <div className="flex flex-row w-full">
@@ -396,7 +403,7 @@ export default function Profile() {
                     ) : (
                       <div className="space-y-3">
                         {blogs.filter(blog => blog.published).map(blog => (
-                          <div key={blog._id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm">
+                          <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
                               <div className="text-xs text-gray-500 mt-1">
@@ -423,7 +430,7 @@ export default function Profile() {
                     ) : (
                       <div className="space-y-3">
                         {blogs.filter(blog => !blog.published).map(blog => (
-                          <div key={blog._id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm">
+                          <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
                               <div className="text-xs text-gray-500 mt-1">

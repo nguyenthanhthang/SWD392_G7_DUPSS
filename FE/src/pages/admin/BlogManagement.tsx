@@ -658,7 +658,7 @@ const BlogManagement: React.FC = () => {
                   if (editingBlog) {
                     await updateBlogApi(editingBlog._id, data);
                     setNotification({type: 'success', message: 'Cập nhật blog thành công'});
-                  } else {
+                    } else {
                     await createBlogApi(data);
                     setNotification({type: 'success', message: 'Tạo blog mới thành công'});
                   }
@@ -672,7 +672,7 @@ const BlogManagement: React.FC = () => {
               }}
             />
           </div>
-        </div>
+              </div>
       )}
 
       {hienModalXem && blogDangXem && (
