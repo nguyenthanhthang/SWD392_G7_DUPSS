@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByAuthorApi } from '../api';
+import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByUserIdApi, updateBlogApi } from '../api';
 import whaleLogo from '../assets/whale.png';
 import AppointmentsPage from './Appointments';
 import PaymentsTable  from './PaymentHistory';
 import type { AxiosError } from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
+import BlogDetailView from '../components/blog/BlogDetailView';
+import CreateBlogForm from '../components/blog/CreateBlogForm';
 
 interface User {
   _id?: string;
@@ -23,6 +25,7 @@ interface User {
 
 const menuTabs = [
   { key: "profile", label: "User Profile" },
+  { key: "blogs", label: "Blogs" },
   { key: "Appointments", label: "Appointments" },
   { key: "payments", label: "Payments" },
 ];
@@ -46,6 +49,10 @@ export default function Profile() {
   const [showPwdNew, setShowPwdNew] = useState(false);
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
   const [blogs, setBlogs] = useState<any[]>([]);
+  const [blogDangXem, setBlogDangXem] = useState<any | null>(null);
+  const [modalBlog, setModalBlog] = useState(false);
+  const [blogDangSua, setBlogDangSua] = useState<any | null>(null);
+  const [modalEdit, setModalEdit] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -63,10 +70,10 @@ export default function Profile() {
   }, []);
 
   useEffect(() => {
-    if (user?.fullName) {
-      getBlogsByAuthorApi(user.fullName).then(setBlogs).catch(() => setBlogs([]));
+    if (user?._id) {
+      getBlogsByUserIdApi(user._id).then(setBlogs).catch(() => setBlogs([]));
     }
-  }, [user?.fullName]);
+  }, [user?._id]);
 
   const handleEdit = () => setEditMode(true);
 
@@ -376,20 +383,60 @@ export default function Profile() {
                       </button>
                     </div>
                   </div>
-                  {/* Blog cá nhân */}
-                  <div className="mt-8">
-                    <div className="font-semibold text-gray-700 mb-4 text-lg">Bài viết của bạn</div>
-                    {blogs.length === 0 ? (
-                      <div className="text-gray-500 italic">Bạn chưa có bài viết nào.</div>
+                </div>
+              )}
+              {tab === 'blogs' && (
+                <div className="p-7">
+                  <div className="font-semibold text-gray-700 mb-4 text-lg">Bài viết của bạn</div>
+                  {/* Bài viết đã xuất bản */}
+                  <div className="mb-8">
+                    <div className="font-semibold text-green-700 mb-2">Bài viết đã xuất bản</div>
+                    {blogs.filter(blog => blog.published).length === 0 ? (
+                      <div className="text-gray-500 italic">Bạn chưa có bài viết nào đã xuất bản.</div>
                     ) : (
                       <div className="space-y-3">
-                        {blogs.map(blog => (
+                        {blogs.filter(blog => blog.published).map(blog => (
                           <div key={blog._id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
-                              <div className="text-xs text-gray-500 mt-1">{blog.published ? 'Đã xuất bản' : 'Chưa duyệt'} • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Đã xuất bản • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
+                              </div>
                             </div>
-                            <Link to={`/blogs/${blog._id}`} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
+                            <div className="flex gap-2">
+                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
+                              <button onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} className="text-indigo-600 hover:underline text-sm font-medium">Chỉnh sửa</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Bài viết chưa duyệt */}
+                  <div>
+                    <div className="font-semibold text-yellow-700 mb-2">Bài viết chưa duyệt</div>
+                    {blogs.filter(blog => !blog.published).length === 0 ? (
+                      <div className="text-gray-500 italic">Bạn không có bài viết nào đang chờ duyệt.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {blogs.filter(blog => !blog.published).map(blog => (
+                          <div key={blog._id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm">
+                            <div>
+                              <div className="font-medium text-base text-gray-800">{blog.title}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Chưa duyệt • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
+                              <button onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} className="text-indigo-600 hover:underline text-sm font-medium">Chỉnh sửa</button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -491,6 +538,38 @@ export default function Profile() {
               </>
             )}
             <button className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm" onClick={()=>setShowPwdModal(false)}>Hủy</button>
+          </div>
+        </div>
+      )}
+      {/* Modal xem chi tiết blog */}
+      {modalBlog && blogDangXem && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+            <BlogDetailView blog={blogDangXem} onClose={() => setModalBlog(false)} />
+          </div>
+        </div>
+      )}
+      {/* Modal chỉnh sửa blog */}
+      {modalEdit && blogDangSua && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+            <CreateBlogForm
+              initialData={{
+                title: blogDangSua.title,
+                content: blogDangSua.content,
+                author: blogDangSua.author,
+                topics: blogDangSua.topics?.join(', ') || '',
+                image: blogDangSua.image || '',
+                published: blogDangSua.published,
+              }}
+              onCancel={() => setModalEdit(false)}
+              onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(user?._id) getBlogsByUserIdApi(user._id).then(setBlogs); }}
+              onSubmit={async (data) => {
+                const dataUpdate = { ...data };
+                if (blogDangSua.published) dataUpdate.published = false;
+                await updateBlogApi(blogDangSua._id, dataUpdate);
+              }}
+            />
           </div>
         </div>
       )}

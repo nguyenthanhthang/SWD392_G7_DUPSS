@@ -331,4 +331,9 @@ export const getBlogsByAuthorApi = async (author: string) => {
   return res.data;
 };
 
+export const getBlogsByUserIdApi = async (userId: string) => {
+  const res = await api.get(`/blogs/user/${userId}`);
+  return res.data;
+};
+
 export default api;

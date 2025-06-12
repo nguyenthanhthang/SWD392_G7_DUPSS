@@ -56,7 +56,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel, in
 
   useEffect(() => {
     if (anDanh) {
-      setTacGia('Ẩn danh');
+      // Không thay đổi giá trị lưu vào DB, chỉ dùng để hiển thị
     } else if (userInfo && !initialData?.author) {
       setTacGia(userInfo.fullName || userInfo.username || '');
     }
@@ -232,7 +232,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({ onSuccess, onCancel, in
                 className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
               />
               <label htmlFor="anDanh" className="text-sm text-gray-700 select-none cursor-pointer">Đăng ẩn danh</label>
-              <span className="text-gray-500 text-sm">{anDanh ? 'Ẩn danh' : tacGia}</span>
+              <span className="text-gray-500 text-sm">{anDanh ? 'Ẩn danh' : (userInfo?.fullName || userInfo?.username || '')}</span>
             </div>
           )}
           <div>
