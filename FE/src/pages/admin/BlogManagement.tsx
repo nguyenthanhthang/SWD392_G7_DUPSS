@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { getAllBlogsApi, createBlogApi, updateBlogApi, deleteBlogApi } from '../../api';
+import { getAllBlogsApi, createBlogApi, updateBlogApi } from '../../api';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import Editor from '../../components/Editor';
+import CreateBlogForm from '../../components/blog/CreateBlogForm';
+import BlogDetailView from '../../components/blog/BlogDetailView';
 
 interface Blog {
   _id: string;
@@ -12,7 +14,7 @@ interface Blog {
   author: string;
   image?: string;
   thumbnail?: string;
-  tags?: string[];
+  topics?: string[];
   published: boolean;
   createdAt: string;
   updatedAt: string;
@@ -33,6 +35,8 @@ const BlogManagement: React.FC = () => {
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const [blogDangXem, setBlogDangXem] = useState<Blog | null>(null);
+  const [hienModalXem, setHienModalXem] = useState(false);
 
   // Filtered blogs
   const filteredBlogs = blogs.filter(blog => {
@@ -43,7 +47,7 @@ const BlogManagement: React.FC = () => {
     const matchesStatus =
       statusFilter === '' ||
       (statusFilter === 'published' && blog.published) ||
-      (statusFilter === 'draft' && !blog.published);
+      (statusFilter === 'pending' && !blog.published);
     const matchesAuthor =
       authorFilter === '' || blog.author === authorFilter;
     return matchesSearch && matchesStatus && matchesAuthor;
@@ -79,7 +83,7 @@ const BlogManagement: React.FC = () => {
       title: '', 
       content: '', 
       author: user?.username || 'Admin', 
-      tags: '', 
+      topics: '', 
       published: false,
       image: '',
       thumbnail: ''
@@ -94,7 +98,7 @@ const BlogManagement: React.FC = () => {
       title: blog.title,
       content: blog.content,
       author: blog.author,
-      tags: blog.tags?.join(', ') || '',
+      topics: blog.topics?.join(', ') || '',
       published: blog.published,
       image: blog.image || '',
     });
@@ -277,21 +281,21 @@ const BlogManagement: React.FC = () => {
       }
     }
     
-    // Validate tags
-    const tagString = formData.tags || '';
-    const tagArr = tagString.split(',').map((t: any) => t.trim()).filter(Boolean);
-    if (tagArr.length === 0) {
-      setFormErrors((prev: any) => ({ ...prev, tags: 'Vui lòng nhập ít nhất 1 tag.' }));
+    // Validate topics
+    const topicString = formData.topics || '';
+    const topicArr = topicString.split(',').map((t: any) => t.trim()).filter(Boolean);
+    if (topicArr.length === 0) {
+      setFormErrors((prev: any) => ({ ...prev, topics: 'Vui lòng nhập ít nhất 1 topic.' }));
     }
-    if (tagArr.length > 5) {
-      errors.tags = 'Chỉ được nhập tối đa 5 tag.';
+    if (topicArr.length > 5) {
+      errors.topics = 'Chỉ được nhập tối đa 5 topic.';
     }
-    for (let tag of tagArr) {
-      if (tag.length > 20) {
-        errors.tags = 'Mỗi tag không quá 20 ký tự.';
+    for (let topic of topicArr) {
+      if (topic.length > 20) {
+        errors.topics = 'Mỗi topic không quá 20 ký tự.';
       }
-      if (!/^[a-zA-Z0-9-_]+$/.test(tag)) {
-        errors.tags = 'Tag chỉ được chứa chữ cái, số, dấu gạch ngang hoặc gạch dưới.';
+      if (!/^[a-zA-Z0-9-_]+$/.test(topic)) {
+        errors.topics = 'Topic chỉ được chứa chữ cái, số, dấu gạch ngang hoặc gạch dưới.';
       }
     }
     
@@ -312,7 +316,7 @@ const BlogManagement: React.FC = () => {
         content: formData.content,
         author: formData.author || user?.username || 'Admin',
         published: formData.published || false,
-        tags: formData.tags ? formData.tags.split(',').map((tag: string) => tag.trim()) : [],
+        topics: formData.topics ? formData.topics.split(',').map((topic: string) => topic.trim()) : [],
       };
       if (file) {
         blogData.image = file;
@@ -341,45 +345,48 @@ const BlogManagement: React.FC = () => {
     }
   };
 
-  // Handle delete
-  const handleDelete = async (id: string) => {
+  // Badge helpers
+  const getStatusBadge = (published: boolean) =>
+    published ? (
+      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Đã xuất bản</span>
+    ) : (
+      <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Chưa duyệt</span>
+    );
+
+  // Handle duyệt blog
+  const handleDuyetBlog = async (blog: Blog) => {
     try {
-      await deleteBlogApi(id);
-      setNotification({type: 'success', message: 'Xóa blog thành công'});
+      await updateBlogApi(blog._id, {
+        ...blog,
+        published: true
+      });
+      setNotification({type: 'success', message: 'Đã duyệt bài viết thành công'});
       fetchBlogs();
       setTimeout(() => {
         setNotification(null);
       }, 3000);
-    } catch {
-      setNotification({type: 'error', message: 'Không thể xóa blog'});
+    } catch (error) {
+      setNotification({type: 'error', message: 'Không thể duyệt bài viết'});
       setTimeout(() => {
         setNotification(null);
       }, 3000);
     }
   };
 
-  // Badge helpers
-  const getStatusBadge = (published: boolean) =>
-    published ? (
-      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Đã xuất bản</span>
-    ) : (
-      <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">Bản nháp</span>
-    );
-
-  // Handle toggle publish status
-  const handleTogglePublish = async (blog: Blog) => {
+  // Handle ngừng xuất bản blog
+  const handleNgungXuatBan = async (blog: Blog) => {
     try {
       await updateBlogApi(blog._id, {
         ...blog,
-        published: !blog.published
+        published: false
       });
-      setNotification({type: 'success', message: `Blog đã ${!blog.published ? 'xuất bản' : 'chuyển về bản nháp'} thành công`});
+      setNotification({type: 'success', message: 'Đã ngừng xuất bản bài viết'});
       fetchBlogs();
       setTimeout(() => {
         setNotification(null);
       }, 3000);
     } catch (error) {
-      setNotification({type: 'error', message: 'Không thể thay đổi trạng thái blog'});
+      setNotification({type: 'error', message: 'Không thể ngừng xuất bản bài viết'});
       setTimeout(() => {
         setNotification(null);
       }, 3000);
@@ -468,7 +475,7 @@ const BlogManagement: React.FC = () => {
             >
               <option value="">Tất cả trạng thái</option>
               <option value="published">Đã xuất bản</option>
-              <option value="draft">Bản nháp</option>
+              <option value="pending">Chưa duyệt</option>
             </select>
           </div>
           <div>
@@ -489,7 +496,7 @@ const BlogManagement: React.FC = () => {
           <span className="font-medium">Kết quả: {filteredBlogs.length} bài viết</span>
           {(searchTerm || statusFilter || authorFilter) && <span className="mx-2">|</span>}
           {searchTerm && <span className="bg-gray-100 px-2 py-1 rounded-full">Tìm kiếm: "{searchTerm}"</span>}
-          {statusFilter && <span className="bg-gray-100 px-2 py-1 rounded-full">Trạng thái: {statusFilter === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</span>}
+          {statusFilter && <span className="bg-gray-100 px-2 py-1 rounded-full">Trạng thái: {statusFilter === 'published' ? 'Đã xuất bản' : 'Chưa duyệt'}</span>}
           {authorFilter && <span className="bg-gray-100 px-2 py-1 rounded-full">Tác giả: {authorFilter}</span>}
         </div>
       </div>
@@ -502,7 +509,7 @@ const BlogManagement: React.FC = () => {
               <th className="px-4 py-3 rounded-tl-lg w-1/5">Tiêu đề</th>
               {/* <th className="px-4 py-3 w-1/6">Ảnh đại diện</th> */}
               <th className="px-4 py-3 w-1/6">Tác giả</th>
-              {/* <th className="px-4 py-3 w-1/6">Tags</th> */}
+              {/* <th className="px-4 py-3 w-1/6">Topics</th> */}
               <th className="px-4 py-3 w-1/6">Trạng thái</th>
               <th className="px-4 py-3 w-1/6">Ngày tạo</th>
               <th className="px-4 py-3 rounded-tr-lg w-1/6">Thao tác</th>
@@ -525,36 +532,48 @@ const BlogManagement: React.FC = () => {
                   <td className="px-4 py-3 whitespace-nowrap">{blog.author}</td>
                   {/*
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {blog.tags && blog.tags.length > 0 ? (
-                      blog.tags.map(tag => (
-                        <span key={tag} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">{tag}</span>
+                    {blog.topics && blog.topics.length > 0 ? (
+                      blog.topics.map(topic => (
+                        <span key={topic} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">{topic}</span>
                       ))
                     ) : (
-                      <span className="text-xs text-gray-400">Không có tag</span>
+                      <span className="text-xs text-gray-400">Không có topic</span>
                     )}
                   </td>
                   */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       {getStatusBadge(blog.published)}
-                      <div className="flex items-center ml-2">
-                        <label className="inline-flex relative items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={blog.published}
-                            onChange={() => handleTogglePublish(blog)}
-                          />
-                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                        </label>
-                      </div>
+                      {!blog.published ? (
+                        <button
+                          onClick={() => handleDuyetBlog(blog)}
+                          className="px-3 py-1 text-sm bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors flex items-center gap-1 shadow-sm hover:shadow"
+                          title="Duyệt bài viết"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Duyệt
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleNgungXuatBan(blog)}
+                          className="px-3 py-1 text-sm bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors flex items-center gap-1 shadow-sm hover:shadow"
+                          title="Ngừng xuất bản bài viết"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Ngừng xuất bản
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{new Date(blog.createdAt).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center space-x-3">
                       <button
-                        onClick={() => window.open(`/blogs/${blog._id}`, '_blank')}
+                        onClick={() => { setBlogDangXem(blog); setHienModalXem(true); }}
                         className="p-2 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
                         title="Xem"
                       >
@@ -570,15 +589,6 @@ const BlogManagement: React.FC = () => {
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(blog._id)}
-                        className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
-                        title="Xóa"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
@@ -626,131 +636,49 @@ const BlogManagement: React.FC = () => {
       {/* Modal Thêm/Sửa Blog */}
       {modalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999]">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">{editingBlog ? 'Sửa blog' : 'Thêm blog mới'}</h2>
-              <button
-                onClick={handleCloseModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-            {Object.keys(formErrors).length > 0 && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm font-medium text-red-600">Vui lòng kiểm tra lại thông tin nhập liệu:</p>
-                <ul className="mt-2 list-disc list-inside text-sm text-red-600">
-                  {Object.values(formErrors).map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tiêu đề</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title || ''}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  style={{ borderColor: formErrors.title ? '#f56565' : '#e2e8f0' }}
-                  required
-                />
-                {formErrors.title && (
-                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.title}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tác giả</label>
-                <input
-                  type="text"
-                  name="author"
-                  value={formData.author || ''}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  style={{ borderColor: formErrors.author ? '#f56565' : '#e2e8f0' }}
-                  required
-                />
-                {formErrors.author && (
-                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.author}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nội dung</label>
-                <Editor
-                  value={formData.content || ''}
-                  onChange={content => {
-                    setFormData({ ...formData, content });
-                    
-                    // Validate content
-                    if (!content || content.trim() === '') {
-                      setFormErrors(prev => ({ ...prev, content: 'Nội dung không được để trống' }));
-                    } else if (content.replace(/<[^>]*>/g, '').trim().length < 50) {
-                      setFormErrors(prev => ({ ...prev, content: 'Nội dung phải có ít nhất 50 ký tự' }));
+          <div className="bg-white rounded-lg p-0 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CreateBlogForm
+              initialData={editingBlog ? {
+                title: editingBlog.title,
+                content: editingBlog.content,
+                author: editingBlog.author,
+                topics: editingBlog.topics?.join(', ') || '',
+                image: editingBlog.image || '',
+                published: editingBlog.published,
+              } : undefined}
+              isAdmin={true}
+              onCancel={handleCloseModal}
+              onSuccess={() => {
+                handleCloseModal();
+                fetchBlogs();
+              }}
+              onSubmit={async (data) => {
+                setIsSubmitting(true);
+                try {
+                  if (editingBlog) {
+                    await updateBlogApi(editingBlog._id, data);
+                    setNotification({type: 'success', message: 'Cập nhật blog thành công'});
                     } else {
-                      setFormErrors(prev => {
-                        const newErrors = { ...prev };
-                        delete newErrors.content;
-                        return newErrors;
-                      });
-                    }
-                  }}
-                  height={300}
-                />
-                {formErrors.content && (
-                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.content}</p>
-                )}
+                    await createBlogApi(data);
+                    setNotification({type: 'success', message: 'Tạo blog mới thành công'});
+                  }
+                  setTimeout(() => setNotification(null), 3000);
+                } catch (error) {
+                  setNotification({type: 'error', message: 'Không thể lưu blog'});
+                  setTimeout(() => setNotification(null), 3000);
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+            />
+          </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Ảnh đại diện blog</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="mt-1 block w-full text-sm"
-                  style={{ color: formErrors.image ? '#f56565' : 'inherit' }}
-                />
-                {formErrors.image && (
-                  <p className="mt-1 text-sm" style={{ color: '#f56565', fontWeight: 500 }}>{formErrors.image}</p>
-                )}
-                {filePreview && (
-                  <img src={filePreview} alt="Preview" className="mt-2 w-32 h-20 object-cover rounded border" />
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="tags">Tags (phân tách bằng dấu phẩy)</label>
-                <input
-                  type="text"
-                  id="tags"
-                  name="tags"
-                  value={formData.tags || ''}
-                  onChange={e => setFormData({ ...formData, tags: e.target.value })}
-                  placeholder="Ví dụ: suc-khoe, tam-ly, dinh-duong"
-                  className="form-control"
-                />
-                {formErrors.tags && <div className="text-danger" style={{ fontSize: 13 }}>{formErrors.tags}</div>}
-              </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {isSubmitting ? 'Đang xử lý...' : (editingBlog ? 'Cập nhật' : 'Tạo mới')}
-                </button>
-              </div>
-            </form>
+      )}
+
+      {hienModalXem && blogDangXem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
+            <BlogDetailView blog={blogDangXem} onClose={() => setHienModalXem(false)} />
           </div>
         </div>
       )}
