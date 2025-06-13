@@ -4,6 +4,14 @@ import Consultant from "../models/Consultant";
 import bcrypt from "bcryptjs";
 import { isStrongPassword } from "../utils";
 
+// Interface cho request body khi cập nhật account thành consultant
+interface IUpdateAccountRequest extends Partial<IAccount> {
+  introduction?: string;
+  contact?: string;
+  experience?: number;
+  startDateofWork?: Date;
+}
+
 // [POST] /api/accounts – Tạo tài khoản
 export const createAccount = async (
   req: Request<{}, {}, IAccount>,
@@ -64,7 +72,7 @@ export const getAccountById = async (
 
 // [PUT] /api/accounts/:id – Cập nhật
 export const updateAccount = async (
-  req: Request<{ id: string }, {}, Partial<IAccount>>,
+  req: Request<{ id: string }, {}, IUpdateAccountRequest>,
   res: Response
 ): Promise<void> => {
   try {
@@ -157,13 +165,27 @@ export const updateAccount = async (
       });
 
       if (!existingConsultant) {
-        // Tạo consultant mới nếu chưa tồn tại
+        // Kiểm tra thông tin consultant bắt buộc
+        const { introduction, contact, experience, startDateofWork } = req.body;
+        if (!introduction || !contact || !startDateofWork) {
+          res.status(400).json({ 
+            message: "Vui lòng nhập đầy đủ thông tin tư vấn viên: giới thiệu, liên hệ và ngày bắt đầu làm việc" 
+          });
+          return;
+        }
+
+        // Tạo consultant mới với thông tin đầy đủ
         const newConsultant = new Consultant({
           accountId: updated._id,
+          introduction,
+          contact,
           status: "active",
         });
         await newConsultant.save();
       } else {
+        // Nếu đã tồn tại, cập nhật thông tin nếu có
+        if (req.body.introduction) existingConsultant.introduction = req.body.introduction;
+        if (req.body.contact) existingConsultant.contact = req.body.contact;
         existingConsultant.status = "active";
         await existingConsultant.save();
       }
