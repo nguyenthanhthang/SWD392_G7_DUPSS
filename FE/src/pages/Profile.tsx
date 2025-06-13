@@ -53,6 +53,8 @@ export default function Profile() {
   const [modalBlog, setModalBlog] = useState(false);
   const [blogDangSua, setBlogDangSua] = useState<any | null>(null);
   const [modalEdit, setModalEdit] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterKeyword, setFilterKeyword] = useState('');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -188,6 +190,17 @@ export default function Profile() {
     }
     setPwdLoading(false);
   };
+
+  // Hàm lọc blog
+  const filteredBlogs = blogs.filter(blog => {
+    const matchStatus =
+      filterStatus === 'all' ||
+      (filterStatus === 'published' && blog.published) ||
+      (filterStatus === 'pending' && !blog.published);
+    const matchKeyword =
+      blog.title.toLowerCase().includes(filterKeyword.toLowerCase());
+    return matchStatus && matchKeyword;
+  });
 
   return (
     <div className="min-h-screen bg-[#f6f8fb] flex flex-col items-center py-4 px-2 relative overflow-x-hidden">
@@ -395,14 +408,29 @@ export default function Profile() {
               {tab === 'blogs' && (
                 <div className="p-7">
                   <div className="font-semibold text-gray-700 mb-4 text-lg">Bài viết của bạn</div>
+                  {/* Filter */}
+                  <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                      <option value="all">Tất cả</option>
+                      <option value="published">Đã xuất bản</option>
+                      <option value="pending">Chưa duyệt</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={filterKeyword}
+                      onChange={e => setFilterKeyword(e.target.value)}
+                      placeholder="Tìm theo tiêu đề..."
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-cyan-500 focus:border-cyan-500 w-full md:w-64"
+                    />
+                  </div>
                   {/* Bài viết đã xuất bản */}
                   <div className="mb-8">
                     <div className="font-semibold text-green-700 mb-2">Bài viết đã xuất bản</div>
-                    {blogs.filter(blog => blog.published).length === 0 ? (
+                    {filteredBlogs.filter(blog => blog.published).length === 0 ? (
                       <div className="text-gray-500 italic">Bạn chưa có bài viết nào đã xuất bản.</div>
                     ) : (
                       <div className="space-y-3">
-                        {blogs.filter(blog => blog.published).map(blog => (
+                        {filteredBlogs.filter(blog => blog.published).map(blog => (
                           <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
@@ -425,11 +453,11 @@ export default function Profile() {
                   {/* Bài viết chưa duyệt */}
                   <div>
                     <div className="font-semibold text-yellow-700 mb-2">Bài viết chưa duyệt</div>
-                    {blogs.filter(blog => !blog.published).length === 0 ? (
+                    {filteredBlogs.filter(blog => !blog.published).length === 0 ? (
                       <div className="text-gray-500 italic">Bạn không có bài viết nào đang chờ duyệt.</div>
                     ) : (
                       <div className="space-y-3">
-                        {blogs.filter(blog => !blog.published).map(blog => (
+                        {filteredBlogs.filter(blog => !blog.published).map(blog => (
                           <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
