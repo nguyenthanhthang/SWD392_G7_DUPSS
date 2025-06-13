@@ -80,14 +80,24 @@ export const updateAccount = async (
       delete req.body.email;
     }
 
-    // Kiểm tra trùng số điện thoại (nếu cập nhật phoneNumber)
-    if (req.body.phoneNumber) {
+    // Kiểm tra trùng số điện thoại và validate chỉ khi thay đổi
+    if (
+      req.body.phoneNumber &&
+      req.body.phoneNumber !== currentAccount.phoneNumber
+    ) {
+      // Kiểm tra trùng
       const existedPhone = await Account.findOne({
         phoneNumber: req.body.phoneNumber,
         _id: { $ne: req.params.id }
       });
       if (existedPhone) {
         res.status(400).json({ message: "Số điện thoại đã tồn tại" });
+        return;
+      }
+      // Validate định dạng
+      const phone = req.body.phoneNumber.trim();
+      if (!/^0\d{9}$/.test(phone)) {
+        res.status(400).json({ message: "Số điện thoại phải 10 số, bắt đầu bằng 0!" });
         return;
       }
     }
@@ -107,15 +117,6 @@ export const updateAccount = async (
       const exists = await Account.findOne({ fullName: name, _id: { $ne: req.params.id } });
       if (exists) {
         res.status(400).json({ message: "Tên này đã được sử dụng!" });
-        return;
-      }
-    }
-
-    // Validate số điện thoại
-    if (req.body.phoneNumber) {
-      const phone = req.body.phoneNumber.trim();
-      if (!/^0\d{9}$/.test(phone)) {
-        res.status(400).json({ message: "Số điện thoại phải 10 số, bắt đầu bằng 0!" });
         return;
       }
     }
