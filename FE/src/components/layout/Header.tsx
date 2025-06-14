@@ -47,7 +47,7 @@ function Header() {
                 alt="Logo"
                 className="h-10 w-10 object-cover rounded-full mr-2"
               />
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-cyan-300 via-cyan-400 to-blue-200 text-transparent bg-clip-text">
+              <span className="ml-2 text-xl font-light text-[#283593]">
                 HopeHub
               </span>
             </Link>

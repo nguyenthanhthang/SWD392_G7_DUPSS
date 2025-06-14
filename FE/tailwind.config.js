@@ -6,8 +6,10 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#6366F1', // indigo-500
-          light: '#EEF2FF', // indigo-50
+          DEFAULT: '#283593', // indigo-900
+        },
+        background: {
+          DEFAULT: '#DBE8FA', // màu nền chủ đạo
         },
         secondary: {
           DEFAULT: '#6B7280', // gray-500

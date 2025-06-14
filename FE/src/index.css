@@ -11,7 +11,9 @@
   }
 
   body {
-    @apply text-sm text-gray-700 bg-gray-50;
+    @apply text-sm;
+    color: #283593;
+    background-color: #fff;
     font-family: 'Manrope', sans-serif;
   }
 

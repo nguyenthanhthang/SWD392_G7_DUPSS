@@ -54,13 +54,13 @@ const ConsultantDashboard = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'upcoming':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-[#E3EAFD] text-[#283593] border-[#DBE8FA]';
       case 'ongoing':
-        return 'bg-green-50 text-green-700 border-green-200';
+        return 'bg-green-100 text-green-700 border-green-200';
       case 'completed':
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
       default:
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-[#E3EAFD] text-[#283593] border-[#DBE8FA]';
     }
   };
 
@@ -79,60 +79,60 @@ const ConsultantDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200 p-6">
+    <div className="min-h-screen bg-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Greeting Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Xin chào, Bác sĩ!</h1>
+          <h1 className="text-3xl font-bold text-[#283593]">Xin chào, Bác sĩ!</h1>
           <p className="text-gray-600 mt-2">Hôm nay là {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-blue-500">
+          <div className="bg-white rounded-2xl p-6 shadow border border-[#DBE8FA]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Lịch hẹn hôm nay</p>
-                <h3 className="text-2xl font-bold text-gray-800">{stats.todayAppointments}</h3>
+                <h3 className="text-2xl font-bold text-[#283593]">{stats.todayAppointments}</h3>
               </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Calendar className="w-6 h-6 text-blue-600" />
+              <div className="bg-[#DBE8FA] p-3 rounded-lg">
+                <Calendar className="w-6 h-6 text-[#283593]" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-green-500">
+          <div className="bg-white rounded-2xl p-6 shadow border border-[#DBE8FA]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Tổng số bệnh nhân</p>
-                <h3 className="text-2xl font-bold text-gray-800">{stats.totalPatients}</h3>
+                <h3 className="text-2xl font-bold text-[#283593]">{stats.totalPatients}</h3>
               </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <Users className="w-6 h-6 text-green-600" />
+              <div className="bg-[#DBE8FA] p-3 rounded-lg">
+                <Users className="w-6 h-6 text-[#283593]" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-purple-500">
+          <div className="bg-white rounded-2xl p-6 shadow border border-[#DBE8FA]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Lịch hẹn tuần này</p>
-                <h3 className="text-2xl font-bold text-gray-800">{stats.weeklyAppointments}</h3>
+                <h3 className="text-2xl font-bold text-[#283593]">{stats.weeklyAppointments}</h3>
               </div>
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Activity className="w-6 h-6 text-purple-600" />
+              <div className="bg-[#DBE8FA] p-3 rounded-lg">
+                <Activity className="w-6 h-6 text-[#283593]" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-amber-500">
+          <div className="bg-white rounded-2xl p-6 shadow border border-[#DBE8FA]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Buổi tư vấn đã hoàn thành</p>
-                <h3 className="text-2xl font-bold text-gray-800">{stats.completedSessions}</h3>
+                <h3 className="text-2xl font-bold text-[#283593]">{stats.completedSessions}</h3>
               </div>
-              <div className="bg-amber-100 p-3 rounded-lg">
-                <FileText className="w-6 h-6 text-amber-600" />
+              <div className="bg-[#DBE8FA] p-3 rounded-lg">
+                <FileText className="w-6 h-6 text-[#283593]" />
               </div>
             </div>
           </div>
@@ -142,10 +142,10 @@ const ConsultantDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Today's Appointments */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-800">Lịch hẹn hôm nay</h2>
-                <Link to="/consultants/schedule" className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+            <div className="bg-white rounded-2xl shadow border border-[#DBE8FA] overflow-hidden">
+              <div className="border-b border-[#DBE8FA] px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-[#283593]">Lịch hẹn hôm nay</h2>
+                <Link to="/consultants/schedule" className="text-[#283593] hover:underline text-sm font-medium flex items-center">
                   Xem tất cả lịch
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
@@ -154,18 +154,18 @@ const ConsultantDashboard = () => {
               <div className="p-6">
                 {todayAppointments.length > 0 ? (
                   <div className="space-y-4">
-                    {todayAppointments.map((appointment) => (
+                    {todayAppointments.map(appointment => (
                       <div 
                         key={appointment.id} 
-                        className={`border rounded-lg p-4 ${getStatusColor(appointment.status)}`}
+                        className={`border rounded-lg p-4 ${getStatusColor(appointment.status)} shadow-sm`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
-                            <div className="bg-blue-100 rounded-full p-2">
-                              <Clock className="w-5 h-5 text-blue-700" />
+                            <div className="bg-[#DBE8FA] rounded-full p-2">
+                              <Clock className="w-5 h-5 text-[#283593]" />
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">{appointment.time}</p>
+                              <p className="font-medium text-[#283593]">{appointment.time}</p>
                             </div>
                           </div>
 
@@ -176,17 +176,17 @@ const ConsultantDashboard = () => {
                               className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
                             />
                             <div>
-                              <p className="font-medium text-gray-900">{appointment.patientName}</p>
-                              <p className="text-sm text-gray-600">{appointment.serviceType}</p>
+                              <p className="font-medium text-[#283593]">{appointment.patientName}</p>
+                              <p className="text-sm text-gray-500">{appointment.serviceType}</p>
                             </div>
                           </div>
 
                           <button
                             onClick={() => handleStartSession(appointment.id)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                               appointment.status === 'ongoing' 
                                 ? 'bg-green-100 text-green-700 cursor-not-allowed' 
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                : 'bg-[#283593] text-white hover:bg-[#3a4bb3]'
                             }`}
                             disabled={appointment.status === 'ongoing'}
                           >
@@ -198,19 +198,19 @@ const ConsultantDashboard = () => {
                   </div>
                 ) : (
                   <div className="text-center py-12 px-4">
-                    <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                      <Calendar className="w-8 h-8 text-blue-600" />
+                    <div className="mx-auto w-16 h-16 bg-[#DBE8FA] rounded-full flex items-center justify-center mb-4">
+                      <Calendar className="w-8 h-8 text-[#283593]" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Không có lịch hẹn nào hôm nay</h3>
-                    <p className="text-gray-600 mb-4">
+                    <h3 className="text-lg font-medium text-[#283593] mb-2">Không có lịch hẹn nào hôm nay</h3>
+                    <p className="text-gray-500 mb-4">
                       Bạn không có lịch hẹn nào hôm nay. Bạn có thể kiểm tra lịch trong tuần tại 
-                      <Link to="/consultants/schedule" className="text-blue-600 hover:text-blue-800 font-medium mx-1">
+                      <Link to="/consultants/schedule" className="text-[#283593] hover:underline font-medium mx-1">
                         Calendar
                       </Link>.
                     </p>
                     <Link 
                       to="/consultants/schedule" 
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#283593] hover:bg-[#3a4bb3]"
                     >
                       <CalendarIcon className="w-4 h-4 mr-2" />
                       Xem lịch tuần
@@ -223,48 +223,47 @@ const ConsultantDashboard = () => {
 
           {/* Quick Actions & Reminders */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="border-b border-gray-200 px-6 py-4">
-                <h2 className="text-xl font-semibold text-gray-800">Thao tác nhanh</h2>
+            <div className="bg-white rounded-2xl shadow border border-[#DBE8FA] overflow-hidden">
+              <div className="border-b border-[#DBE8FA] px-6 py-4">
+                <h2 className="text-xl font-semibold text-[#283593]">Thao tác nhanh</h2>
               </div>
-              
               <div className="p-6 space-y-4">
                 <Link 
                   to="/consultants/schedule"
-                  className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                  className="flex items-center p-4 bg-[#DBE8FA] rounded-lg hover:bg-[#E3EAFD] transition"
                 >
-                  <div className="bg-blue-100 p-3 rounded-lg mr-4">
-                    <Calendar className="w-6 h-6 text-blue-600" />
+                  <div className="bg-white p-3 rounded-lg mr-4 border border-[#DBE8FA]">
+                    <Calendar className="w-6 h-6 text-[#283593]" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Quản lý lịch</h3>
-                    <p className="text-sm text-gray-600">Xem và cập nhật lịch tư vấn</p>
+                    <h3 className="font-medium text-[#283593]">Quản lý lịch</h3>
+                    <p className="text-sm text-gray-500">Xem và cập nhật lịch tư vấn</p>
                   </div>
                 </Link>
 
                 <Link 
                   to="/consultants/patients"
-                  className="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition"
+                  className="flex items-center p-4 bg-[#DBE8FA] rounded-lg hover:bg-[#E3EAFD] transition"
                 >
-                  <div className="bg-green-100 p-3 rounded-lg mr-4">
-                    <Users className="w-6 h-6 text-green-600" />
+                  <div className="bg-white p-3 rounded-lg mr-4 border border-[#DBE8FA]">
+                    <Users className="w-6 h-6 text-[#283593]" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Quản lý bệnh nhân</h3>
-                    <p className="text-sm text-gray-600">Xem danh sách và hồ sơ bệnh nhân</p>
+                    <h3 className="font-medium text-[#283593]">Quản lý bệnh nhân</h3>
+                    <p className="text-sm text-gray-500">Xem danh sách và hồ sơ bệnh nhân</p>
                   </div>
                 </Link>
 
                 <Link 
                   to="/consultants/reports"
-                  className="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition"
+                  className="flex items-center p-4 bg-[#DBE8FA] rounded-lg hover:bg-[#E3EAFD] transition"
                 >
-                  <div className="bg-purple-100 p-3 rounded-lg mr-4">
-                    <FileText className="w-6 h-6 text-purple-600" />
+                  <div className="bg-white p-3 rounded-lg mr-4 border border-[#DBE8FA]">
+                    <FileText className="w-6 h-6 text-[#283593]" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Báo cáo & cập nhật</h3>
-                    <p className="text-sm text-gray-600">Xem báo cáo hoạt động</p>
+                    <h3 className="font-medium text-[#283593]">Báo cáo & cập nhật</h3>
+                    <p className="text-sm text-gray-500">Xem báo cáo hoạt động</p>
                   </div>
                 </Link>
               </div>

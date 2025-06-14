@@ -123,15 +123,15 @@ export default function Home() {
           {/* COLUMN-1 */}
           <div className="mx-auto sm:mx-0 mt-8">
             <div className='py-3 text-center lg:text-start'>
-              <button className='text-blue-600 bg-blue-100 hover:shadow-xl text-sm md:text-lg font-bold px-6 py-1 rounded-3xl tracking-wider hover:text-white hover:bg-blue-700'>DRUG USE PREVENTION</button>
+              <button className='text-[#283593] bg-[#f8f8f8] hover:shadow-xl text-sm md:text-lg font-bold px-6 py-1 rounded-3xl tracking-wider hover:text-white hover:bg-[#283593]'>DRUG USE PREVENTION</button>
             </div>
             <div className="py-3 text-center lg:text-start">
-              <h1 className='text-6xl lg:text-7xl font-bold text-black' style={{ fontFamily: "'Fira Sans', 'Poppins', 'Nunito', sans-serif" }}>
+              <h1 className='text-6xl lg:text-7xl font-bold text-[#283593]' style={{ fontFamily: "'Fira Sans', 'Poppins', 'Nunito', sans-serif" }}>
                Together is <br /> strength, <br /> trust is light
               </h1>
             </div>
             <div className='my-7 text-center lg:text-start'>
-              <button className='text-sm md:text-xl font-semibold hover:shadow-xl bg-blue-600 text-white py-3 px-6 md:py-5 md:px-14 rounded-full hover:bg-blue-700'>
+              <button className='text-sm md:text-xl font-semibold hover:shadow-xl bg-[#283593] text-white py-3 px-6 md:py-5 md:px-14 rounded-full hover:bg-[#DBE8FA] hover:text-[#283593]'>
                 Take Quiz
               </button>
               
@@ -149,18 +149,18 @@ export default function Home() {
       </div>
       {/* About Us Section */}
       <div id="aboutus-section">
-        <div className='mx-auto max-w-7xl px-4 py-24 my-32 lg:px-10 bg-gray-100 rounded-3xl relative'>
-          <h3 className='text-center text-blue-600 text-lg tracking-widest'>ABOUT US</h3>
-          <h4 className='text-center text-4xl lg:text-6xl font-bold'>Know more about us.</h4>
+        <div className='mx-auto max-w-7xl px-4 py-24 my-32 lg:px-10 bg-white rounded-3xl relative'>
+          <h3 className='text-center text-[#283593] text-lg tracking-widest'>ABOUT US</h3>
+          <h4 className='text-center text-4xl lg:text-6xl font-bold text-[#283593]'>Know more about us.</h4>
           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 my-16 gap-x-16 lg:gap-x-32'>
             {aboutData.map((item, i) => (
-              <div key={i} className='hover:bg-blue-600 bg-white rounded-3xl mt-16 pt-10 pl-8 pb-10 pr-6 shadow-xl group transition-colors h-200'> {/* thêm chiều cao cố định */}
-                <h4 className='text-4xl font-semibold text-black mb-5 group-hover:text-white'>{item.heading}</h4>
+              <div key={i} className='hover:bg-[#283593] bg-white rounded-3xl mt-16 pt-10 pl-8 pb-10 pr-6 shadow-xl group transition-colors h-200'> {/* thêm chiều cao cố định */}
+                <h4 className='text-4xl font-semibold text-[#283593] mb-5 group-hover:text-white'>{item.heading}</h4>
                 <img src={item.imgSrc} alt={item.imgSrc} width={100} height={100} className="mb-5" />
-                <h4 className='text-lg font-normal text-black group-hover:text-white mb-5 line-clamp-3'> {/* thêm line-clamp-3 */}
+                <h4 className='text-lg font-normal text-[#283593] group-hover:text-white mb-5 line-clamp-3'> {/* thêm line-clamp-3 */}
                   {item.paragraph}
                 </h4>
-                <a href="#" className='text-lg font-semibold group-hover:text-white text-blue-600 hover:underline'>
+                <a href="#" className='text-lg font-semibold group-hover:text-white text-[#283593] hover:underline'>
                   {item.link}
                   <span className="inline-block ml-1">→</span>
                 </a>
@@ -186,17 +186,17 @@ export default function Home() {
           <div className="relative w-full flex items-center">
             {/* Nút trái */}
             <button
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white border border-gray-200 w-12 h-12 flex items-center justify-center rounded-full shadow hover:bg-blue-100 transition disabled:opacity-30"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white border border-[#DBE8FA] w-12 h-12 flex items-center justify-center rounded-full shadow hover:bg-[#DBE8FA] hover:text-[#283593] transition disabled:opacity-30"
               onClick={() => setConsultantSliderIndex(i => Math.max(i - 1, 0))}
               disabled={consultantSliderIndex === 0}
               aria-label="Prev"
             >
-              <span className="text-2xl">&#8592;</span>
+              <span className="text-2xl text-[#283593]">&#8592;</span>
             </button>
             {/* Slider */}
             <div className="w-full overflow-hidden px-12">
               <div
-                className="flex gap-8 justify-start transition-transform duration-300"
+                className="flex gap-8 justify-center transition-transform duration-300"
                 style={{ transform: `translateX(-${consultantSliderIndex * (100 / visibleConsultant)}%)` }}
               >
                 {loadingConsultant ? (
@@ -206,34 +206,34 @@ export default function Home() {
                 ) : consultants.length === 0 ? (
                   <div className="text-center w-full py-20 text-gray-500 text-xl">Không có chuyên gia nào.</div>
                 ) : (
-                    consultants.map((consultant, idx) => (
+                  consultants.map((consultant, idx) => (
                     consultant.accountId ? (
-                        <motion.div
-                          key={consultant._id}
-                          initial={{ opacity: 0, y: 60 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true, amount: 0.3 }}
-                          transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
-                          className="bg-white m-3 py-16 px-8 my-10 text-center shadow-xl rounded-3xl min-w-[360px] w-[400px] flex-shrink-0 flex flex-col items-center"
-                        >
+                      <motion.div
+                        key={consultant._id}
+                        initial={{ opacity: 0, y: 60 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.3 }}
+                        transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
+                        className="bg-white py-10 px-8 my-10 text-center shadow rounded-2xl min-w-[340px] w-[360px] flex-shrink-0 flex flex-col items-center border border-[#DBE8FA] hover:shadow-xl hover:border-[#3a4bb3] transition-all duration-200"
+                      >
                         <div className='relative flex flex-col items-center'>
-                          <img src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'} alt={consultant.accountId.fullName || 'Chuyên gia'} width={200} height={200} className="inline-block m-auto rounded-full mb-4" />
+                          <img src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'} alt={consultant.accountId.fullName || 'Chuyên gia'} width={120} height={120} className="inline-block m-auto rounded-full border-4 border-[#DBE8FA] shadow mb-4" />
                         </div>
-                        <h4 className='text-3xl font-bold pt-6'>{consultant.accountId.fullName || 'Chuyên gia'}</h4>
-                        <h3 className='text-xl font-normal pt-2 pb-2 opacity-50'>Chuyên gia tư vấn</h3>
-                        <div className="text-gray-600 text-center mb-2 line-clamp-2">{consultant.introduction}</div>
-                          <div className="text-gray-400 text-sm mb-4">Liên hệ: {consultant.accountId.phoneNumber || 'Không có số điện thoại'}</div>
-                          <motion.button
-                            whileHover={{ scale: 1.08 }}
-                            whileTap={{ scale: 0.96 }}
-                            className="mt-2 px-8 py-3 rounded-full bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition text-lg"
-                            onClick={() => window.location.href = `/consultant/${consultant._id}`}
-                          >
-                            Đặt lịch
-                          </motion.button>
-                        </motion.div>
+                        <h4 className='text-2xl font-bold text-[#283593] pt-4'>{consultant.accountId.fullName || 'Chuyên gia'}</h4>
+                        <h3 className='text-base font-medium text-[#5C6BC0] pt-1 pb-2 flex items-center justify-center gap-2'><span className="inline-block align-middle">Chuyên gia tư vấn</span></h3>
+                        <div className="text-gray-500 text-center mb-2 line-clamp-2 text-base">{consultant.introduction}</div>
+                        <div className="text-gray-400 text-xs mb-4">Liên hệ: {consultant.accountId.phoneNumber || 'Không có số điện thoại'}</div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.97 }}
+                          className="mt-2 px-7 py-2.5 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide"
+                          onClick={() => window.location.href = `/consultant/${consultant._id}`}
+                        >
+                          Đặt lịch
+                        </motion.button>
+                      </motion.div>
                     ) : (
-                      <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-lg p-6 flex flex-col items-center">
+                      <div key={consultant._id} className="bg-red-100 rounded-2xl shadow p-6 flex flex-col items-center">
                         <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
                       </div>
                     )
@@ -243,12 +243,12 @@ export default function Home() {
             </div>
             {/* Nút phải */}
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white border border-gray-200 w-12 h-12 flex items-center justify-center rounded-full shadow hover:bg-blue-100 transition disabled:opacity-30"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white border border-[#DBE8FA] w-12 h-12 flex items-center justify-center rounded-full shadow hover:bg-[#DBE8FA] hover:text-[#283593] transition disabled:opacity-30"
               onClick={() => setConsultantSliderIndex(i => Math.min(i + 1, maxConsultantSlider))}
               disabled={consultantSliderIndex === maxConsultantSlider || consultants.length === 0}
               aria-label="Next"
             >
-              <span className="text-2xl">&#8594;</span>
+              <span className="text-2xl text-[#283593]">&#8594;</span>
             </button>
           </div>
         </div>
