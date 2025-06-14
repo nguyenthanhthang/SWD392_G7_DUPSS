@@ -336,4 +336,10 @@ export const getBlogsByUserIdApi = async (userId: string) => {
   return res.data;
 };
 
+// Cập nhật thông tin consultant
+export const updateConsultantApi = async (id: string, data: Partial<{ introduction: string; startDateofWork: string }>) => {
+  const res = await api.put(`/consultants/${id}`, data);
+  return res.data;
+};
+
 export default api;

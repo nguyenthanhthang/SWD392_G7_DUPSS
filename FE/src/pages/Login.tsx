@@ -40,7 +40,7 @@ function LoginPage() {
       if (user.role === "admin") {
         navigate("/admin", { replace: true });
       } else if (user.role === "consultant") {
-        navigate("/consultant", { replace: true });
+        navigate("/consultants", { replace: true });
       } else {
         const from =
           location.state &&
