@@ -57,6 +57,9 @@ function Header() {
             <Link to="/" className="text-gray-600 hover:text-gray-900">
               Home
             </Link>
+            <Link to="/quizz" className="text-gray-600 hover:text-gray-900">
+              Quiz
+            </Link>
             <Link
               to="/consulting"
               className="text-gray-600 hover:text-gray-900"

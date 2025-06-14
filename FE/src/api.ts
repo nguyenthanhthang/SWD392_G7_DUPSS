@@ -224,8 +224,14 @@ export const getEventAttendanceApi = async (eventId: string) => {
   return res.data;
 };
 
-export const checkPhoneNumberExistsApi = async (phone: string, excludeId?: string) => {
-  const res = await api.get(`/accounts/check-phone/${phone}` + (excludeId ? `?excludeId=${excludeId}` : ''));
+export const checkPhoneNumberExistsApi = async (
+  phone: string,
+  excludeId?: string
+) => {
+  const res = await api.get(
+    `/accounts/check-phone/${phone}` +
+      (excludeId ? `?excludeId=${excludeId}` : "")
+  );
   return res.data;
 };
 
@@ -243,19 +249,30 @@ export const createAppointmentApi = async (data: {
   reason: string;
   note?: string;
 }) => {
-  const res = await api.post('/appointments', data);
+  const res = await api.post("/appointments", data);
   return res.data;
 };
 
 // Cập nhật thông tin account
-export const updateAccountApi = async (id: string, data: Partial<{ fullName: string; phoneNumber: string }>) => {
+export const updateAccountApi = async (
+  id: string,
+  data: Partial<{ fullName: string; phoneNumber: string }>
+) => {
   const res = await api.put(`/accounts/${id}`, data);
   return res.data;
 };
 
 // Đổi mật khẩu
-export const changePasswordApi = async (email: string, password: string, confirmPassword: string) => {
-  const res = await api.post(`/accounts/change-password`, { email, password, confirmPassword });
+export const changePasswordApi = async (
+  email: string,
+  password: string,
+  confirmPassword: string
+) => {
+  const res = await api.post(`/accounts/change-password`, {
+    email,
+    password,
+    confirmPassword,
+  });
   return res.data;
 };
 
@@ -266,11 +283,22 @@ export const getAppointmentByUserIdApi = async (userId: string) => {
 
 // Gửi OTP quên mật khẩu
 export const sendResetPasswordEmailApi = async (email: string) => {
-  const res = await api.post('/auth/send-reset-password-email', { email });
+  const res = await api.post("/auth/send-reset-password-email", { email });
   return res.data;
 };
 
 // Blog APIs
+
+// Interface for Blog data
+interface BlogData {
+  title: string;
+  content: string;
+  author: string;
+  published: boolean;
+  topics?: string[];
+  image?: File | string;
+}
+
 export const getAllBlogsApi = async () => {
   const res = await api.get("/blogs");
   return res.data;
@@ -281,38 +309,38 @@ export const getBlogByIdApi = async (id: string) => {
   return res.data;
 };
 
-export const createBlogApi = async (data: any) => {
+export const createBlogApi = async (data: BlogData) => {
   // Nếu có file (data.image là File), gửi FormData
   if (data.image instanceof File) {
     const form = new FormData();
-    form.append('title', data.title);
-    form.append('content', data.content);
-    form.append('author', data.author);
-    form.append('published', data.published);
-    if (data.topics) form.append('topics', JSON.stringify(data.topics));
-    form.append('image', data.image);
-    const res = await api.post('/blogs', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    form.append("title", data.title);
+    form.append("content", data.content);
+    form.append("author", data.author);
+    form.append("published", data.published.toString());
+    if (data.topics) form.append("topics", JSON.stringify(data.topics));
+    form.append("image", data.image);
+    const res = await api.post("/blogs", form, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
     // Không có file, gửi JSON bình thường
-    const res = await api.post('/blogs', data);
+    const res = await api.post("/blogs", data);
     return res.data;
   }
 };
 
-export const updateBlogApi = async (id: string, data: any) => {
+export const updateBlogApi = async (id: string, data: BlogData) => {
   if (data.image instanceof File) {
     const form = new FormData();
-    form.append('title', data.title);
-    form.append('content', data.content);
-    form.append('author', data.author);
-    form.append('published', data.published);
-    if (data.topics) form.append('topics', JSON.stringify(data.topics));
-    form.append('image', data.image);
+    form.append("title", data.title);
+    form.append("content", data.content);
+    form.append("author", data.author);
+    form.append("published", data.published.toString());
+    if (data.topics) form.append("topics", JSON.stringify(data.topics));
+    form.append("image", data.image);
     const res = await api.put(`/blogs/${id}`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
@@ -337,8 +365,67 @@ export const getBlogsByUserIdApi = async (userId: string) => {
 };
 
 // Cập nhật thông tin consultant
-export const updateConsultantApi = async (id: string, data: Partial<{ introduction: string; startDateofWork: string }>) => {
+export const updateConsultantApi = async (
+  id: string,
+  data: Partial<{ introduction: string; startDateofWork: string }>
+) => {
   const res = await api.put(`/consultants/${id}`, data);
+  return res.data;
+};
+
+// ===== QUIZ APIs =====
+
+// Lấy danh sách các bài quiz
+export const getAllQuizzesApi = async (ageGroup?: string) => {
+  const params = ageGroup ? `?ageGroup=${ageGroup}` : "";
+  const res = await api.get(`/quizzes${params}`);
+  return res.data;
+};
+
+// Lấy câu hỏi theo quiz và age group
+export const getQuizQuestionsApi = async (
+  quizId: string,
+  ageGroup?: string,
+  limit?: number
+) => {
+  const params = new URLSearchParams();
+  if (ageGroup) params.append("ageGroup", ageGroup);
+  if (limit) params.append("limit", limit.toString());
+  const res = await api.get(
+    `/quizzes/${quizId}/questions?${params.toString()}`
+  );
+  return res.data;
+};
+
+// Submit kết quả làm bài quiz
+export const submitQuizResultApi = async (data: {
+  quizId: string;
+  userId?: string;
+  sessionId?: string;
+  answers: { questionId: string; selectedOption: number }[];
+}) => {
+  const res = await api.post("/quizzes/quiz-results", data);
+  return res.data;
+};
+
+// Lấy lịch sử kết quả quiz của user
+export const getUserQuizResultsApi = async (
+  userId: string,
+  limit?: number,
+  page?: number
+) => {
+  const params = new URLSearchParams();
+  if (limit) params.append("limit", limit.toString());
+  if (page) params.append("page", page.toString());
+  const res = await api.get(
+    `/quizzes/quiz-results/${userId}?${params.toString()}`
+  );
+  return res.data;
+};
+
+// Lấy chi tiết một kết quả quiz
+export const getQuizResultByIdApi = async (resultId: string) => {
+  const res = await api.get(`/quizzes/quiz-results/result/${resultId}`);
   return res.data;
 };
 
