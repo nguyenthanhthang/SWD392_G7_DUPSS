@@ -53,7 +53,7 @@ function Header() {
             </Link>
           </div>
 
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8 text-lg font-medium">
             <Link to="/" className="text-gray-600 hover:text-gray-900">
               Home
             </Link>
