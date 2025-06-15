@@ -1,297 +1,233 @@
 import React, { useState } from "react";
-import { ChevronDown, Plus, Filter, Download, Search, Settings, Bell, User, Share2, Bookmark, Clock, Calendar, MoreHorizontal } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, MoreHorizontal, Plus } from 'lucide-react';
 
-// Dữ liệu mẫu
-const taskData = [
+// Dữ liệu mẫu cho bệnh nhân
+const patientData = [
   {
-    id: "develop-processing-1",
-    title: "Develop Processing Plans",
-    color: "bg-pink-100",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Clair Burge",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      date: "12.11.23"
-    }
+    id: 1,
+    name: "Nguyễn Văn A",
+    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+    appointmentType: "Khám định kỳ",
+    time: "09:00 - 09:30",
+    status: "đang tiến hành",
+    room: "Phòng 101"
   },
   {
-    id: "resolve-payment",
-    title: "Resolve Payment Disputes",
-    color: "bg-pink-100",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Clair Burge",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      date: "8.11.23"
-    }
+    id: 2,
+    name: "Trần Thị B",
+    avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+    appointmentType: "Khám trực tuyến",
+    time: "10:00 - 10:30",
+    status: "chờ khám",
+    room: "Trực tuyến"
   },
   {
-    id: "train-employees",
-    title: "Train Employees",
-    color: "bg-pink-100",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Craig Curry",
-      avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-      date: "8.11.23"
-    }
+    id: 3,
+    name: "Lê Văn C",
+    avatar: "https://randomuser.me/api/portraits/men/45.jpg",
+    appointmentType: "Khám khẩn cấp",
+    time: "11:00 - 11:30",
+    status: "hoàn thành",
+    room: "Phòng 102"
   },
   {
-    id: "recruit-new-talent",
-    title: "Recruit New Talent",
-    color: "bg-yellow-300",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Heina Julie",
-      avatar: "https://randomuser.me/api/portraits/women/65.jpg",
-      date: "4.11.23"
-    }
+    id: 4,
+    name: "Phạm Thị D",
+    avatar: "https://randomuser.me/api/portraits/women/65.jpg",
+    appointmentType: "Theo dõi sức khỏe",
+    time: "13:00 - 13:30",
+    status: "chờ khám",
+    room: "Phòng 103"
   },
   {
-    id: "oversee-operations",
-    title: "Oversee Operations",
-    color: "bg-gray-100",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Christian Bass",
-      avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-      date: "11.2.23"
-    }
+    id: 5,
+    name: "Hoàng Văn E",
+    avatar: "https://randomuser.me/api/portraits/men/67.jpg",
+    appointmentType: "Chẩn đoán xét nghiệm",
+    time: "14:00 - 14:30",
+    status: "chờ khám",
+    room: "Phòng xét nghiệm"
   },
   {
-    id: "develop-strategic",
-    title: "Develop Strategic Plans",
-    color: "bg-pink-100",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Christian Bass",
-      avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-      date: "15.11.23"
-    }
-  },
-  {
-    id: "provide-customer",
-    title: "Provide Customer Service",
-    color: "bg-pink-100",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Christian Bass",
-      avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-      date: "9.11.23"
-    }
-  },
-  {
-    id: "improve-efficiency",
-    title: "Improve Efficiency",
-    color: "bg-pink-100",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Christian Bass",
-      avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-      date: "10.11.23"
-    }
-  },
-  {
-    id: "market-services",
-    title: "Market Services",
-    color: "bg-yellow-300",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Clair Burge",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      date: "6.11.23"
-    }
-  },
-  {
-    id: "implement-new-tech",
-    title: "Implement New Technologies",
-    color: "bg-gray-100",
-    textColor: "text-gray-800",
-    assignee: {
-      name: "Clair Burge",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      date: "4.12.23"
-    }
+    id: 6,
+    name: "Ngô Thị F",
+    avatar: "https://randomuser.me/api/portraits/women/70.jpg",
+    appointmentType: "Khám trực tuyến",
+    time: "15:00 - 15:30",
+    status: "chờ khám",
+    room: "Trực tuyến"
   }
 ];
 
-// Tổ chức dữ liệu theo cột
-const columns = [
-  {
-    id: "develop",
-    title: "Develop Processing Plans",
-    tasks: taskData.filter(t => t.id.includes("develop")),
-  },
-  {
-    id: "resolve",
-    title: "Resolve Payment Disputes",
-    tasks: taskData.filter(t => t.id.includes("resolve")),
-  },
-  {
-    id: "train",
-    title: "Train Employees",
-    tasks: taskData.filter(t => t.id.includes("train")),
-  },
-  {
-    id: "recruit",
-    title: "Recruit New Talent",
-    tasks: taskData.filter(t => t.id.includes("recruit")),
-  },
-  {
-    id: "oversee",
-    title: "Oversee Operations",
-    tasks: taskData.filter(t => t.id.includes("oversee")),
+// Tạo dữ liệu cho các ngày trong tuần
+const daysOfWeek = ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"];
+const currentDate = new Date();
+
+// Tạo dữ liệu cho 4 tuần (2 tuần hiện tại và 2 tuần kế tiếp)
+const generateWeekData = (startOffset = 0) => {
+  const result = [];
+  const startDate = new Date(currentDate);
+  startDate.setDate(currentDate.getDate() + startOffset * 7);
+  
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() - startDate.getDay() + i + 1);
+    
+    // Phân bố ngẫu nhiên các cuộc hẹn cho mỗi ngày
+    const appointments = patientData
+      .filter(() => Math.random() > 0.5) // Chọn ngẫu nhiên các bệnh nhân
+      .map(patient => ({
+        ...patient,
+        id: `${patient.id}-${date.getDate()}`
+      }));
+    
+    result.push({
+      dayName: daysOfWeek[i],
+      date: date,
+      dateString: `${date.getDate()}/${date.getMonth() + 1}`,
+      appointments
+    });
   }
+  
+  return result;
+};
+
+const weekData = [
+  { weekName: "Tuần này", days: generateWeekData(0) },
+  { weekName: "Tuần sau", days: generateWeekData(1) },
+  { weekName: "Tuần sau nữa", days: generateWeekData(2) },
+  { weekName: "Tuần sau nữa", days: generateWeekData(3) }
 ];
 
+function getHourFromTimeString(timeStr: string) {
+  // timeStr dạng "09:00 - 09:30"
+  const match = timeStr.match(/^(\d{2}):(\d{2})/);
+  if (!match) return 0;
+  return parseInt(match[1], 10);
+}
+
+const shiftOptions = [
+  { label: 'Ca sáng', value: 'morning' },
+  { label: 'Ca chiều', value: 'afternoon' }
+];
+
+// Component chính
 export default function ScheduleManagement() {
-  const [selectedTab, setSelectedTab] = useState("pipeline");
+  const [weekIndex, setWeekIndex] = useState(0);
+  const [shift, setShift] = useState<'morning' | 'afternoon'>('morning');
+  const statusOptions = ['Tất cả', 'đang tiến hành', 'chờ khám', 'hoàn thành'];
+  const [selectedStatus, setSelectedStatus] = useState('Tất cả');
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#F7F9FB] px-0 md:px-8 py-0 md:py-8">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 py-4 px-6">
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-black rounded-md flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="ml-2 font-bold text-lg">salesforce</span>
-            </div>
-            <button className="ml-6 flex items-center text-sm text-gray-600">
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </button>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <button className={`px-4 py-2 rounded-full ${selectedTab === "pipeline" ? "bg-black text-white" : "bg-gray-100 text-gray-700"}`} 
-              onClick={() => setSelectedTab("pipeline")}>
-              Pipeline
-            </button>
-            <button className={`px-4 py-2 rounded-full ${selectedTab === "activity" ? "bg-black text-white" : "bg-gray-100 text-gray-700"}`}
-              onClick={() => setSelectedTab("activity")}>
-              Activity
-            </button>
-            <button className={`px-4 py-2 rounded-full ${selectedTab === "comments" ? "bg-black text-white" : "bg-gray-100 text-gray-700"}`}
-              onClick={() => setSelectedTab("comments")}>
-              Comments
-            </button>
-            <button className={`px-4 py-2 rounded-full ${selectedTab === "reports" ? "bg-black text-white" : "bg-gray-100 text-gray-700"}`}
-              onClick={() => setSelectedTab("reports")}>
-              Reports
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Title Section */}
-        <div className="flex justify-between items-center mb-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-0">
+        <div className="flex items-center justify-between pt-8 pb-2">
           <div>
-            <div className="text-sm text-gray-500">Task Schedule</div>
-            <h1 className="text-3xl font-bold">Daily Operation</h1>
+            <h1 className="text-3xl font-bold text-[#283593] mb-1">Lịch khám bệnh nhân</h1>
+            <p className="text-base text-gray-500">Xem và quản lý lịch hẹn khám bệnh</p>
           </div>
-
-          <div className="flex items-center space-x-2">
-            <button className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-              </svg>
-            </button>
-            <button className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </button>
-            <button className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600">
-              <Settings size={18} />
-            </button>
-          </div>
+          <button className="bg-blue-600 text-white px-5 py-2 rounded-xl font-medium flex items-center gap-2 shadow hover:bg-blue-700 transition-all duration-200">
+            <Plus size={18} /> Thêm ca làm
+          </button>
         </div>
+        {/* Filter Section */}
+        <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-wrap items-center gap-4 mb-6">
+          <select className="px-4 py-2 rounded-lg border border-gray-200 text-[#283593] bg-white" value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
+            {statusOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+          <div className="flex-1"></div>
+          <div className="flex gap-1">
+            {shiftOptions.map(opt => (
+              <button
+                key={opt.value}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-150
+                  ${shift === opt.value ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-[#283593]'}
+                  focus:outline-none`}
+                onClick={() => setShift(opt.value as 'morning' | 'afternoon')}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
 
-        {/* Status Pills */}
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="flex items-center bg-gray-800 text-white px-4 py-2 rounded-full text-sm">
-            <span className="mr-1">Still Running</span>
-            <span className="bg-yellow-400 text-black w-5 h-5 rounded-full flex items-center justify-center text-xs">5</span>
-          </div>
-          <div className="flex items-center bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm">
-            <span className="mr-1">Disqualified</span>
-            <span className="bg-white text-black w-5 h-5 rounded-full flex items-center justify-center text-xs">4</span>
-          </div>
         </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white p-4 rounded-xl shadow-sm border-b-4 border-gray-200">
-            <div className="text-sm text-gray-500">Week's Tasks</div>
-            <div className="text-2xl font-bold">132</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm border-b-4 border-gray-200">
-            <div className="text-sm text-gray-500">Pending Approval</div>
-            <div className="text-2xl font-bold">34</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm border-b-4 border-yellow-400">
-            <div className="text-sm text-gray-500">Employees Involved</div>
-            <div className="text-2xl font-bold">22</div>
-          </div>
-        </div>
-
-        {/* Task Board */}
-        <div className="grid grid-cols-5 gap-5">
-          {columns.map((column) => (
-            <div key={column.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="p-4 flex justify-between items-center">
-                <h3 className="font-semibold text-gray-700">{column.title}</h3>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <MoreHorizontal size={16} />
-                </button>
-              </div>
-              
-              <div className="px-3 pb-3">
-                {column.tasks.map((task) => (
-                  <div 
-                    key={task.id}
-                    className={`${task.color} ${task.textColor} mb-3 p-4 rounded-lg relative`}
-                  >
-                    {/* Task bookmark indicator */}
-                    {task.id === "provide-customer" && (
-                      <div className="absolute right-4 top-4">
-                        <div className="w-4 h-5 bg-black"></div>
-                      </div>
-                    )}
-                    
-                    <h4 className="font-medium mb-3">{task.title}</h4>
-                    
-                    {/* Progress bar */}
-                    <div className="w-full h-1.5 bg-gray-200 rounded-full mb-4">
-                      <div className="h-full bg-gray-400 rounded-full" style={{ width: '60%' }}></div>
-                    </div>
-                    
-                    {/* Assignee */}
-                    <div className="flex items-center">
-                      <img 
-                        src={task.assignee.avatar} 
-                        alt={task.assignee.name} 
-                        className="w-8 h-8 rounded-full mr-3"
-                      />
-                      <div>
-                        <div className="text-sm font-medium">{task.assignee.name}</div>
-                        <div className="text-xs text-gray-500">{task.assignee.date}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* Schedule Grid */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+          <div className="flex items-center px-6 pt-6 pb-2 justify-between">
+            <div>
+              <span className="font-semibold text-[#283593]">{weekData[weekIndex].weekName}</span>
+              <span className="ml-2 text-gray-400 text-sm">({weekData[weekIndex].days[0].dateString} - {weekData[weekIndex].days[6].dateString})</span>
             </div>
-          ))}
+            <div className="flex items-center gap-2">
+              <button onClick={() => setWeekIndex(weekIndex === 0 ? 1 : 0)} className="p-1 hover:bg-gray-100 rounded">
+                <ChevronLeft size={22} className="text-[#283593]" />
+              </button>
+              <button onClick={() => setWeekIndex(weekIndex === 1 ? 0 : 1)} className="p-1 hover:bg-gray-100 rounded">
+                <ChevronRight size={22} className="text-[#283593]" />
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 border-t border-gray-100">
+            {weekData[weekIndex].days.map((day, idx) => (
+              <div key={idx} className="min-h-[120px] border-r border-gray-100 last:border-r-0 px-2 py-2">
+                <div className="text-center mb-2">
+                  <div className="font-medium text-[#283593]">{day.dayName}</div>
+                  <div className="text-xs text-gray-400">{day.dateString}</div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {(() => {
+                    // Lọc theo ca sáng/chiều và status
+                    const filtered = day.appointments.filter(app => {
+                      const hour = getHourFromTimeString(app.time);
+                      if (shift === 'morning' && !(hour >= 8 && hour < 12)) return false;
+                      if (shift === 'afternoon' && !(hour >= 13 && hour < 17)) return false;
+                      if (selectedStatus !== 'Tất cả' && app.status !== selectedStatus) return false;
+                      return true;
+                    });
+                    if (filtered.length === 0) {
+                      return <div className="text-gray-300 text-center text-sm min-h-[80px] flex items-center justify-center">Không có lịch hẹn</div>;
+                    }
+                    return filtered.map((appointment) => (
+                      <div key={appointment.id} className={`rounded-xl p-3 shadow-sm border border-gray-100 bg-${
+                        appointment.appointmentType === "Khám khẩn cấp" ? "red-50" :
+                        appointment.appointmentType === "Khám trực tuyến" ? "blue-50" :
+                        appointment.status === "đang tiến hành" ? "yellow-50" :
+                        appointment.status === "hoàn thành" ? "green-50" : "yellow-50"
+                      } flex flex-col gap-2 relative`}> 
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1 text-[#283593] text-sm font-medium">
+                            <Clock size={16} className="mr-1 text-gray-400" />
+                            <span>{appointment.time}</span>
+                          </div>
+                          <button className="text-gray-400 hover:text-gray-600">
+                            <MoreHorizontal size={16} />
+                          </button>
+                        </div>
+                        <div className="flex items-center mb-1">
+                          <img src={appointment.avatar} alt={appointment.name} className="w-8 h-8 rounded-full mr-2 border-2 border-white" />
+                          <div className="min-w-0">
+                            <div className="font-medium text-[#283593] truncate max-w-[120px]">{appointment.name}</div>
+                            <div className="text-xs text-gray-500 truncate max-w-[100px]">{appointment.room}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className={`text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 truncate max-w-[90px] whitespace-nowrap overflow-hidden`}>
+                            {appointment.appointmentType}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 truncate max-w-[90px] whitespace-nowrap overflow-hidden`}>
+                            {appointment.status}
+                          </span>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -342,4 +342,15 @@ export const updateConsultantApi = async (id: string, data: Partial<{ introducti
   return res.data;
 };
 
-export default api;
+export const getAllSlotTimeApi = async () => {
+  const res = await api.get('/slot-times');
+  return res.data;
+};
+
+// Lấy danh sách tư vấn viên rảnh cho từng khung giờ trong một ngày
+export const getAvailableConsultantsByDayApi = async (date: string) => {
+  const res = await api.get(`/slot-times/available-by-day/${date}`);
+  return res.data;
+};
+
+export default api; 
