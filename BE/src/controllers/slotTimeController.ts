@@ -69,9 +69,7 @@ export const createSlotTime = async (req: Request, res: Response) => {
         console.log('DEBUG BE: slotMoi =', slotMoi.map(s => s.start_time));
         // Tổng slot sau khi thêm slot mới
         // Nếu đã đủ 20 slot thì luôn cho đăng ký thêm slot mới
-        if (slotDaCo.length <= 20 && (slotDaCo.length + slotMoi.length) <= 20) {
-          return res.status(400).json({ message: "Bạn phải đăng ký ít nhất 20 ca làm trong 1 tuần!" });
-        }
+       
         // Tạo các slot mới (chỉ tạo slot chưa tồn tại)
         const slotTaoMoi = [];
         for (const slot of slotMoi) {
@@ -134,9 +132,7 @@ export const deleteSlotTime = async (req: Request, res: Response) => {
           start_time: { $gte: weekStart, $lte: weekEnd },
           _id: { $ne: id }
         });
-        if (slotTimes.length < 20) {
-          return res.status(400).json({ message: "Bạn phải có ít nhất 20 ca làm trong 1 tuần, không thể xóa thêm!" });
-        }
+       
         await SlotTime.findByIdAndDelete(id);
         res.status(200).json({ message: "Xóa slot time thành công",data:slotTime });
     } catch (error) {
