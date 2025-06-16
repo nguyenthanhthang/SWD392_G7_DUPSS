@@ -122,9 +122,7 @@ export const getSlotTimeByConsultantIdApi = async (consultantId: string) => {
 
 export const createSlotTimeApi = async (data: {
   consultant_id: string;
-  start_time: string;
-  end_time: string;
-  status: string;
+  slots: { start_time: string; end_time: string }[];
 }) => {
   const res = await api.post("/slot-times", data);
   return res.data;

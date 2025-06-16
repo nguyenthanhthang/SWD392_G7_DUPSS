@@ -31,12 +31,58 @@ export const getSlotTimeByConsultantId = async (req: Request, res: Response) => 
         res.status(500).json({ message: "Xảy ra lỗi khi lấy slot time theo consultant_id",error });
     }
 }
+
+// Hàm lấy ngày đầu tuần (thứ 2)
+function getStartOfWeek(date: string | Date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+}
+
 export const createSlotTime = async (req: Request, res: Response) => {
     try {
-        const { consultant_id, start_time, end_time } = req.body;
-        // chua check thuoc consultant_id co ton tai khong, lcih nay da ton tai chua
-        const slotTime = await SlotTime.create({ consultant_id, start_time, end_time });
-        res.status(201).json(slotTime);
+        const { consultant_id: tuVanVien_id, slots: danhSachSlot } = req.body;
+        // slots: [{ start_time, end_time }]
+        if (!Array.isArray(danhSachSlot) || danhSachSlot.length === 0) {
+          return res.status(400).json({ message: "Danh sách slot không hợp lệ!" });
+        }
+        // Lấy ngày đầu tuần của slot đầu tiên
+        const dauTuan = getStartOfWeek(danhSachSlot[0].start_time);
+        dauTuan.setUTCHours(0, 0, 0, 0);
+        const cuoiTuan = new Date(dauTuan);
+        cuoiTuan.setUTCDate(dauTuan.getUTCDate() + 6);
+        cuoiTuan.setUTCHours(23, 59, 59, 999);
+        // Lấy tất cả slot time của tư vấn viên trong tuần này
+        const slotDaCo = await SlotTime.find({
+          consultant_id: tuVanVien_id,
+          start_time: { $gte: dauTuan, $lte: cuoiTuan }
+        });
+        // Lọc ra các slot thực sự mới (chưa tồn tại trong tuần)
+        const slotMoi = danhSachSlot.filter(slot => {
+          return !slotDaCo.some(st => new Date(st.start_time).getTime() === new Date(slot.start_time).getTime());
+        });
+        // LOG DEBUG
+        console.log('DEBUG BE: dauTuan =', dauTuan, 'cuoiTuan =', cuoiTuan);
+        console.log('DEBUG BE: slotDaCo.length =', slotDaCo.length, 'slotMoi.length =', slotMoi.length);
+        console.log('DEBUG BE: slotDaCo =', slotDaCo.map(s => s.start_time));
+        console.log('DEBUG BE: slotMoi =', slotMoi.map(s => s.start_time));
+        // Tổng slot sau khi thêm slot mới
+        // Nếu đã đủ 20 slot thì luôn cho đăng ký thêm slot mới
+        if (slotDaCo.length <= 20 && (slotDaCo.length + slotMoi.length) <= 20) {
+          return res.status(400).json({ message: "Bạn phải đăng ký ít nhất 20 ca làm trong 1 tuần!" });
+        }
+        // Tạo các slot mới (chỉ tạo slot chưa tồn tại)
+        const slotTaoMoi = [];
+        for (const slot of slotMoi) {
+          const newSlot = await SlotTime.create({
+            consultant_id: tuVanVien_id,
+            start_time: slot.start_time,
+            end_time: slot.end_time
+          });
+          slotTaoMoi.push(newSlot);
+        }
+        res.status(201).json({ message: "Tạo slot time thành công", data: slotTaoMoi });
     } catch (error) {
         res.status(500).json({ message: "Xảy ra lỗi khi tạo slot time",error });
     }
@@ -72,6 +118,24 @@ export const deleteSlotTime = async (req: Request, res: Response) => {
         }
         if(slotTime?.status === "booked"){
             return res.status(400).json({ message: "Không thể xóa slot time đã được đặt",data:slotTime });
+        }
+        if (!slotTime) {
+          return res.status(404).json({ message: "Không tìm thấy slot time" });
+        }
+        // Lấy ngày đầu tuần của slotTime
+        const weekStart = getStartOfWeek(slotTime.start_time);
+        weekStart.setUTCHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+        weekEnd.setUTCHours(23, 59, 59, 999);
+        // Đếm số slot time của consultant trong tuần này (trừ slot chuẩn bị xóa)
+        const slotTimes = await SlotTime.find({
+          consultant_id: slotTime.consultant_id,
+          start_time: { $gte: weekStart, $lte: weekEnd },
+          _id: { $ne: id }
+        });
+        if (slotTimes.length < 20) {
+          return res.status(400).json({ message: "Bạn phải có ít nhất 20 ca làm trong 1 tuần, không thể xóa thêm!" });
         }
         await SlotTime.findByIdAndDelete(id);
         res.status(200).json({ message: "Xóa slot time thành công",data:slotTime });
