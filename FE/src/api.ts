@@ -1,5 +1,14 @@
 import axios from "axios";
 
+interface BlogData {
+  title: string;
+  content: string;
+  author: string;
+  published: boolean;
+  topics?: string[];
+  image?: File;
+}
+
 const api = axios.create({
   baseURL: "http://localhost:5000/api", // Đổi lại nếu BE chạy port khác hoặc có prefix khác
   headers: {
@@ -222,8 +231,14 @@ export const getEventAttendanceApi = async (eventId: string) => {
   return res.data;
 };
 
-export const checkPhoneNumberExistsApi = async (phone: string, excludeId?: string) => {
-  const res = await api.get(`/accounts/check-phone/${phone}` + (excludeId ? `?excludeId=${excludeId}` : ''));
+export const checkPhoneNumberExistsApi = async (
+  phone: string,
+  excludeId?: string
+) => {
+  const res = await api.get(
+    `/accounts/check-phone/${phone}` +
+      (excludeId ? `?excludeId=${excludeId}` : "")
+  );
   return res.data;
 };
 
@@ -241,19 +256,30 @@ export const createAppointmentApi = async (data: {
   reason: string;
   note?: string;
 }) => {
-  const res = await api.post('/appointments', data);
+  const res = await api.post("/appointments", data);
   return res.data;
 };
 
 // Cập nhật thông tin account
-export const updateAccountApi = async (id: string, data: Partial<{ fullName: string; phoneNumber: string }>) => {
+export const updateAccountApi = async (
+  id: string,
+  data: Partial<{ fullName: string; phoneNumber: string }>
+) => {
   const res = await api.put(`/accounts/${id}`, data);
   return res.data;
 };
 
 // Đổi mật khẩu
-export const changePasswordApi = async (email: string, password: string, confirmPassword: string) => {
-  const res = await api.post(`/accounts/change-password`, { email, password, confirmPassword });
+export const changePasswordApi = async (
+  email: string,
+  password: string,
+  confirmPassword: string
+) => {
+  const res = await api.post(`/accounts/change-password`, {
+    email,
+    password,
+    confirmPassword,
+  });
   return res.data;
 };
 
@@ -264,7 +290,7 @@ export const getAppointmentByUserIdApi = async (userId: string) => {
 
 // Gửi OTP quên mật khẩu
 export const sendResetPasswordEmailApi = async (email: string) => {
-  const res = await api.post('/auth/send-reset-password-email', { email });
+  const res = await api.post("/auth/send-reset-password-email", { email });
   return res.data;
 };
 
@@ -279,38 +305,37 @@ export const getBlogByIdApi = async (id: string) => {
   return res.data;
 };
 
-export const createBlogApi = async (data: any) => {
-  // Nếu có file (data.image là File), gửi FormData
+export const createBlogApi = async (data: BlogData) => {
   if (data.image instanceof File) {
     const form = new FormData();
-    form.append('title', data.title);
-    form.append('content', data.content);
-    form.append('author', data.author);
-    form.append('published', data.published);
-    if (data.topics) form.append('topics', JSON.stringify(data.topics));
-    form.append('image', data.image);
-    const res = await api.post('/blogs', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    form.append("title", data.title);
+    form.append("content", data.content);
+    form.append("author", data.author);
+    form.append("published", String(data.published));
+    if (data.topics) form.append("topics", JSON.stringify(data.topics));
+    form.append("image", data.image);
+    const res = await api.post("/blogs", form, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
-    // Không có file, gửi JSON bình thường
-    const res = await api.post('/blogs', data);
+    const res = await api.post("/blogs", data);
     return res.data;
   }
 };
 
-export const updateBlogApi = async (id: string, data: any) => {
+export const updateBlogApi = async (id: string, data: Partial<BlogData>) => {
   if (data.image instanceof File) {
     const form = new FormData();
-    form.append('title', data.title);
-    form.append('content', data.content);
-    form.append('author', data.author);
-    form.append('published', data.published);
-    if (data.topics) form.append('topics', JSON.stringify(data.topics));
-    form.append('image', data.image);
+    if (data.title) form.append("title", data.title);
+    if (data.content) form.append("content", data.content);
+    if (data.author) form.append("author", data.author);
+    if (typeof data.published === "boolean")
+      form.append("published", String(data.published));
+    if (data.topics) form.append("topics", JSON.stringify(data.topics));
+    form.append("image", data.image);
     const res = await api.put(`/blogs/${id}`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
@@ -335,13 +360,16 @@ export const getBlogsByUserIdApi = async (userId: string) => {
 };
 
 // Cập nhật thông tin consultant
-export const updateConsultantApi = async (id: string, data: Partial<{ introduction: string; startDateofWork: string }>) => {
+export const updateConsultantApi = async (
+  id: string,
+  data: Partial<{ introduction: string; startDateofWork: string }>
+) => {
   const res = await api.put(`/consultants/${id}`, data);
   return res.data;
 };
 
 export const getAllSlotTimeApi = async () => {
-  const res = await api.get('/slot-times');
+  const res = await api.get("/slot-times");
   return res.data;
 };
 
@@ -351,4 +379,4 @@ export const getAvailableConsultantsByDayApi = async (date: string) => {
   return res.data;
 };
 
-export default api; 
+export default api;
