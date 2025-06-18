@@ -295,6 +295,17 @@ export const sendResetPasswordEmailApi = async (email: string) => {
 };
 
 // Blog APIs
+
+// Interface for Blog data
+interface BlogData {
+  title: string;
+  content: string;
+  author: string;
+  published: boolean;
+  topics?: string[];
+  image?: File | string;
+}
+
 export const getAllBlogsApi = async () => {
   const res = await api.get("/blogs");
   return res.data;
@@ -306,12 +317,13 @@ export const getBlogByIdApi = async (id: string) => {
 };
 
 export const createBlogApi = async (data: BlogData) => {
+  // Nếu có file (data.image là File), gửi FormData
   if (data.image instanceof File) {
     const form = new FormData();
     form.append("title", data.title);
     form.append("content", data.content);
     form.append("author", data.author);
-    form.append("published", String(data.published));
+    form.append("published", data.published.toString());
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
     form.append("image", data.image);
     const res = await api.post("/blogs", form, {
@@ -319,19 +331,19 @@ export const createBlogApi = async (data: BlogData) => {
     });
     return res.data;
   } else {
+    // Không có file, gửi JSON bình thường
     const res = await api.post("/blogs", data);
     return res.data;
   }
 };
 
-export const updateBlogApi = async (id: string, data: Partial<BlogData>) => {
+export const updateBlogApi = async (id: string, data: BlogData) => {
   if (data.image instanceof File) {
     const form = new FormData();
-    if (data.title) form.append("title", data.title);
-    if (data.content) form.append("content", data.content);
-    if (data.author) form.append("author", data.author);
-    if (typeof data.published === "boolean")
-      form.append("published", String(data.published));
+    form.append("title", data.title);
+    form.append("content", data.content);
+    form.append("author", data.author);
+    form.append("published", data.published.toString());
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
     form.append("image", data.image);
     const res = await api.put(`/blogs/${id}`, form, {
@@ -368,14 +380,59 @@ export const updateConsultantApi = async (
   return res.data;
 };
 
-export const getAllSlotTimeApi = async () => {
-  const res = await api.get("/slot-times");
+// ===== QUIZ APIs =====
+
+// Lấy danh sách các bài quiz
+export const getAllQuizzesApi = async (ageGroup?: string) => {
+  const params = ageGroup ? `?ageGroup=${ageGroup}` : "";
+  const res = await api.get(`/quizzes${params}`);
   return res.data;
 };
 
-// Lấy danh sách tư vấn viên rảnh cho từng khung giờ trong một ngày
-export const getAvailableConsultantsByDayApi = async (date: string) => {
-  const res = await api.get(`/slot-times/available-by-day/${date}`);
+// Lấy câu hỏi theo quiz và age group
+export const getQuizQuestionsApi = async (
+  quizId: string,
+  ageGroup?: string,
+  limit?: number
+) => {
+  const params = new URLSearchParams();
+  if (ageGroup) params.append("ageGroup", ageGroup);
+  if (limit) params.append("limit", limit.toString());
+  const res = await api.get(
+    `/quizzes/${quizId}/questions?${params.toString()}`
+  );
+  return res.data;
+};
+
+// Submit kết quả làm bài quiz
+export const submitQuizResultApi = async (data: {
+  quizId: string;
+  userId?: string;
+  sessionId?: string;
+  answers: { questionId: string; selectedOption: number }[];
+}) => {
+  const res = await api.post("/quizzes/quiz-results", data);
+  return res.data;
+};
+
+// Lấy lịch sử kết quả quiz của user
+export const getUserQuizResultsApi = async (
+  userId: string,
+  limit?: number,
+  page?: number
+) => {
+  const params = new URLSearchParams();
+  if (limit) params.append("limit", limit.toString());
+  if (page) params.append("page", page.toString());
+  const res = await api.get(
+    `/quizzes/quiz-results/${userId}?${params.toString()}`
+  );
+  return res.data;
+};
+
+// Lấy chi tiết một kết quả quiz
+export const getQuizResultByIdApi = async (resultId: string) => {
+  const res = await api.get(`/quizzes/quiz-results/result/${resultId}`);
   return res.data;
 };
 
