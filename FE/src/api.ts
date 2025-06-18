@@ -1,12 +1,12 @@
 import axios from "axios";
 
-interface BlogData {
+export interface BlogData {
   title: string;
   content: string;
   author: string;
   published: boolean;
   topics?: string[];
-  image?: File;
+  image?: File | string; // Có thể là File khi upload hoặc URL string khi hiển thị
 }
 
 const api = axios.create({
@@ -296,16 +296,6 @@ export const sendResetPasswordEmailApi = async (email: string) => {
 
 // Blog APIs
 
-// Interface for Blog data
-interface BlogData {
-  title: string;
-  content: string;
-  author: string;
-  published: boolean;
-  topics?: string[];
-  image?: File | string;
-}
-
 export const getAllBlogsApi = async () => {
   const res = await api.get("/blogs");
   return res.data;
@@ -331,7 +321,7 @@ export const createBlogApi = async (data: BlogData) => {
     });
     return res.data;
   } else {
-    // Không có file, gửi JSON bình thường
+    // Không có file hoặc image là URL, gửi JSON bình thường
     const res = await api.post("/blogs", data);
     return res.data;
   }
@@ -433,6 +423,19 @@ export const getUserQuizResultsApi = async (
 // Lấy chi tiết một kết quả quiz
 export const getQuizResultByIdApi = async (resultId: string) => {
   const res = await api.get(`/quizzes/quiz-results/result/${resultId}`);
+  return res.data;
+};
+
+// ===== SLOT TIME APIs =====
+
+export const getAllSlotTimeApi = async () => {
+  const res = await api.get("/slot-times");
+  return res.data;
+};
+
+// Lấy danh sách tư vấn viên rảnh cho từng khung giờ trong một ngày
+export const getAvailableConsultantsByDayApi = async (date: string) => {
+  const res = await api.get(`/slot-times/available-by-day/${date}`);
   return res.data;
 };
 
