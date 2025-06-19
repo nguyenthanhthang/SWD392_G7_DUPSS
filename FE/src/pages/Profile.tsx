@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByUserIdApi, updateBlogApi } from '../api';
 import whaleLogo from '../assets/whale.png';
@@ -22,6 +22,20 @@ interface User {
   isVerified?: boolean;
   isDisabled?: boolean;
 } 
+
+interface Blog {
+  _id: string;
+  title: string;
+  content: string;
+  author: string;
+  image?: string;
+  thumbnail?: string;
+  topics?: string[];
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+  anDanh?: boolean;
+}
 
 const menuTabs = [
   { key: "profile", label: "User Profile" },
@@ -48,13 +62,16 @@ export default function Profile() {
   const [pwdLoading, setPwdLoading] = useState(false);
   const [showPwdNew, setShowPwdNew] = useState(false);
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
-  const [blogs, setBlogs] = useState<any[]>([]);
-  const [blogDangXem, setBlogDangXem] = useState<any | null>(null);
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [blogDangXem, setBlogDangXem] = useState<Blog | null>(null);
   const [modalBlog, setModalBlog] = useState(false);
-  const [blogDangSua, setBlogDangSua] = useState<any | null>(null);
+  const [blogDangSua, setBlogDangSua] = useState<Blog | null>(null);
   const [modalEdit, setModalEdit] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterKeyword, setFilterKeyword] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -202,6 +219,56 @@ export default function Profile() {
     return matchStatus && matchKeyword;
   });
 
+  const handleAvatarClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?._id) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload
+    setIsUploadingAvatar(true);
+    try {
+      // First, upload the image to Cloudinary
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const uploadResponse = await fetch('http://localhost:5000/api/uploads/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) throw new Error('Failed to upload image');
+      const { imageUrl } = await uploadResponse.json();
+
+      // Then, update user's photoUrl
+      await updateAccountApi(user._id, { photoUrl: imageUrl });
+
+      // Update local user state
+      setUser(prev => prev ? { ...prev, photoUrl: imageUrl } : null);
+      showToast('success', 'Cập nhật ảnh đại diện thành công!');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      showToast('error', 'Không thể cập nhật ảnh đại diện!');
+      setAvatarPreview(null); // Reset preview on error
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#DBE8FA] flex flex-col items-center py-4 px-2 relative overflow-x-hidden">
       {/* Bóng tròn 2 màu chủ đạo */}
@@ -289,7 +356,31 @@ export default function Profile() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Avatar + Name */}
                     <div className="bg-white rounded-2xl border border-gray-100 p-8 flex flex-col items-center">
-                      <img src={user?.photoUrl || 'https://i.pravatar.cc/150?img=3'} alt="avatar" className="w-24 h-24 rounded-full mb-4" />
+                      <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                        <div className="w-24 h-24 rounded-full overflow-hidden">
+                          <img 
+                            src={avatarPreview || user?.photoUrl || 'https://i.pravatar.cc/150?img=3'} 
+                            alt="avatar" 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
+                          <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                      />
+                      {isUploadingAvatar && (
+                        <div className="text-sm text-blue-500 animate-pulse">Đang tải ảnh lên...</div>
+                      )}
                       <div className="font-bold text-lg text-gray-800 mb-1">{user?.fullName || '---'}</div>
                       <div className="text-gray-500 text-sm mb-2 flex items-center gap-2">
                         {editPhoneOnly ? (

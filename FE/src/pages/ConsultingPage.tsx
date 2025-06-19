@@ -202,7 +202,7 @@ function ConsultingPage() {
                   <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
                   <div className="flex items-center gap-2 text-gray-400 text-xs mb-4 text-center">
                     <FaEnvelope className="inline-block text-gray-400 text-sm" />
-                    <span>Liên hệ: {consultant.accountId.email || 'Không có email'}</span>
+                    <span>{consultant.accountId.email || 'Không có email'}</span>
                   </div>
                   <motion.button
                     whileHover={{ scale: 1.04 }}

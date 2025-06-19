@@ -263,7 +263,11 @@ export const createAppointmentApi = async (data: {
 // Cập nhật thông tin account
 export const updateAccountApi = async (
   id: string,
-  data: Partial<{ fullName: string; phoneNumber: string }>
+  data: Partial<{ 
+    fullName: string; 
+    phoneNumber: string;
+    photoUrl: string;
+  }>
 ) => {
   const res = await api.put(`/accounts/${id}`, data);
   return res.data;

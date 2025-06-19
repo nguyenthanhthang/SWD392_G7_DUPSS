@@ -707,15 +707,12 @@ export default function ScheduleManagement() {
                           <img src={appointment.avatar} alt={appointment.name} className="w-8 h-8 rounded-full mr-2 border-2 border-white" />
                           <div className="min-w-0">
                             <div className="font-medium text-[#283593] truncate max-w-[120px]">{appointment.name}</div>
-                            <div className="text-xs text-gray-500 truncate max-w-[100px]">{appointment.room}</div>
+                            <div className="text-xs text-gray-500 truncate max-w-[100px]">{appointment.status}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <span className={`text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 truncate max-w-[90px] whitespace-nowrap overflow-hidden`}>
                             {appointment.appointmentType}
-                          </span>
-                          <span className={`text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 truncate max-w-[90px] whitespace-nowrap overflow-hidden`}>
-                            {appointment.status}
                           </span>
                         </div>
                       </div>
