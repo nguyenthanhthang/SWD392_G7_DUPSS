@@ -173,11 +173,154 @@ export default function ScheduleManagement() {
   const [selectedSlotEdit, setSelectedSlotEdit] = useState<{dayIdx: number, slotIdx: number} | null>(null);
   const [allSlotTimes, setAllSlotTimes] = useState<SlotTime[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  // Thêm state cho chọn nhiều ô bằng kéo chuột
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectMode, setSelectMode] = useState<'select' | 'deselect' | null>(null);
+  // Thêm state cho kéo xóa nhiều slot đã chọn
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTargets, setDeleteTargets] = useState<{ dayIdx: number, slotIdx: number, slotTimeId: string }[]>([]);
+  // Sửa lại logic chọn slot: tick 1 ô khi click, tick nhiều ô khi kéo, tick cả ô đầu tiên khi kéo
+  const [mouseDownSlot, setMouseDownSlot] = useState<{dayIdx: number, slotIdx: number} | null>(null);
 
-  const handleSlotToggle = (dayIdx: number, slotIdx: number) => {
+  const handleSlotMouseDown = (dayIdx: number, slotIdx: number) => {
     const key = `${modalWeekIndex}-${dayIdx}-${slotIdx}`;
-    setSelectedSlots(prev => ({ ...prev, [key]: !prev[key] }));
+    const isSelected = !!selectedSlots[key];
+    setIsSelecting(true);
+    setSelectMode(isSelected ? 'deselect' : 'select');
+    setMouseDownSlot({ dayIdx, slotIdx });
+    // Tick luôn ô đầu tiên khi bắt đầu kéo
+    setSelectedSlots(prev => {
+      if (isSelected) {
+        const n = { ...prev };
+        delete n[key];
+        return n;
+      } else {
+        return { ...prev, [key]: true };
+      }
+    });
   };
+
+  const handleSlotMouseUp = (dayIdx: number, slotIdx: number) => {
+    // Nếu chỉ click 1 ô (không kéo), mouseDownSlot trùng mouseUp
+    if (mouseDownSlot && mouseDownSlot.dayIdx === dayIdx && mouseDownSlot.slotIdx === slotIdx) {
+      const key = `${modalWeekIndex}-${dayIdx}-${slotIdx}`;
+      setSelectedSlots(prev => {
+        if (prev[key]) {
+          const n = { ...prev };
+          delete n[key];
+          return n;
+        } else {
+          return { ...prev, [key]: true };
+        }
+      });
+    }
+    setIsSelecting(false);
+    setSelectMode(null);
+    setMouseDownSlot(null);
+  };
+
+  const handleSlotMouseEnter = (dayIdx: number, slotIdx: number) => {
+    if (!isSelecting || !selectMode) return;
+    const key = `${modalWeekIndex}-${dayIdx}-${slotIdx}`;
+    setSelectedSlots(prev => {
+      if (selectMode === 'select' && !prev[key]) {
+        return { ...prev, [key]: true };
+      }
+      if (selectMode === 'deselect' && prev[key]) {
+        const n = { ...prev };
+        delete n[key];
+        return n;
+      }
+      return prev;
+    });
+  };
+
+  // Hàm xử lý khi bắt đầu kéo xóa slot đã chọn
+  const handleDeleteMouseDown = (dayIdx: number, slotIdx: number, slotTimeId: string) => {
+    setIsDeleting(true);
+    setDeleteTargets([{ dayIdx, slotIdx, slotTimeId }]);
+  };
+
+  // Hàm xử lý khi rê chuột qua các ô đã chọn để xóa
+  const handleDeleteMouseEnter = (dayIdx: number, slotIdx: number, slotTimeId: string) => {
+    if (!isDeleting) return;
+    setDeleteTargets(prev => {
+      // Tránh trùng lặp
+      if (prev.some(t => t.dayIdx === dayIdx && t.slotIdx === slotIdx)) return prev;
+      return [...prev, { dayIdx, slotIdx, slotTimeId }];
+    });
+  };
+
+  // Sửa lại: Đặt handleDeleteMouseUp thành function declaration để không bị unused khi chỉ dùng trong useEffect
+  function handleDeleteMouseUp() {
+    if (isDeleting && deleteTargets.length > 0) {
+      (async () => {
+        await fetchAllSlotTimes();
+        const weekStart = getStartOfWeek(modalWeekData[modalWeekIndex].days[0].date);
+        weekStart.setUTCHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+        weekEnd.setUTCHours(23, 59, 59, 999);
+        const weekSlots = allSlotTimes.filter(st => {
+          if (!user?._id) return false;
+          const stDate = new Date(st.start_time);
+          return (
+            st.consultant_id === user._id &&
+            stDate.getTime() >= weekStart.getTime() &&
+            stDate.getTime() <= weekEnd.getTime()
+          );
+        });
+        const slotIdsToDelete = deleteTargets.map(t => t.slotTimeId);
+        const remain = weekSlots.filter(st => !slotIdsToDelete.includes(st._id));
+        let countSelected = 0;
+        for (let dayIdx = 0; dayIdx < modalWeekData[modalWeekIndex].days.length; dayIdx++) {
+          for (let slotIdx = 0; slotIdx < timeSlots.length; slotIdx++) {
+            const key = `${modalWeekIndex}-${dayIdx}-${slotIdx}`;
+            if (selectedSlots[key]) {
+              const dayObj = modalWeekData[modalWeekIndex].days[dayIdx];
+              const slotHour = parseInt(timeSlots[slotIdx]);
+              const exists = weekSlots.some(st => {
+                const stDate = new Date(st.start_time);
+                return (
+                  stDate.getFullYear() === dayObj.date.getFullYear() &&
+                  stDate.getMonth() === dayObj.date.getMonth() &&
+                  stDate.getDate() === dayObj.date.getDate() &&
+                  stDate.getHours() === slotHour
+                );
+              });
+              if (!exists) countSelected++;
+            }
+          }
+        }
+        if (remain.length + countSelected < 20) {
+          toast.error('Bạn phải có ít nhất 20 ca làm trong 1 tuần, không thể xóa thêm!');
+          setIsDeleting(false);
+          setDeleteTargets([]);
+          return;
+        }
+        for (const t of deleteTargets) {
+          try {
+            await deleteSlotTimeApi(t.slotTimeId);
+            setSelectedSlots(prev => {
+              const n = { ...prev };
+              const key = `${modalWeekIndex}-${t.dayIdx}-${t.slotIdx}`;
+              delete n[key];
+              return n;
+            });
+            toast.success('Đã xóa ca làm!');
+          } catch {
+            toast.error('Xóa ca làm thất bại!');
+          }
+        }
+        fetchAllSlotTimes();
+        setIsDeleting(false);
+        setDeleteTargets([]);
+      })();
+    } else {
+      setIsDeleting(false);
+      setDeleteTargets([]);
+    }
+  }
 
   const handleDangKy = async () => {
     if (!user?._id) {
@@ -338,6 +481,13 @@ export default function ScheduleManagement() {
     }
   };
 
+  // Thêm event listener để xử lý mouseup ngoài bảng cho kéo xóa
+  React.useEffect(() => {
+    if (!isDeleting) return;
+    window.addEventListener('mouseup', handleDeleteMouseUp);
+    return () => window.removeEventListener('mouseup', handleDeleteMouseUp);
+  }, [isDeleting, deleteTargets]);
+
   return (
     <div className="min-h-screen bg-[#F7F9FB] px-0 md:px-8 py-0 md:py-8">
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
@@ -360,6 +510,8 @@ export default function ScheduleManagement() {
                   <ChevronRight size={20} />
                 </button>
               </div>
+              {/* Thêm hướng dẫn kéo chọn/xóa slot */}
+              <span className="text-sm text-[#f02e2e] font-medium ml-2">Kéo giữ để thêm hoặc xóa nhiều slot</span>
             </div>
             {/* Lịch đăng ký ca làm */}
             <div className="overflow-x-auto relative min-h-[400px]">
@@ -394,8 +546,10 @@ export default function ScheduleManagement() {
                               {slotTimeObj ? (
                                 <button
                                   className="w-8 h-8 rounded-md border-2 flex items-center justify-center bg-green-100 border-green-400 text-green-700 font-bold cursor-pointer hover:bg-green-200 transition-all duration-150 relative"
-                                  title="Đã đăng ký. Nhấn để xóa."
-                                  onClick={() => handleDeleteSlotTime(slotTimeObj._id, day)}
+                                  title="Đã đăng ký. Nhấn để xóa hoặc kéo để xóa nhiều."
+                                  onClick={() => { if (!isDeleting) handleDeleteSlotTime(slotTimeObj._id, day); }}
+                                  onMouseDown={e => { e.preventDefault(); handleDeleteMouseDown(dayIdx, slotIdx, slotTimeObj._id); }}
+                                  onMouseEnter={() => handleDeleteMouseEnter(dayIdx, slotIdx, slotTimeObj._id)}
                                 >
                                   ✓
                                   <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs text-green-600 whitespace-nowrap">Đã đăng ký</span>
@@ -405,9 +559,24 @@ export default function ScheduleManagement() {
                                   className={`w-8 h-8 rounded-md border-2 flex items-center justify-center transition-all duration-150
                                     ${isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-300 hover:border-blue-400'}
                                   `}
-                                  onClick={() => handleSlotToggle(dayIdx, slotIdx)}
+                                  onClick={e => {
+                                    e.preventDefault();
+                                    const key = `${modalWeekIndex}-${dayIdx}-${slotIdx}`;
+                                    setSelectedSlots(prev => {
+                                      if (prev[key]) {
+                                        const n = { ...prev };
+                                        delete n[key];
+                                        return n;
+                                      } else {
+                                        return { ...prev, [key]: true };
+                                      }
+                                    });
+                                  }}
+                                  onMouseDown={e => { e.preventDefault(); handleSlotMouseDown(dayIdx, slotIdx); }}
+                                  onMouseEnter={() => handleSlotMouseEnter(dayIdx, slotIdx)}
+                                  onMouseUp={() => handleSlotMouseUp(dayIdx, slotIdx)}
                                   aria-label="Chọn khung giờ"
-                                  style={{ minWidth: '2rem', minHeight: '2rem' }}
+                                  style={{ minWidth: '2rem', minHeight: '2rem', userSelect: 'none' }}
                                 >
                                   {isSelected ? <span className="font-bold">✓</span> : ''}
                                 </button>
