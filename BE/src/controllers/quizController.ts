@@ -94,23 +94,99 @@ export const getQuizQuestions = async (req: Request, res: Response) => {
       const limitNum = parseInt(limit as string);
       const allQuestions = await Question.find(filter);
 
-      // Shuffle array randomly
-      const shuffled = allQuestions.sort(() => 0.5 - Math.random());
-      const randomQuestions = shuffled.slice(0, limitNum);
+      // Logic đặc biệt cho ASSIST và CRAFFT: 10 câu medium + 5 câu easy
+      if (quizId === "assist" || quizId === "crafft") {
+        console.log(
+          `Special logic for ${quizId}: selecting 10 medium + 5 easy questions`
+        );
 
-      console.log(
-        `Returning ${randomQuestions.length} random questions out of ${allQuestions.length}`
-      );
+        // Phân loại câu hỏi theo difficulty
+        const mediumQuestions = allQuestions.filter(
+          (q) => q.difficulty === "medium"
+        );
+        const easyQuestions = allQuestions.filter(
+          (q) => q.difficulty === "easy"
+        );
 
-      return res.json({
-        success: true,
-        data: {
-          quiz,
-          questions: randomQuestions,
-          total: allQuestions.length,
-          selected: randomQuestions.length,
-        },
-      });
+        console.log(
+          `Found ${mediumQuestions.length} medium questions and ${easyQuestions.length} easy questions`
+        );
+
+        // Kiểm tra xem có đủ câu hỏi không
+        if (mediumQuestions.length < 10) {
+          console.warn(
+            `Warning: Only ${mediumQuestions.length} medium questions available, need 10`
+          );
+        }
+        if (easyQuestions.length < 5) {
+          console.warn(
+            `Warning: Only ${easyQuestions.length} easy questions available, need 5`
+          );
+        }
+
+        // Random 10 câu medium (hoặc tất cả nếu không đủ)
+        const shuffledMedium = mediumQuestions.sort(() => 0.5 - Math.random());
+        const selectedMedium = shuffledMedium.slice(
+          0,
+          Math.min(10, mediumQuestions.length)
+        );
+
+        // Random 5 câu easy (hoặc tất cả nếu không đủ)
+        const shuffledEasy = easyQuestions.sort(() => 0.5 - Math.random());
+        const selectedEasy = shuffledEasy.slice(
+          0,
+          Math.min(5, easyQuestions.length)
+        );
+
+        // Kết hợp và shuffle lại để trộn thứ tự
+        const combinedQuestions = [...selectedMedium, ...selectedEasy];
+        const finalQuestions = combinedQuestions.sort(
+          () => 0.5 - Math.random()
+        );
+
+        console.log(
+          `Selected ${selectedMedium.length} medium + ${selectedEasy.length} easy = ${finalQuestions.length} total questions`
+        );
+
+        return res.json({
+          success: true,
+          data: {
+            quiz,
+            questions: finalQuestions,
+            total: allQuestions.length,
+            selected: finalQuestions.length,
+            breakdown: {
+              medium: selectedMedium.length,
+              easy: selectedEasy.length,
+              total: finalQuestions.length,
+            },
+            available: {
+              medium: mediumQuestions.length,
+              easy: easyQuestions.length,
+            },
+            maxScore: 15,
+          },
+        });
+      } else {
+        // Logic cũ cho các quiz khác
+        const shuffled = allQuestions.sort(() => 0.5 - Math.random());
+        const randomQuestions = shuffled.slice(0, limitNum);
+
+        console.log(
+          `Returning ${randomQuestions.length} random questions out of ${allQuestions.length}`
+        );
+
+        return res.json({
+          success: true,
+          data: {
+            quiz,
+            questions: randomQuestions,
+            total: allQuestions.length,
+            selected: randomQuestions.length,
+            maxScore: randomQuestions.length, // mỗi câu 1 điểm
+          },
+        });
+      }
     }
 
     const questions = await questionQuery;
@@ -345,5 +421,21 @@ export const getQuizResultById = async (req: Request, res: Response) => {
       success: false,
       message: "Lỗi server khi lấy chi tiết kết quả",
     });
+  }
+};
+
+export const getUserQuizHistory = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    const history = await QuizResult.find({ userId })
+      .sort({ takenAt: -1 }) // Sort by newest first
+      .select("quizId totalScore riskLevel suggestedAction takenAt")
+      .limit(20); // Limit to last 20 results
+
+    res.json(history);
+  } catch (error) {
+    console.error("Error fetching quiz history:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

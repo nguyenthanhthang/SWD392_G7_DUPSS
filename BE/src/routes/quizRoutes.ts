@@ -5,6 +5,7 @@ import {
   submitQuizResult,
   getUserQuizResults,
   getQuizResultById,
+  getUserQuizHistory,
 } from "../controllers/quizController";
 
 const router = express.Router();
@@ -23,5 +24,8 @@ router.get("/quiz-results/:userId", getUserQuizResults);
 
 // GET /api/quiz-results/result/:resultId - Lấy chi tiết một kết quả
 router.get("/quiz-results/result/:resultId", getQuizResultById);
+
+// GET /api/quizzes/history/:userId - Lịch sử làm bài của user
+router.get("/history/:userId", getUserQuizHistory);
 
 export default router;
