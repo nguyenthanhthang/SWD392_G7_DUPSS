@@ -12,7 +12,8 @@ interface Blog {
   image?: string;
   thumbnail?: string;
   topics?: string[];
-  published: boolean;
+  published: 'draft' | 'published' | 'rejected';
+  comments?: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -37,7 +38,7 @@ function BlogDetailPage() {
         const blogData = await getBlogByIdApi(id);
         
         // Nếu blog chưa được xuất bản, chuyển hướng về trang blogs
-        if (!blogData.published) {
+        if (blogData.published !== 'published') {
           setError('Bài viết này chưa được xuất bản');
           return;
         }
@@ -50,10 +51,9 @@ function BlogDetailPage() {
         // Lấy bài viết liên quan theo tag
         if (blogData.topics && blogData.topics.length > 0) {
           try {
-            const allBlogs = await getAllBlogsApi();
+            const allBlogs = await getAllBlogsApi(); // This will only return published blogs
             const related = allBlogs.filter((b: Blog) =>
               b._id !== blogData._id &&
-              b.published &&
               b.topics && b.topics.some((tag: string) => blogData.topics.includes(tag))
             ).slice(0, 3);
             setRelatedBlogs(related);

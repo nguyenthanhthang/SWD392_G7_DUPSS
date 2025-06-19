@@ -89,3 +89,12 @@ export const getUserQuizHistoryApi = async (
     };
   }
 };
+
+export const getAllBlogsApi = async (isAdmin?: boolean) => {
+  try {
+    const response = await axios.get(`${API_URL}/blogs${isAdmin ? '?isAdmin=true' : ''}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

@@ -51,9 +51,7 @@ function BlogPage() {
       setLoading(true);
       try {
         const allBlogs = await getAllBlogsApi();
-        // Chỉ hiển thị blog đã được xuất bản
-        const publishedBlogs = allBlogs.filter((blog: Blog) => blog.published);
-        setBlogs(publishedBlogs);
+        setBlogs(allBlogs); // getAllBlogsApi now only returns published blogs for non-admin users
         setError(null);
       } catch (err) {
         setError('Không thể tải danh sách bài viết. Vui lòng thử lại sau.');
@@ -144,19 +142,19 @@ function BlogPage() {
       <Toaster position="top-center" />
       
       {/* Hero Section - Blue Professional Theme */}
-      <div className="bg-gradient-to-r from-blue-800 via-blue-600 to-cyan-500 py-10">
+      <div className="bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 py-10">
         <div className="container mx-auto px-4 relative">
           {/* Decorative circles - blue only */}
-          <div className="absolute top-0 left-10 w-20 h-20 rounded-full bg-cyan-200 opacity-10"></div>
-          <div className="absolute bottom-5 right-20 w-16 h-16 rounded-full bg-blue-300 opacity-10"></div>
-          <div className="absolute top-10 right-40 w-8 h-8 rounded-full bg-blue-100 opacity-10"></div>
+          <div className="absolute top-0 left-10 w-20 h-20 rounded-full bg-cyan-100 opacity-20"></div>
+          <div className="absolute bottom-5 right-20 w-16 h-16 rounded-full bg-blue-200 opacity-20"></div>
+          <div className="absolute top-10 right-40 w-8 h-8 rounded-full bg-blue-100 opacity-20"></div>
           {/* Blue bubbles */}
-          <div className="absolute top-8 left-1/4 w-24 h-24 rounded-full bg-cyan-400 opacity-20 blur-xl"></div>
-          <div className="absolute top-20 right-1/4 w-32 h-32 rounded-full bg-blue-400 opacity-20 blur-xl"></div>
-          <div className="absolute bottom-10 left-1/3 w-20 h-20 rounded-full bg-cyan-300 opacity-10 blur-xl"></div>
-          <div className="absolute bottom-0 right-1/3 w-28 h-28 rounded-full bg-blue-200 opacity-10 blur-xl"></div>
+          <div className="absolute top-8 left-1/4 w-24 h-24 rounded-full bg-cyan-300 opacity-20 blur-xl"></div>
+          <div className="absolute top-20 right-1/4 w-32 h-32 rounded-full bg-blue-300 opacity-20 blur-xl"></div>
+          <div className="absolute bottom-10 left-1/3 w-20 h-20 rounded-full bg-cyan-200 opacity-20 blur-xl"></div>
+          <div className="absolute bottom-0 right-1/3 w-28 h-28 rounded-full bg-blue-200 opacity-20 blur-xl"></div>
           <h1 className="text-4xl md:text-5xl font-bold text-center mb-6 text-white drop-shadow-lg">Blog & Tin tức</h1>
-          <p className="text-xl text-center max-w-3xl mx-auto text-blue-100 drop-shadow">Khám phá những bài viết bổ ích và cập nhật về tâm lý học, sức khỏe tinh thần và các phương pháp trị liệu mới nhất.</p>
+          <p className="text-xl text-center max-w-3xl mx-auto text-white drop-shadow">Khám phá những bài viết bổ ích và cập nhật về tâm lý học, sức khỏe tinh thần và các phương pháp trị liệu mới nhất.</p>
         </div>
       </div>
 
@@ -166,11 +164,11 @@ function BlogPage() {
           <div className="mb-8 flex justify-center">
             <button
               onClick={handleCreateBlogClick}
-              className={`$\{
+              className={`${
                 isLoggedIn 
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800' 
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600' 
                   : 'bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600'
-              } px-6 py-3 rounded-lg shadow-lg transition-all duration-300 flex items-center font-semibold text-lg text-blue-900 dark:text-white drop-shadow`}
+              } px-6 py-3 rounded-lg shadow-lg transition-all duration-300 flex items-center font-semibold text-lg text-white drop-shadow`}
             >
               <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isLoggedIn ? (
@@ -276,11 +274,10 @@ function BlogPage() {
                   <button
                     onClick={() => paginate(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className={`px-4 py-2 border-r border-blue-100 flex items-center $\{
-                      currentPage === 1 
-                        ? 'bg-blue-50 text-blue-300 cursor-not-allowed' 
-                        : 'text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
-                    }`}
+                    className={currentPage === 1 
+                      ? 'px-4 py-2 border-r border-blue-100 flex items-center bg-blue-50 text-blue-300 cursor-not-allowed'
+                      : 'px-4 py-2 border-r border-blue-100 flex items-center text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
+                    }
                   >
                     <svg className="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -293,11 +290,10 @@ function BlogPage() {
                       <button
                         key={pageNumber}
                         onClick={() => paginate(pageNumber)}
-                        className={`w-10 border-r border-blue-100 $\{
-                          currentPage === pageNumber 
-                            ? 'bg-cyan-600 text-white font-medium' 
-                            : 'text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
-                        }`}
+                        className={pageNumber === currentPage
+                          ? 'w-10 border-r border-blue-100 bg-cyan-600 text-white font-medium'
+                          : 'w-10 border-r border-blue-100 text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
+                        }
                       >
                         {pageNumber}
                       </button>
@@ -306,11 +302,10 @@ function BlogPage() {
                   <button
                     onClick={() => paginate(Math.min(Math.ceil(filteredBlogs.length / blogsPerPage), currentPage + 1))}
                     disabled={currentPage === Math.ceil(filteredBlogs.length / blogsPerPage)}
-                    className={`px-4 py-2 flex items-center $\{
-                      currentPage === Math.ceil(filteredBlogs.length / blogsPerPage) 
-                        ? 'bg-blue-50 text-blue-300 cursor-not-allowed' 
-                        : 'text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
-                    }`}
+                    className={currentPage === Math.ceil(filteredBlogs.length / blogsPerPage)
+                      ? 'px-4 py-2 flex items-center bg-blue-50 text-blue-300 cursor-not-allowed'
+                      : 'px-4 py-2 flex items-center text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
+                    }
                   >
                     Sau
                     <svg className="w-5 h-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

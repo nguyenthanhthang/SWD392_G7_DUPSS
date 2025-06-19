@@ -64,7 +64,7 @@ const BlogManagement: React.FC = () => {
   const fetchBlogs = async () => {
     setLoading(true);
     try {
-      const data = await getAllBlogsApi();
+      const data = await getAllBlogsApi(true);
       setBlogs(data);
     } catch (error) {
       message.error('Không thể lấy danh sách blogs');
@@ -232,117 +232,6 @@ const BlogManagement: React.FC = () => {
         delete newErrors[field];
         return newErrors;
       });
-    }
-  };
-  const handleSwitch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, published: e.target.checked ? 'published' : 'draft' });
-  };
-
-  // Handle submit
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (isSubmitting) return; // Prevent double submit
-    
-    // Validate form
-    const errors: {[key: string]: string} = {};
-    
-    // Validate title
-    if (!formData.title || formData.title.trim() === '') {
-      errors.title = 'Tiêu đề không được để trống';
-    } else if (formData.title.trim().length < 5) {
-      errors.title = 'Tiêu đề phải có ít nhất 5 ký tự';
-    } else if (formData.title.trim().length > 150) {
-      errors.title = 'Tiêu đề không được quá 150 ký tự';
-    }
-    
-    // Validate author
-    if (!formData.author || formData.author.trim() === '') {
-      errors.author = 'Tác giả không được để trống';
-    } else if (formData.author.trim().length < 3) {
-      errors.author = 'Tên tác giả phải có ít nhất 3 ký tự';
-    } else if (formData.author.trim().length > 50) {
-      errors.author = 'Tên tác giả không được quá 50 ký tự';
-    }
-    
-    // Validate content
-    if (!formData.content || formData.content.trim() === '') {
-      errors.content = 'Nội dung không được để trống';
-    } else if (formData.content.replace(/<[^>]*>/g, '').trim().length < 50) {
-      errors.content = 'Nội dung phải có ít nhất 50 ký tự';
-    }
-    
-    // Validate image
-    if (file) {
-      const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!validImageTypes.includes(file.type)) {
-        errors.image = 'Ảnh phải có định dạng JPG, JPEG, PNG hoặc WEBP';
-      } else if (file.size > 2 * 1024 * 1024) {
-        errors.image = 'Ảnh không được quá 2MB';
-      }
-    }
-    
-    // Validate topics
-    const topicString = formData.topics || '';
-    const topicArr = topicString.split(',').map((t: any) => t.trim()).filter(Boolean);
-    if (topicArr.length === 0) {
-      setFormErrors((prev: any) => ({ ...prev, topics: 'Vui lòng nhập ít nhất 1 topic.' }));
-    }
-    if (topicArr.length > 5) {
-      errors.topics = 'Chỉ được nhập tối đa 5 topic.';
-    }
-    for (let topic of topicArr) {
-      if (topic.length > 20) {
-        errors.topics = 'Mỗi topic không quá 20 ký tự.';
-      }
-      if (!/^[a-zA-Z0-9-_]+$/.test(topic)) {
-        errors.topics = 'Topic chỉ được chứa chữ cái, số, dấu gạch ngang hoặc gạch dưới.';
-      }
-    }
-    
-    // If there are errors, show them and stop submission
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      setIsSubmitting(false);
-      return;
-    }
-    
-    // Clear errors if no problems
-    setFormErrors({});
-    
-    try {
-      setIsSubmitting(true); // Set submitting state to true
-      let blogData: any = {
-        title: formData.title,
-        content: formData.content,
-        author: formData.author || user?.username || 'Admin',
-        published: formData.published,
-        topics: formData.topics ? formData.topics.split(',').map((topic: string) => topic.trim()) : [],
-      };
-      if (file) {
-        blogData.image = file;
-      } else if (formData.image && typeof formData.image === 'string') {
-        blogData.image = formData.image;
-      }
-      if (editingBlog) {
-        await updateBlogApi(editingBlog._id, blogData);
-        setNotification({type: 'success', message: 'Cập nhật blog thành công'});
-      } else {
-        await createBlogApi(blogData);
-        setNotification({type: 'success', message: 'Tạo blog mới thành công'});
-      }
-      handleCloseModal();
-      fetchBlogs();
-      setTimeout(() => {
-        setNotification(null);
-      }, 3000);
-    } catch (error) {
-      setNotification({type: 'error', message: 'Không thể lưu blog'});
-      setTimeout(() => {
-        setNotification(null);
-      }, 3000);
-    } finally {
-      setIsSubmitting(false); // Reset submitting state
     }
   };
 
@@ -645,18 +534,28 @@ const BlogManagement: React.FC = () => {
                 fetchBlogs();
               }}
               onSubmit={async (data) => {
+                console.log('Submitting blog data:', data); // Debug log
                 setIsSubmitting(true);
                 try {
                   if (editingBlog) {
+                    console.log('Updating blog with ID:', editingBlog._id); // Debug log
                     await updateBlogApi(editingBlog._id, data);
                     setNotification({type: 'success', message: 'Cập nhật blog thành công'});
-                    } else {
+                  } else {
+                    console.log('Creating new blog'); // Debug log
                     await createBlogApi(data);
                     setNotification({type: 'success', message: 'Tạo blog mới thành công'});
                   }
                   setTimeout(() => setNotification(null), 3000);
-                } catch (error) {
-                  setNotification({type: 'error', message: 'Không thể lưu blog'});
+                } catch (error: any) {
+                  console.error('Error saving blog:', error);
+                  if (error.response) {
+                    console.error('Server response:', error.response.data);
+                    console.error('Status:', error.response.status);
+                    setNotification({type: 'error', message: `Lỗi: ${error.response.data.message || 'Không thể lưu blog'}`});
+                  } else {
+                    setNotification({type: 'error', message: 'Không thể lưu blog'});
+                  }
                   setTimeout(() => setNotification(null), 3000);
                 } finally {
                   setIsSubmitting(false);
@@ -664,7 +563,7 @@ const BlogManagement: React.FC = () => {
               }}
             />
           </div>
-              </div>
+        </div>
       )}
 
       {hienModalXem && blogDangXem && (

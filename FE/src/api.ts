@@ -342,6 +342,8 @@ export const createBlogApi = async (data: BlogData) => {
 };
 
 export const updateBlogApi = async (id: string, data: BlogData) => {
+  console.log('updateBlogApi called with:', { id, data }); // Debug log
+  
   if (data.image instanceof File) {
     const form = new FormData();
     form.append("title", data.title);
@@ -350,11 +352,16 @@ export const updateBlogApi = async (id: string, data: BlogData) => {
     form.append("published", data.published.toString());
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
     form.append("image", data.image);
+    
+    console.log('Sending FormData with published:', data.published); // Debug log
+    
     const res = await api.put(`/blogs/${id}`, form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
+    console.log('Sending JSON with published:', data.published); // Debug log
+    
     const res = await api.put(`/blogs/${id}`, data);
     return res.data;
   }

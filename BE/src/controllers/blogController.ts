@@ -9,10 +9,15 @@ interface MulterRequest extends Request {
 
 export const getAllBlogs = async (req: Request, res: Response) => {
   try {
-    const blogs = await Blog.find().sort({ createdAt: -1 });
+    // Check if user is admin from the request
+    const isAdmin = req.query.isAdmin === 'true';
     
-    // Thêm một số blog mẫu nếu không có blog nào
-    if (blogs.length === 0) {
+    // If not admin, only return published blogs
+    const query = isAdmin ? {} : { published: 'published' };
+    const blogs = await Blog.find(query).sort({ createdAt: -1 });
+    
+    // Thêm một số blog mẫu nếu không có blog nào và là admin
+    if (blogs.length === 0 && isAdmin) {
       const sampleBlogs = [
         {
           title: 'Hiểu về Sức Khỏe Tâm Thần',
@@ -42,7 +47,7 @@ export const getAllBlogs = async (req: Request, res: Response) => {
         await blog.save();
       }
 
-      const newBlogs = await Blog.find().sort({ createdAt: -1 });
+      const newBlogs = await Blog.find(query).sort({ createdAt: -1 });
       return res.json(newBlogs);
     }
 
@@ -121,23 +126,62 @@ export const createBlog = async (req: MulterRequest, res: Response) => {
 
 export const updateBlog = async (req: MulterRequest, res: Response) => {
   try {
+    // Kiểm tra trạng thái hiện tại của blog
+    const existingBlog = await Blog.findById(req.params.id);
+    if (!existingBlog) {
+      return res.status(404).json({ message: 'Không tìm thấy blog' });
+    }
+
+    // Nếu blog đã bị từ chối, không cho phép cập nhật
+    if (existingBlog.published === 'rejected') {
+      return res.status(403).json({ message: 'Không thể sửa bài viết đã bị từ chối' });
+    }
+
     const { title, content, author, topics, published } = req.body;
-    let updateData: any = { title, content, author, topics };
+    console.log('Update blog request body:', req.body); // Debug log
     
-    // Validate published status if provided
-    if (published) {
+    let updateData: any = { title, content, author };
+    
+    // Xử lý topics
+    if (topics !== undefined && topics !== null) {
+      let topicsArr = topics;
+      if (typeof topics === 'string') {
+        try {
+          // Thử parse JSON trước
+          topicsArr = JSON.parse(topics);
+        } catch {
+          // Nếu không phải JSON, split theo dấu phẩy
+          topicsArr = topics.split(',').map((t: string) => t.trim()).filter(Boolean);
+        }
+      }
+      // Đảm bảo topicsArr là array
+      if (Array.isArray(topicsArr)) {
+        updateData.topics = topicsArr;
+      } else {
+        console.warn('Topics is not an array:', topicsArr);
+        updateData.topics = [];
+      }
+    }
+    
+    // Validate và xử lý published status
+    if (published !== undefined && published !== null) {
       const validStatuses = ['draft', 'published', 'rejected'];
       if (!validStatuses.includes(published)) {
-        return res.status(400).json({ message: 'Trạng thái published không hợp lệ' });
+        return res.status(400).json({ 
+          message: `Trạng thái published không hợp lệ: ${published}. Các giá trị hợp lệ: ${validStatuses.join(', ')}` 
+        });
       }
       updateData.published = published;
     }
     
+    // Xử lý image
     if (req.file && req.file.path) {
       updateData.image = req.file.path;
     } else if (req.body.image) {
       updateData.image = req.body.image;
     }
+    
+    console.log('Update data:', updateData); // Debug log
     
     const blog = await Blog.findByIdAndUpdate(
       req.params.id,
