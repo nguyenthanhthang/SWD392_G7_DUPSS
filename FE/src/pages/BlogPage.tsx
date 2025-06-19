@@ -213,10 +213,10 @@ function BlogPage() {
             {/* Blog cards - Blue theme */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {currentBlogs.map((blog) => (
-                <Link 
-                  to={`/blogs/$\{blog._id\}`} 
+                <Link
                   key={blog._id}
-                  className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1 group border border-blue-100"
+                  to={'/blogs/' + blog._id}
+                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full group"
                 >
                   {blog.image ? (
                     <div className="h-56 overflow-hidden relative">

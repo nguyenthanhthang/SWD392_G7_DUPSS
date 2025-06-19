@@ -15,7 +15,8 @@ interface Blog {
   image?: string;
   thumbnail?: string;
   topics?: string[];
-  published: boolean;
+  published: 'draft' | 'published' | 'rejected';
+  comments: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -46,8 +47,8 @@ const BlogManagement: React.FC = () => {
       blog.author.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === '' ||
-      (statusFilter === 'published' && blog.published) ||
-      (statusFilter === 'pending' && !blog.published);
+      (statusFilter === 'published' && blog.published === 'published') ||
+      (statusFilter === 'pending' && blog.published === 'draft');
     const matchesAuthor =
       authorFilter === '' || blog.author === authorFilter;
     return matchesSearch && matchesStatus && matchesAuthor;
@@ -84,7 +85,7 @@ const BlogManagement: React.FC = () => {
       content: '', 
       author: user?.username || 'Admin', 
       topics: '', 
-      published: false,
+      published: 'draft',
       image: '',
       thumbnail: ''
     });
@@ -122,11 +123,11 @@ const BlogManagement: React.FC = () => {
       // Validate image
       const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!validImageTypes.includes(f.type)) {
-        setFormErrors(prev => ({ ...prev, image: 'Ảnh phải có định dạng JPG, JPEG, PNG hoặc WEBP' }));
+        setFormErrors((prev: {[key: string]: string}) => ({ ...prev, image: 'Ảnh phải có định dạng JPG, JPEG, PNG hoặc WEBP' }));
       } else if (f.size > 2 * 1024 * 1024) {
-        setFormErrors(prev => ({ ...prev, image: 'Ảnh không được quá 2MB' }));
+        setFormErrors((prev: {[key: string]: string}) => ({ ...prev, image: 'Ảnh không được quá 2MB' }));
       } else {
-        setFormErrors(prev => {
+        setFormErrors((prev: {[key: string]: string}) => {
           const newErrors = { ...prev };
           delete newErrors.image;
           return newErrors;
@@ -234,7 +235,7 @@ const BlogManagement: React.FC = () => {
     }
   };
   const handleSwitch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, published: e.target.checked });
+    setFormData({ ...formData, published: e.target.checked ? 'published' : 'draft' });
   };
 
   // Handle submit
@@ -315,7 +316,7 @@ const BlogManagement: React.FC = () => {
         title: formData.title,
         content: formData.content,
         author: formData.author || user?.username || 'Admin',
-        published: formData.published || false,
+        published: formData.published,
         topics: formData.topics ? formData.topics.split(',').map((topic: string) => topic.trim()) : [],
       };
       if (file) {
@@ -346,9 +347,11 @@ const BlogManagement: React.FC = () => {
   };
 
   // Badge helpers
-  const getStatusBadge = (published: boolean) =>
-    published ? (
+  const getStatusBadge = (published: 'draft' | 'published' | 'rejected') =>
+    published === 'published' ? (
       <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Đã xuất bản</span>
+    ) : published === 'rejected' ? (
+      <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">Bị từ chối</span>
     ) : (
       <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Chưa duyệt</span>
     );
@@ -358,7 +361,7 @@ const BlogManagement: React.FC = () => {
     try {
       await updateBlogApi(blog._id, {
         ...blog,
-        published: true
+        published: 'published'
       });
       setNotification({type: 'success', message: 'Đã duyệt bài viết thành công'});
       fetchBlogs();
@@ -378,7 +381,7 @@ const BlogManagement: React.FC = () => {
     try {
       await updateBlogApi(blog._id, {
         ...blog,
-        published: false
+        published: 'draft'
       });
       setNotification({type: 'success', message: 'Đã ngừng xuất bản bài viết'});
       fetchBlogs();
@@ -544,7 +547,7 @@ const BlogManagement: React.FC = () => {
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       {getStatusBadge(blog.published)}
-                      {!blog.published ? (
+                      {!blog.published && blog.published !== 'published' && (
                         <button
                           onClick={() => handleDuyetBlog(blog)}
                           className="px-3 py-1 text-sm bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors flex items-center gap-1 shadow-sm hover:shadow"
@@ -554,17 +557,6 @@ const BlogManagement: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                           Duyệt
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleNgungXuatBan(blog)}
-                          className="px-3 py-1 text-sm bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors flex items-center gap-1 shadow-sm hover:shadow"
-                          title="Ngừng xuất bản bài viết"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          Ngừng xuất bản
                         </button>
                       )}
                     </div>

@@ -18,7 +18,7 @@ interface CreateBlogFormProps {
     author?: string;
     topics?: string;
     image?: string;
-    published?: boolean;
+    published?: 'draft' | 'published' | 'rejected';
   };
   onSubmit?: (data: BlogData) => Promise<void>;
   isAdmin?: boolean;
@@ -61,6 +61,9 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [anDanh, setAnDanh] = useState(false);
+  const [trangThai, setTrangThai] = useState<'draft' | 'published' | 'rejected'>(
+    initialData?.published || 'draft'
+  );
 
   useEffect(() => {
     const storedUserInfo = localStorage.getItem("userInfo");
@@ -174,7 +177,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
         content: noiDung,
         author: tacGia,
         topics: topics.split(",").map((topic: string) => topic.trim()),
-        published: isAdmin ? initialData?.published ?? false : false,
+        published: isAdmin ? trangThai : 'draft',
       };
       if (hinhAnh) {
         blogData.image = hinhAnh;
@@ -442,6 +445,25 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               </p>
             )}
           </div>
+          
+          {/* Trạng thái xuất bản - chỉ hiển thị cho admin */}
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-blue-800">
+                Trạng thái xuất bản
+              </label>
+              <select
+                value={trangThai}
+                onChange={(e) => setTrangThai(e.target.value as 'draft' | 'published' | 'rejected')}
+                className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 bg-blue-50 text-blue-900"
+              >
+                <option value="draft">Chưa xuất bản</option>
+                <option value="published">Đã xuất bản</option>
+                <option value="rejected">Từ chối</option>
+              </select>
+            </div>
+          )}
+          
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
