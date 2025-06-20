@@ -35,6 +35,10 @@ export const getConsultantById = async(req:Request,res:Response):Promise<void>=>
 export const updateConsultant = async(req:Request,res:Response):Promise<void>=>{
     try {
         const consultant = await Consultant.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('accountId');
+        if (!consultant) {
+            res.status(404).json({ message: "Không tìm thấy tư vấn viên" });
+            return;
+        }
         res.status(200).json(consultant);
     } catch (error) {
         res.status(500).json({ message: "Lỗi khi cập nhật tư vấn viên", error });
@@ -50,7 +54,11 @@ export const deleteConsultant = async(req:Request,res:Response):Promise<void>=>{
 }
 export const getConsultantByAccountId = async(req:Request,res:Response):Promise<void>=>{
     try {
-        const consultant = await Consultant.findOne({ accountId: req.params.id }).populate('accountId');
+        const consultant = await Consultant.findOne({ accountId: req.params.accountId }).populate('accountId');
+        if (!consultant) {
+            res.status(404).json({ message: "Không tìm thấy tư vấn viên" });
+            return;
+        }
         res.status(200).json(consultant);
     } catch (error) {
         res.status(500).json({ message: "Lỗi khi lấy tư vấn viên", error });
