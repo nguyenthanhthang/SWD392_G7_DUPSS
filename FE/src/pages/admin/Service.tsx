@@ -39,7 +39,6 @@ const Service: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<IService | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -335,55 +334,13 @@ const Service: React.FC = () => {
     if (!selectedService) return;
 
     try {
-      console.log('Dữ liệu gửi đi:', formData);
-      const response = await api.put(`/services/${selectedService._id}`, formData);
-      console.log('Kết quả từ API:', response.data);
-      
-      // Cập nhật danh sách dịch vụ với dữ liệu từ response
-      if (response.data && response.data.data) {
-        setServices(prev =>
-          prev.map(service =>
-            service._id === selectedService._id ? response.data.data : service
-          )
-        );
-      } else {
-        // Tải lại danh sách dịch vụ nếu không có dữ liệu trả về
-        fetchServices();
-      }
-      
+      await api.put(`/services/${selectedService._id}`, formData);
+      toast.success('Dịch vụ đã được cập nhật thành công!');
+      fetchServices();
       handleCloseUpdateModal();
-      toast.success('Cập nhật dịch vụ thành công!');
-    } catch (error) {
-      console.error('Lỗi chi tiết:', error);
-      toast.error('Có lỗi xảy ra khi cập nhật dịch vụ!');
-    }
-  };
-
-  // Open delete modal
-  const handleOpenDeleteModal = (service: IService) => {
-    setSelectedService(service);
-    setIsDeleteModalOpen(true);
-  };
-
-  // Close delete modal
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setSelectedService(null);
-  };
-
-  // Handle delete service
-  const handleDeleteService = async () => {
-    if (!selectedService) return;
-
-    try {
-      await api.delete(`/services/${selectedService._id}`);
-      setServices(prev =>
-        prev.filter(service => service._id !== selectedService._id)
-      );
-      handleCloseDeleteModal();
-      toast.success('Xóa dịch vụ thành công!');
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi xóa dịch vụ!');
+    } catch (err) {
+      console.error('Lỗi khi cập nhật dịch vụ:', err);
+      toast.error('Có lỗi xảy ra khi cập nhật dịch vụ');
     }
   };
 
@@ -501,28 +458,6 @@ const Service: React.FC = () => {
                             strokeLinejoin="round"
                             strokeWidth={2}
                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      </button>
-                    </Tooltip>
-
-                    <Tooltip text="Xóa">
-                      <button
-                        onClick={() => handleOpenDeleteModal(service)}
-                        className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                           />
                         </svg>
                       </button>
@@ -713,186 +648,54 @@ const Service: React.FC = () => {
 
       {/* Modal Cập nhật dịch vụ */}
       {isUpdateModalOpen && selectedService && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-xl shadow-lg">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold text-indigo-700">Cập nhật dịch vụ</h2>
-              <button
-                onClick={handleCloseUpdateModal}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          {/* Nội dung form cập nhật */}
+          <form onSubmit={handleUpdateService} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-800">Chỉnh sửa dịch vụ</h2>
+              <button type="button" onClick={handleCloseUpdateModal} className="p-2 rounded-full hover:bg-gray-100">
+                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
-
-            <form onSubmit={handleUpdateService} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tên dịch vụ</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    onBlur={handleInputChange}
-                    placeholder="Nhập tên dịch vụ"
-                    className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Giá (VNĐ)</label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    onBlur={handleInputChange}
-                    step="1000"
-                    placeholder="Nhập giá dịch vụ"
-                    className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                    required
-                  />
-                </div>
+            {/* Body */}
+            <div className="p-6 space-y-5 overflow-y-auto">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tên dịch vụ</label>
+                <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  onBlur={handleInputChange}
-                  rows={3}
-                  placeholder="Nhập mô tả chi tiết về dịch vụ"
-                  className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
+                <textarea name="description" value={formData.description} onChange={handleInputChange} rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></textarea>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh</label>
-                <div className="flex items-center space-x-3 mb-2">
-                  <button
-                    type="button"
-                    onClick={handleSelectImage}
-                    className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors flex items-center text-sm"
-                    disabled={uploading}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {uploading ? 'Đang tải lên...' : 'Chọn ảnh'}
-                  </button>
-                  {formData.image && (
-                    <span className="text-sm text-green-600 flex items-center">
-                      <svg className="h-4 w-4 text-green-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                      Đã tải ảnh lên
-                    </span>
-                  )}
-                </div>
-                {formData.image && (
-                  <div className="mt-2 border rounded overflow-hidden shadow-sm">
-                    <img 
-                      src={formData.image}
-                      alt="Preview"
-                      className="w-full h-40 object-cover"
-                    />
-                  </div>
-                )}
-                <input
-                  type="hidden"
-                  name="image"
-                  value={formData.image}
-                  required
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giá (VND)</label>
+                <input type="number" name="price" value={formData.price} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
               </div>
-
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh dịch vụ</label>
+                <div className="mt-2 flex items-center gap-4">
+                  {formData.image && <img src={formData.image} alt="Preview" className="w-24 h-24 rounded-lg object-cover" />}
+                  <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+                  <button type="button" onClick={handleSelectImage} disabled={uploading} className={`px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${uploading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} focus:outline-none`}>
+                    {uploading ? 'Đang tải...' : 'Chọn ảnh'}
+                  </button>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                >
+                <select name="status" value={formData.status} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
                 </select>
               </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCloseUpdateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
-                  disabled={!formData.image || uploading}
-                >
-                  Cập nhật
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Xác nhận xóa */}
-      {isDeleteModalOpen && selectedService && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold text-red-600">Xác nhận xóa</h2>
-              <button
-                onClick={handleCloseDeleteModal}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
             </div>
-
-            <div className="mb-6 p-3 bg-red-50 border-l-4 border-red-500 rounded">
-              <div className="flex items-start">
-                <svg className="h-5 w-5 text-red-600 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div>
-                  <p className="text-base font-medium text-gray-800">Bạn có chắc chắn muốn xóa dịch vụ "<span className="font-bold">{selectedService.name}</span>"?</p>
-                  <p className="text-sm text-gray-600 mt-1">Hành động này không thể hoàn tác.</p>
-                </div>
-              </div>
+            {/* Footer */}
+            <div className="flex justify-end items-center p-6 border-t border-gray-200 space-x-3">
+              <button type="button" onClick={handleCloseUpdateModal} className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">Hủy</button>
+              <button type="submit" className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Lưu thay đổi</button>
             </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleCloseDeleteModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleDeleteService}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors flex items-center"
-              >
-                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Xóa
-              </button>
-            </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

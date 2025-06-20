@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi } from '../api';
+import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi } from '../api';
 import { ChevronLeft, ChevronRight, Check, User, Sparkles, Calendar, Banknote } from 'lucide-react';
 import { addDays, startOfWeek } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
+import Confetti from 'react-confetti';
 import './ServicePage.css'; // Import the CSS file
 import { useAuth } from '../contexts/AuthContext';
 
@@ -91,7 +92,7 @@ export default function ServicePage() {
   const [selectedConsultant, setSelectedConsultant] = useState('');
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [currentWeek, setCurrentWeek] = useState(0);
+  const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; time: string } | null>(null);
   const [form, setForm] = useState({
     name: '',
@@ -121,29 +122,34 @@ export default function ServicePage() {
   const [bill, setBill] = useState<Bill | null>(null);
   const [showError, setShowError] = useState<string | null>(null);
   const { user } = useAuth();
+  const [userAppointments, setUserAppointments] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [consultantsData, servicesData] = await Promise.all([
+        const [consultantsData, servicesData, slotTimesData] = await Promise.all([
           getAllConsultantsApi(),
-          getAllServicesApi()
+          getAllServicesApi(),
+          getAllSlotTimeApi()
         ]);
         setConsultants(consultantsData);
         
-        // Lọc chỉ hiển thị dịch vụ có trạng thái "active"
         const activeServices = servicesData.filter((service: Service) => service.status === 'active');
         setServices(activeServices);
         
-        const slotTimes = await getAllSlotTimeApi();
-        console.log('Slot times from API:', slotTimes);
-        setAllSlotTimes(slotTimes);
+        setAllSlotTimes(slotTimesData);
+
+        if (user?._id) {
+          const appointments = await getAppointmentByUserIdApi(user._id);
+          setUserAppointments(appointments);
+        }
+
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
     fetchData();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (currentStep === 3 && user) {
@@ -227,6 +233,21 @@ export default function ServicePage() {
     if (currentStep > 0) setCurrentStep(currentStep - 1);
   };
 
+  const today = new Date();
+  const startOfThisWeek = startOfWeek(today, { weekStartsOn: 1 });
+  const startOfNextWeek = addDays(startOfThisWeek, 7);
+
+  const handleWeekChange = (direction: 'next' | 'prev') => {
+    setCurrentWeek(prev => {
+      const newWeek = addDays(prev, direction === 'next' ? 7 : -7);
+      // Giới hạn trong tuần hiện tại và tuần sau
+      if (newWeek.getTime() < startOfThisWeek.getTime() || newWeek.getTime() > startOfNextWeek.getTime()) {
+        return prev;
+      }
+      return newWeek;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -242,8 +263,7 @@ export default function ServicePage() {
       setShowError('Thiếu thông tin đặt lịch!');
       return;
     }
-    const today = new Date();
-    const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
     const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
     const slotDate = addDays(weekStart, dayIdx);
     const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
@@ -290,8 +310,7 @@ export default function ServicePage() {
     setPendingSlot({ day: slotDay, time: slotTime });
     setSelectedSlot({ day: slotDay, time: slotTime });
     
-    const today = new Date();
-    const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
     const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(slotDay);
     const slotDate = addDays(weekStart, dayIdx);
     const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
@@ -313,11 +332,54 @@ export default function ServicePage() {
   // Helper để lấy ngày yyyy-MM-dd từ slot đang chọn
   const getSelectedSlotDateStr = () => {
     if (!selectedSlot) return '';
-    const today = new Date();
-    const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
     const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
     const slotDate = addDays(weekStart, dayIdx);
     return formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy');
+  };
+
+  const getEndTime = (startTime: string): string => {
+    const [hourStr, minuteStr] = startTime.split(':');
+    const hour = parseInt(hourStr, 10);
+    // Assuming 1-hour slots
+    const endHour = hour + 1;
+    return `${String(endHour).padStart(2, '0')}:${minuteStr}`;
+  };
+
+  const getSlotStatus = (day: string, time: string): 'available' | 'booked' | 'past' => {
+    const dayIndex = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(day);
+    const slotDate = addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), dayIndex);
+
+    // 1. Check if the slot is in the past
+    const now = new Date();
+    const [hour, minute] = time.split(':').map(Number);
+    const slotDateTime = new Date(slotDate);
+    slotDateTime.setHours(hour, minute, 0, 0);
+
+    if (slotDateTime < now) {
+      return 'past';
+    }
+
+    // 2. Check if the slot is already booked by the user
+    for (const app of userAppointments) {
+      if (!app.dateBooking) continue; // Skip if no booking date
+
+      const appDate = new Date(app.dateBooking);
+      if (isNaN(appDate.getTime())) {
+          console.warn('Skipping invalid appointment date:', app.dateBooking);
+          continue; // Skip if date is invalid
+      }
+      
+      const appDayFormatted = formatInTimeZone(appDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+      const slotDayFormatted = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+      const appTimeFormatted = formatInTimeZone(appDate, 'Asia/Ho_Chi_Minh', 'HH:mm');
+
+      if (appDayFormatted === slotDayFormatted && appTimeFormatted === time) {
+        return 'booked';
+      }
+    }
+
+    return 'available';
   };
 
   return (
@@ -469,36 +531,18 @@ export default function ServicePage() {
                   
                     {/* Calendar Navigation */}
                     <div className="flex items-center justify-between mb-8">
-                      <button
-                      className="w-14 h-14 rounded-2xl bg-white border border-sky-100 flex items-center justify-center text-sky-500 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50 transition-all disabled:opacity-30"
-                        disabled={Number(currentWeek) === 0}
-                        onClick={() => setCurrentWeek(0)}
-                      >
-                      <ChevronLeft className="w-6 h-6" />
+                      <button className="w-14 h-14 rounded-2xl bg-white border border-sky-100 flex items-center justify-center text-sky-500 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50 transition-all disabled:opacity-30" disabled={currentWeek.getTime() <= startOfThisWeek.getTime()} onClick={() => handleWeekChange('prev')}>
+                        <ChevronLeft className="w-6 h-6" />
                       </button>
-                      <div className="text-center">
-                      <div className="text-2xl font-medium text-gray-800 mb-1">
-                          {(() => {
-                            const today = new Date();
-                            const currentDate = new Date(today);
-                            currentDate.setDate(today.getDate() + (currentWeek * 7));
-                            const monday = new Date(currentDate);
-                            const dayOfWeek = currentDate.getDay();
-                            const diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-                            monday.setDate(diff);
-                            const sunday = new Date(monday);
-                            sunday.setDate(monday.getDate() + 6);
-                            return `Tuần ${monday.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} - ${sunday.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
-                          })()}
-                        </div>
-                        <div className="text-sm text-gray-500">Tháng {new Date().getMonth() + 1}, {new Date().getFullYear()}</div>
+                      <div className="text-lg font-semibold text-sky-900">
+                        {(() => {
+                            const monday = startOfWeek(currentWeek, { weekStartsOn: 1 });
+                            const sunday = addDays(monday, 6);
+                            return `Tuần ${formatInTimeZone(monday, 'Asia/Ho_Chi_Minh', 'dd/MM')} - ${formatInTimeZone(sunday, 'Asia/Ho_Chi_Minh', 'dd/MM')}`;
+                        })()}
                       </div>
-                      <button
-                      className="w-14 h-14 rounded-2xl bg-white border border-sky-100 flex items-center justify-center text-sky-500 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50 transition-all disabled:opacity-30"
-                        disabled={Number(currentWeek) === 1}
-                        onClick={() => setCurrentWeek(1)}
-                      >
-                      <ChevronRight className="w-6 h-6" />
+                      <button className="w-14 h-14 rounded-2xl bg-white border border-sky-100 flex items-center justify-center text-sky-500 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50 transition-all disabled:opacity-30" disabled={currentWeek.getTime() >= startOfNextWeek.getTime()} onClick={() => handleWeekChange('next')}>
+                        <ChevronRight className="w-6 h-6" />
                       </button>
                     </div>
                   
@@ -530,60 +574,54 @@ export default function ServicePage() {
                   
                     {/* Calendar Grid */}
                   <div className="bg-white/80 rounded-2xl p-6 shadow-sm border border-sky-50">
-                      {/* Header */}
-                      <div className="grid grid-cols-8 gap-3 mb-6">
-                      <div className="text-center text-sm font-medium text-gray-500">Giờ</div>
-                        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => (
-                        <div key={day} className={`text-center text-sm font-semibold py-2 ${
-                          dayIdx === 6 ? 'text-red-500' : 'text-sky-700'
-                          }`}>
-                            {day}
-                          </div>
-                        ))}
+                      <div className="grid grid-cols-8 gap-3 mb-4 text-center">
+                        <div className="font-medium text-gray-500 py-2">Giờ</div>
+                        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => {
+                            const dayDate = addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), dayIdx);
+                            return (
+                                <div key={day} className="rounded-lg py-2">
+                                    <div className={`font-semibold text-sm ${dayIdx === 6 ? 'text-red-500' : 'text-sky-800'}`}>{day}</div>
+                                    <div className="text-xs text-gray-400">{formatInTimeZone(dayDate, 'Asia/Ho_Chi_Minh', 'd/M')}</div>
+                                </div>
+                            )
+                        })}
                       </div>
                     
-                      {/* Time Slots */}
-                    <div className="space-y-4">
-                        {(timeFilter === 'morning' ? ['08:00', '09:00', '10:00', '11:00'] : ['13:00', '14:00', '15:00', '16:00', '17:00']).map(slot => (
-                          <div key={slot} className="grid grid-cols-8 gap-3 items-center">
+                    <div className="space-y-2">
+                        {(timeFilter === 'morning' ? ['08:00', '09:00', '10:00', '11:00'] : ['13:00', '14:00', '15:00', '16:00', '17:00']).map(slot => {
+                          const displayTime = `${slot}-${getEndTime(slot)}`;
+                          return (
+                          <div key={slot} className="grid grid-cols-8 gap-3 items-center border-t border-gray-100">
                             {/* Time Label */}
-                          <div className="text-center text-sm font-medium text-gray-600 py-3">
-                              {slot}
+                          <div className="text-center text-sm font-semibold text-gray-700 py-4">
+                              {displayTime}
                             </div>
                             {/* Day Buttons */}
-                            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => {
-                              const isSelected = selectedSlot?.day === day && selectedSlot?.time === slot;
-                              const today = new Date();
-                              const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
-                              const slotDate = addDays(weekStart, dayIdx);
-                              const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-                              const slotHour = slot;
-                              const isAvailable = allSlotTimes.some(st => {
-                                if (st.status !== 'available') return false;
-                                const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-                                const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
-                                return stDateStr === slotDateStr && stHour === slotHour;
-                              });
+                            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day) => {
+                              const status = getSlotStatus(day, slot);
                               return (
-                                <button
-                                  key={day + slot}
-                                className={`h-14 w-full rounded-xl border transition-all duration-200 ${
-                                    isAvailable
-                                      ? (isSelected 
-                                        ? 'bg-gradient-to-r from-sky-500 to-cyan-500 border-sky-500 text-white shadow-lg transform scale-105' 
-                                        : 'bg-white border-sky-100 hover:border-sky-300 hover:bg-sky-50 text-gray-600 hover:shadow-sm')
-                                      : 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                                  }`}
-                                  onClick={isAvailable ? () => handleOpenConsultantDrawer(day, slot) : undefined}
-                                  disabled={!isAvailable}
-                                title={isAvailable ? '' : 'Không có tư vấn viên'}
-                                >
-                                {isSelected && <Check className="w-5 h-5 mx-auto" />}
-                                </button>
+                                <div key={day + slot} className="p-1 h-full">
+                                  <button
+                                    className={`w-full h-full p-3 rounded-xl text-center transition-all duration-200 text-xs font-medium
+                                    ${selectedSlot?.day === day && selectedSlot?.time === slot
+                                      ? 'bg-blue-600 text-white shadow-lg scale-105'
+                                      : status === 'booked'
+                                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300'
+                                      : status === 'past'
+                                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                      : 'bg-white hover:bg-sky-100 hover:border-sky-300 text-sky-800 border border-sky-200/80 shadow-sm hover:shadow-md'
+                                    }`}
+                                    onClick={() => handleOpenConsultantDrawer(day, slot)}
+                                    disabled={status !== 'available'}
+                                    title={status === 'past' ? 'Thời gian đã qua' : status === 'booked' ? 'Bạn đã đặt lịch này' : `Chọn lịch ${displayTime} ${day}`}
+                                  >
+                                    {status === 'booked' ? 'Đã đặt' : slot}
+                                  </button>
+                                </div>
                               );
                             })}
                           </div>
-                        ))}
+                        )})}
                       </div>
                     </div>
                   
@@ -896,7 +934,7 @@ export default function ServicePage() {
                   <div className="flex justify-between items-center bg-sky-50/80 rounded-xl px-6 py-4 shadow-sm">
                     <span className="text-gray-600">Thời gian:</span>
                     <span className="font-medium text-gray-800">
-                      {selectedSlot ? `${selectedSlot.day}, ${getSelectedSlotDateStr()}, ${selectedSlot.time}` : '--'}
+                      {selectedSlot ? `${selectedSlot.day}, ${getSelectedSlotDateStr()}, ${selectedSlot.time} - ${getEndTime(selectedSlot.time)}` : '--'}
                     </span>
                   </div>
                   <div className="border-t border-gray-200 pt-4 mb-2">
@@ -957,56 +995,65 @@ export default function ServicePage() {
             )}
             {/* Step 6: Bill */}
             {currentStep === 5 && bill && (
-              <div className="w-full max-w-2xl bg-white/70 backdrop-blur-xl rounded-3xl shadow-xl p-10 border border-cyan-100 flex flex-col gap-8 animate-fadeIn">
-                <div className="text-center mb-6">
-                  <div className="inline-flex items-center gap-3 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                    <span className="text-sm font-medium text-emerald-600 tracking-wide uppercase">Đặt lịch thành công</span>
-                    <div className="w-8 h-px bg-gradient-to-r from-emerald-500 to-transparent"></div>
+              <>
+                <Confetti
+                  width={window.innerWidth}
+                  height={window.innerHeight}
+                  recycle={false}
+                  numberOfPieces={500}
+                  tweenDuration={10000}
+                />
+                <div className="w-full max-w-2xl bg-white/70 backdrop-blur-xl rounded-3xl shadow-xl p-10 border border-cyan-100 flex flex-col gap-8 animate-fadeIn">
+                  <div className="text-center mb-6">
+                    <div className="flex justify-center mb-4">
+                      <svg className="w-20 h-20 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h2 className="text-3xl font-bold text-emerald-700 mb-2 tracking-tight">Đặt lịch thành công!</h2>
+                    <p className="text-gray-600 text-lg">Cảm ơn bạn đã tin tưởng sử dụng dịch vụ của chúng tôi.</p>
                   </div>
-                  <h2 className="text-3xl font-bold text-emerald-700 mb-2 tracking-tight">Hóa đơn đặt lịch</h2>
-                  <p className="text-gray-600 text-lg">Cảm ơn bạn đã tin tưởng sử dụng dịch vụ!</p>
-                </div>
-                <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 p-6 rounded-2xl border border-emerald-100 shadow-md">
-                <div className="flex flex-col gap-4 text-base text-gray-700">
-                    <div className="flex justify-between border-b border-emerald-100 pb-3">
-                      <span className="text-gray-600">Dịch vụ:</span>
-                      <span className="font-semibold text-gray-800">{bill.service?.name}</span>
-                </div>
-                    <div className="flex justify-between border-b border-emerald-100 pb-3">
-                      <span className="text-gray-600">Chuyên viên:</span>
-                      <span className="font-semibold text-gray-800">{bill.consultant?.accountId?.fullName || "Không xác định"}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-emerald-100 pb-3">
-                      <span className="text-gray-600">Thời gian:</span>
-                      <span className="font-medium">{bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time}` : '--'}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-emerald-100 pb-3">
-                      <span className="text-gray-600">Khách hàng:</span>
-                      <span className="font-medium">{bill.fullName}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-emerald-100 pb-3">
-                      <span className="text-gray-600">SĐT:</span>
-                      <span className="font-medium">{bill.phone}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-emerald-100 pb-3">
-                      <span className="text-gray-600">Giới tính:</span>
-                      <span className="font-medium">{bill.gender === 'male' ? 'Nam' : 'Nữ'}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-emerald-100 pb-3">
-                      <span className="text-gray-600">Lý do tư vấn:</span>
-                      <span className="font-medium">{bill.reason}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-3 text-lg font-bold">
-                  <span>Tổng cộng:</span>
-                      <span className="text-emerald-700">{bill.price?.toLocaleString('vi-VN')}đ</span>
+                  <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 p-6 rounded-2xl border border-emerald-100 shadow-md">
+                  <div className="flex flex-col gap-4 text-base text-gray-700">
+                      <div className="flex justify-between border-b border-emerald-100 pb-3">
+                        <span className="text-gray-600">Dịch vụ:</span>
+                        <span className="font-semibold text-gray-800">{bill.service?.name}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-100 pb-3">
+                        <span className="text-gray-600">Chuyên viên:</span>
+                        <span className="font-semibold text-gray-800">{bill.consultant?.accountId?.fullName || "Không xác định"}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-100 pb-3">
+                        <span className="text-gray-600">Thời gian:</span>
+                        <span className="font-medium">{bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time} - ${getEndTime(bill.slot.time)}` : '--'}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-100 pb-3">
+                        <span className="text-gray-600">Khách hàng:</span>
+                        <span className="font-medium">{bill.fullName}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-100 pb-3">
+                        <span className="text-gray-600">SĐT:</span>
+                        <span className="font-medium">{bill.phone}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-100 pb-3">
+                        <span className="text-gray-600">Giới tính:</span>
+                        <span className="font-medium">{bill.gender === 'male' ? 'Nam' : 'Nữ'}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-100 pb-3">
+                        <span className="text-gray-600">Lý do tư vấn:</span>
+                        <span className="font-medium">{bill.reason}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-3 text-lg font-bold">
+                    <span>Tổng cộng:</span>
+                        <span className="text-emerald-700">{bill.price?.toLocaleString('vi-VN')}đ</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex justify-center mt-6">
+                    <button className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white px-10 py-4 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105" onClick={() => window.location.reload()}>Đặt lịch mới</button>
+                  </div>
                 </div>
-                <div className="flex justify-center mt-6">
-                  <button className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white px-10 py-4 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105" onClick={() => window.location.reload()}>Đặt lịch mới</button>
-                </div>
-              </div>
+              </>
             )}
           </div>
         </div>

@@ -75,9 +75,28 @@ const AppointmentsPage = () => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     try {
-      return formatInTimeZone(new Date(dateString), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm');
+      return formatInTimeZone(new Date(dateString), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy');
     } catch (error) {
       return 'Invalid Date';
+    }
+  };
+  
+  const getEndTime = (startTime: string): string => {
+    if (!startTime) return '';
+    const [hourStr, minuteStr] = startTime.split(':');
+    const hour = parseInt(hourStr, 10);
+    const endHour = hour + 1;
+    return `${String(endHour).padStart(2, '0')}:${minuteStr}`;
+  };
+
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      const startTime = formatInTimeZone(new Date(dateString), 'Asia/Ho_Chi_Minh', 'HH:mm');
+      const endTime = getEndTime(startTime);
+      return `${startTime} - ${endTime}`;
+    } catch (error) {
+      return 'Invalid Time';
     }
   };
 
@@ -248,6 +267,10 @@ const AppointmentsPage = () => {
                     <Calendar className="w-3 h-3 text-sky-500" />
                     {formatDate(appointment.dateBooking)}
                   </div>
+                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-sky-500" />
+                    {formatTime(appointment.dateBooking)}
+                  </div>
                   <div className={`text-xs ${getStatusInfo(appointment.status).color} font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${getStatusInfo(appointment.status).bg} ${getStatusInfo(appointment.status).border}`}>
                     {getStatusInfo(appointment.status).text}
                   </div>
@@ -304,10 +327,7 @@ const AppointmentsPage = () => {
                         }}
                       />
                       <div className="font-medium">
-                        {selectedAppointment.consultant_id.accountId?.fullName || 
-                         (typeof selectedAppointment.consultant_id === 'object' && 'fullName' in selectedAppointment.consultant_id 
-                           ? (selectedAppointment.consultant_id as any).fullName 
-                           : 'Không xác định')}
+                        <span className="font-medium text-gray-800">{selectedAppointment.consultant_id?.accountId?.fullName || 'Không xác định'}</span>
                       </div>
                     </>
                   ) : (
@@ -321,9 +341,10 @@ const AppointmentsPage = () => {
                 </div>
               </div>
               
-              <div>
-                <div className="text-sm text-gray-500 mb-1">Thời gian</div>
-                <div className="font-medium">{formatDate(selectedAppointment.dateBooking)}</div>
+              {/* Time */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Thời gian:</span>
+                <span className="font-medium text-gray-800">{`${formatDate(selectedAppointment.dateBooking)}, ${formatTime(selectedAppointment.dateBooking)}`}</span>
               </div>
               
               <div>
