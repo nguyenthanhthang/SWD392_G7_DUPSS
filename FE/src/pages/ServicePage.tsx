@@ -654,31 +654,38 @@ export default function ServicePage() {
             )}
             {/* Step 4: Bill */}
             {currentStep === 3 && bill && (
-              <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl p-10 border border-blue-100 flex flex-col gap-8 animate-fadeIn">
-                <div className="text-center mb-6">
-                  <div className="inline-flex items-center gap-3 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="text-sm font-medium text-green-600 tracking-wide uppercase">Đặt lịch thành công</span>
-                    <div className="w-8 h-px bg-gradient-to-r from-green-500 to-transparent"></div>
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 animate-fadeIn">
+                <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full flex flex-col items-center">
+                  <div className="bg-green-100 rounded-full p-4 mb-4">
+                    <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
-                  <h2 className="text-3xl font-bold text-green-700 mb-2 tracking-tight">Hóa đơn đặt lịch</h2>
-                  <p className="text-gray-600 font-light text-lg">Cảm ơn bạn đã tin tưởng sử dụng dịch vụ!</p>
-                </div>
-                <div className="flex flex-col gap-4 text-base text-gray-700">
-                  <div className="flex justify-between"><span>Dịch vụ:</span><span className="font-semibold">{bill.service?.name}</span></div>
-                  <div className="flex justify-between"><span>Chuyên viên:</span><span className="font-semibold">{bill.consultant?.accountId?.fullName}</span></div>
-                  <div className="flex justify-between"><span>Thời gian:</span><span>{bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time}` : '--'}</span></div>
-                  <div className="flex justify-between"><span>Khách hàng:</span><span>{bill.fullName}</span></div>
-                  <div className="flex justify-between"><span>SĐT:</span><span>{bill.phone}</span></div>
-                  <div className="flex justify-between"><span>Giới tính:</span><span>{bill.gender === 'male' ? 'Nam' : 'Nữ'}</span></div>
-                  <div className="flex justify-between"><span>Lý do tư vấn:</span><span>{bill.reason}</span></div>
-                </div>
-                <div className="border-t border-gray-200 pt-4 mb-2 flex justify-between items-center text-lg font-bold">
-                  <span>Tổng cộng:</span>
-                  <span className="text-blue-700">{bill.price?.toLocaleString('vi-VN')}đ</span>
-                </div>
-                <div className="flex justify-center mt-6">
-                  <button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105" onClick={() => window.location.reload()}>Đặt lịch mới</button>
+                  <h2 className="text-2xl font-bold text-green-700 mb-2">Đặt lịch thành công!</h2>
+                  <p className="text-gray-600 mb-4 text-center">
+                    Cảm ơn bạn đã tin tưởng sử dụng dịch vụ.<br />
+                    Chuyên viên sẽ liên hệ xác nhận trong thời gian sớm nhất.
+                  </p>
+                  <div className="w-full flex flex-col gap-2 mb-4">
+                    <div className="flex justify-between text-gray-700">
+                      <span>Dịch vụ:</span>
+                      <span className="font-semibold">{bill.service?.name}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-700">
+                      <span>Chuyên viên:</span>
+                      <span className="font-semibold">{bill.consultant?.accountId?.fullName}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-700">
+                      <span>Thời gian:</span>
+                      <span>{bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time}` : '--'}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-3 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                    onClick={() => window.location.reload()}
+                  >
+                    Đặt lịch mới
+                  </button>
                 </div>
               </div>
             )}

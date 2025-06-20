@@ -6,6 +6,7 @@ const router = Router();
 
 router.post("/", createCertificate);
 router.get("/", getAllCertificates);
+router.get("/consultant/:consultantId", getCertificatesByConsultantId);
 router.get("/:id", getCertificateById);
 router.put("/:id", updateCertificate);
 router.delete("/:id", deleteCertificate);

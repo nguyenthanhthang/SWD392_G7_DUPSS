@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import whaleLogo from '../../assets/whale.png';
-import { PlusCircle, Trash2, Edit, FileText, Eye, EyeOff } from 'lucide-react';
-import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getConsultantByIdApi, updateConsultantApi } from '../../api';
+import { PlusCircle, Trash2, Edit, Eye, EyeOff, Filter, CalendarDays, X } from 'lucide-react';
+import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getConsultantByAccountIdApi, updateConsultantApi, getCertificatesByConsultantIdApi, createCertificateApi, updateCertificateApi, deleteCertificateApi, getCertificateByIdApi } from '../../api';
 import type { AxiosError } from 'axios';
 
 // Interfaces
@@ -21,10 +21,14 @@ interface User {
 
 interface ICertificate {
     _id?: string;
-    name: string;
-    issuer: string;
+    title: string;
+    type?: string;
+    issuedBy: string;
     issueDate: string;
+    expireDate?: string;
+    description?: string;
     fileUrl: string;
+    consultant_id?: string;
 }
 
 interface IConsultant {
@@ -36,36 +40,14 @@ interface IConsultant {
     certificates?: ICertificate[];
 }
 
-// Mock data
-const mockConsultant: IConsultant = {
-  _id: 'c1',
-  accountId: '1',
-  introduction: 'Tôi là chuyên gia tâm lý với hơn 10 năm kinh nghiệm.',
-  contact: 'https://linkedin.com/in/consultant01',
-  startDateofWork: '2014-05-01',
-  certificates: [
-    {
-      _id: 'cert1',
-      name: 'Chứng chỉ Tâm lý học',
-      issuer: 'Đại học Quốc gia',
-      issueDate: '2014-06-01',
-      fileUrl: 'https://example.com/cert1.pdf',
-    },
-    {
-      _id: 'cert2',
-      name: 'Chứng chỉ Tham vấn',
-      issuer: 'Bộ Y tế',
-      issueDate: '2016-09-15',
-      fileUrl: 'https://example.com/cert2.pdf',
-    },
-  ],
-};
+const DEFAULT_CERT_IMAGE = "https://cdn.prod.website-files.com/60a530a795c0ca8a81c5868a/660568c3773236b1fdefc245_badge-preview%20(2)%2011.46.22.png";
 
 export default function ConsultantProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [editData, setEditData] = useState<User>({});
   const [editMode, setEditMode] = useState(false);
-  const [consultant, setConsultant] = useState<IConsultant>(mockConsultant);
+  const [consultant, setConsultant] = useState<IConsultant | null>(null);
+  const [certificates, setCertificates] = useState<ICertificate[]>([]);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [fieldError, setFieldError] = useState<{ fullName?: string; phoneNumber?: string }>({});
   const [showPwdModal, setShowPwdModal] = useState(false);
@@ -80,9 +62,14 @@ export default function ConsultantProfile() {
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
   const [modalCertificate, setModalCertificate] = useState(false);
   const [chungChiDangSua, setChungChiDangSua] = useState<ICertificate | null>(null);
-  const [initialCertificateData, setInitialCertificateData] = useState<ICertificate>({ name: '', issuer: '', issueDate: '', fileUrl: ''});
+  const [initialCertificateData, setInitialCertificateData] = useState<Omit<ICertificate, '_id'>>({ title: '', type: '', issuedBy: '', issueDate: '', expireDate: '', description: '', fileUrl: '' });
   const [editConsultant, setEditConsultant] = useState(false);
-  const [consultantEditData, setConsultantEditData] = useState<IConsultant>(mockConsultant);
+  const [consultantEditData, setConsultantEditData] = useState<Partial<IConsultant>>({});
+  const [certificateFilter, setCertificateFilter] = useState('all');
+  const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -103,14 +90,28 @@ export default function ConsultantProfile() {
     const fetchConsultant = async () => {
       if (!user?._id) return;
       try {
-        const consultantData = await getConsultantByIdApi(user._id);
+        const consultantData = await getConsultantByAccountIdApi(user._id);
         setConsultant(consultantData);
-      } catch {
-        // Optionally log error or show toast
+        if (consultantData?._id) {
+            fetchCertificates(consultantData._id);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải dữ liệu chuyên gia:", err);
       }
     };
+
     if (user?._id) fetchConsultant();
   }, [user?._id]);
+
+  const fetchCertificates = async (consultantId: string) => {
+    try {
+        const certsData = await getCertificatesByConsultantIdApi(consultantId);
+        setCertificates(certsData || []);
+    } catch (err) {
+        setCertificates([]);
+        console.error("Lỗi khi tải chứng chỉ:", err);
+    }
+  };
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -202,36 +203,51 @@ export default function ConsultantProfile() {
     setPwdLoading(false);
   };
 
-  // Certificate handlers (mock)
-  const handleCertificateSubmit = async (data: ICertificate) => {
-    if (chungChiDangSua) {
-      // Update
-      setConsultant(prev => ({
-        ...prev,
-        certificates: prev.certificates?.map(c => c._id === chungChiDangSua._id ? data : c)
-      }));
-      showToast('success', 'Cập nhật chứng chỉ thành công!');
-    } else {
-      // Add
-      const newCert = { ...data, _id: Math.random().toString(36).slice(2) };
-      setConsultant(prev => ({
-        ...prev,
-        certificates: [...(prev.certificates || []), newCert]
-      }));
-      showToast('success', 'Thêm chứng chỉ thành công!');
+  const handleCertificateSubmit = async (data: Omit<ICertificate, '_id' | 'consultant_id'>) => {
+    if (!consultant?._id) {
+        showToast('error', 'Không tìm thấy thông tin chuyên gia.');
+        return;
     }
-    setModalCertificate(false);
-    setChungChiDangSua(null);
+    // issuedBy phải là number
+    const apiData = {
+        title: data.title,
+        type: data.type || '',
+        issuedBy: Number(data.issuedBy),
+        issueDate: data.issueDate,
+        expireDate: data.expireDate,
+        description: data.description,
+        fileUrl: data.fileUrl,
+        consultant_id: consultant._id
+    };
+    try {
+        if (chungChiDangSua?._id) {
+            await updateCertificateApi(chungChiDangSua._id, apiData);
+            showToast('success', 'Cập nhật chứng chỉ thành công!');
+        } else {
+            await createCertificateApi(apiData);
+            showToast('success', 'Thêm chứng chỉ thành công!');
+        }
+        fetchCertificates(consultant._id); // Refresh list
+        setModalCertificate(false);
+        setChungChiDangSua(null);
+    } catch {
+        showToast('error', 'Thao tác thất bại!');
+    }
   };
+
   const handleDeleteCertificate = async (certificateId?: string) => {
-    setConsultant(prev => ({
-      ...prev,
-      certificates: prev.certificates?.filter(c => c._id !== certificateId)
-    }));
-    showToast('success', 'Xóa chứng chỉ thành công!');
+    if (!certificateId || !consultant?._id) return;
+    try {
+        await deleteCertificateApi(certificateId);
+        showToast('success', 'Xóa chứng chỉ thành công!');
+        fetchCertificates(consultant._id); // Refresh list
+    } catch {
+        showToast('error', 'Xóa thất bại!');
+    }
   };
 
   const handleConsultantEdit = () => {
+    if (!consultant) return;
     setConsultantEditData(consultant);
     setEditConsultant(true);
   };
@@ -241,18 +257,91 @@ export default function ConsultantProfile() {
   };
 
   const handleConsultantSave = async () => {
-    if (!consultant?._id) return;
+    if (!consultant?._id) {
+      showToast('error', 'Không tìm thấy thông tin chuyên gia.');
+      return;
+    }
     try {
-      await updateConsultantApi(consultant._id, {
+      const updatedData = {
         introduction: consultantEditData.introduction,
         startDateofWork: consultantEditData.startDateofWork,
-      });
-      const updated = await getConsultantByIdApi(consultant._id);
+      };
+      const updated = await updateConsultantApi(consultant._id, updatedData);
       setConsultant(updated);
       setEditConsultant(false);
       showToast('success', 'Cập nhật thông tin chuyên gia thành công!');
     } catch {
       showToast('error', 'Cập nhật thông tin chuyên gia thất bại!');
+    }
+  };
+
+  const formatDateForInput = (date?: string) => {
+    if (!date) return '';
+    try {
+      return new Date(date).toISOString().split('T')[0];
+    } catch {
+      console.error("Invalid date format:", date);
+      return '';
+    }
+  };
+
+  const filteredCertificates = certificates.filter(cert => {
+    if (certificateFilter === 'all') return true;
+    if (!cert.expireDate) return false;
+    const now = new Date();
+    const expireDate = new Date(cert.expireDate);
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(now.getDate() + 30);
+
+    if (certificateFilter === 'expired') return expireDate < now;
+    if (certificateFilter === 'expiring_soon') return expireDate >= now && expireDate <= thirtyDaysFromNow;
+    if (certificateFilter === 'valid') return expireDate > thirtyDaysFromNow;
+    return true;
+  });
+
+  const handleAvatarClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?._id) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    setIsUploadingAvatar(true);
+    try {
+      // Upload to server
+      const formData = new FormData();
+      formData.append('image', file);
+      const uploadResponse = await fetch('http://localhost:5000/api/uploads/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: formData,
+      });
+      if (!uploadResponse.ok) throw new Error('Failed to upload image');
+      const { imageUrl } = await uploadResponse.json();
+      // Update user's photoUrl
+      await updateAccountApi(user._id, { photoUrl: imageUrl });
+      // Update local user state
+      setUser(prev => prev ? { ...prev, photoUrl: imageUrl } : null);
+      setEditData(prev => ({ ...prev, photoUrl: imageUrl }));
+      showToast('success', 'Cập nhật ảnh đại diện thành công!');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      showToast('error', 'Không thể cập nhật ảnh đại diện!');
+      setAvatarPreview(null);
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -275,6 +364,36 @@ export default function ConsultantProfile() {
                   <h2 className="text-2xl font-bold mb-2 text-gray-800">Hồ sơ chuyên gia</h2>
                   <p className="text-gray-500 mb-8">Quản lý thông tin cá nhân, chuyên môn và các chứng chỉ của bạn.</p>
                   
+                  
+                  {/* Avatar + Name */}
+                  <div className="flex flex-col items-center mb-8">
+                    <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                      <div className="w-24 h-24 rounded-full overflow-hidden">
+                        <img
+                          src={avatarPreview || user?.photoUrl || 'https://i.pravatar.cc/150?img=3'}
+                          alt="avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
+                        <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                    />
+                    {isUploadingAvatar && (
+                      <div className="text-sm text-blue-500 animate-pulse">Đang tải ảnh lên...</div>
+                    )}
+                    <div className="font-bold text-lg text-gray-800 mb-1">{user?.fullName || '---'}</div>
+                  </div>
                   {/* User Info Section */}
                   <div className="bg-white rounded-2xl border border-gray-100 p-8 mb-8">
                     <div className='flex justify-between items-start'>
@@ -353,7 +472,7 @@ export default function ConsultantProfile() {
                              <input
                                 type="date"
                                 className={`w-full border border-gray-200 rounded-md px-4 py-2 text-gray-700 ${!editConsultant ? 'bg-gray-50' : 'bg-white'}`}
-                                value={editConsultant ? (consultantEditData.startDateofWork || '') : (consultant?.startDateofWork || '')}
+                                value={editConsultant ? formatDateForInput(consultantEditData.startDateofWork) : formatDateForInput(consultant?.startDateofWork)}
                                 onChange={e => editConsultant && setConsultantEditData({ ...consultantEditData, startDateofWork: e.target.value })}
                                 disabled={!editConsultant}
                             />
@@ -374,30 +493,86 @@ export default function ConsultantProfile() {
 
                   {/* Certificates Section */}
                   <div className="bg-white rounded-2xl border border-gray-100 p-8">
-                     <div className='flex justify-between items-start'>
-                        <h3 className="font-semibold text-gray-700 mb-6">Quản lý chứng chỉ</h3>
-                        <button onClick={() => { setChungChiDangSua(null); setInitialCertificateData({ name: '', issuer: '', issueDate: '', fileUrl: ''}); setModalCertificate(true); }} className="text-blue-600 text-sm font-medium flex items-center gap-1">
-                            <PlusCircle size={14}/> Thêm chứng chỉ
-                        </button>
+                     <div className='flex justify-between items-center mb-6'>
+                        <h3 className="font-semibold text-gray-700">Quản lý chứng chỉ</h3>
+                        <div className='flex items-center gap-4'>
+                            <div className="flex items-center gap-2">
+                                <Filter size={16} className="text-gray-500" />
+                                <select 
+                                  value={certificateFilter}
+                                  onChange={e => setCertificateFilter(e.target.value)}
+                                  className="bg-white border border-gray-200 rounded-md px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="all">Tất cả</option>
+                                    <option value="valid">Còn hạn</option>
+                                    <option value="expiring_soon">Sắp hết hạn</option>
+                                    <option value="expired">Đã hết hạn</option>
+                                </select>
+                            </div>
+                            <button onClick={() => { setChungChiDangSua(null); setInitialCertificateData({ title: '', type: '', issuedBy: '', issueDate: '', expireDate: '', description: '', fileUrl: ''}); setModalCertificate(true); }} className="text-blue-600 text-sm font-medium flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md">
+                                <PlusCircle size={14}/> Thêm chứng chỉ
+                            </button>
+                        </div>
                     </div>
-                    <div className="space-y-4">
-                        {consultant?.certificates?.length === 0 && <p className='text-gray-500 italic'>Chưa có chứng chỉ nào.</p>}
-                        {consultant?.certificates?.map(cert => (
-                            <div key={cert._id} className="p-4 border rounded-lg flex items-center justify-between">
-                                <div>
-                                    <p className="font-semibold text-gray-800">{cert.name}</p>
-                                    <p className="text-sm text-gray-500">Cấp bởi: {cert.issuer} - Ngày cấp: {new Date(cert.issueDate).toLocaleDateString('vi-VN')}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {filteredCertificates.length === 0 ? (
+                            <p className='text-gray-500 italic md:col-span-2'>Không có chứng chỉ nào phù hợp.</p>
+                        ) : (
+                            filteredCertificates.map(cert => (
+                            <div 
+                              key={cert._id} 
+                              className="relative aspect-video rounded-lg overflow-hidden group shadow-lg bg-gray-200 cursor-pointer"
+                              onClick={() => setViewImageUrl(cert.fileUrl)}
+                            >
+                                <img 
+                                    src={cert.fileUrl || DEFAULT_CERT_IMAGE} 
+                                    alt={cert.title} 
+                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_CERT_IMAGE; }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                                    <h4 className="font-bold text-lg truncate">{cert.title}</h4>
+                                    <div className='flex items-center text-xs opacity-80 gap-3 mt-1'>
+                                      <div className='flex items-center gap-1'>
+                                        <CalendarDays size={12}/>
+                                        <span>Cấp: {new Date(cert.issueDate).toLocaleDateString('vi-VN')}</span>
+                                      </div>
+                                      {cert.expireDate && (
+                                        <div className='flex items-center gap-1'>
+                                          <CalendarDays size={12}/>
+                                          <span>Hết hạn: {new Date(cert.expireDate).toLocaleDateString('vi-VN')}</span>
+                                        </div>
+                                      )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <a href={cert.fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700"><FileText size={18}/></a>
-                                    <button onClick={() => {setChungChiDangSua(cert); setInitialCertificateData(cert); setModalCertificate(true);}} className="text-gray-500 hover:text-indigo-600"><Edit size={18}/></button>
-                                    <button onClick={() => handleDeleteCertificate(cert._id)} className="text-gray-500 hover:text-red-600"><Trash2 size={18}/></button>
+                                <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (cert._id) {
+                                          const detail = await getCertificateByIdApi(cert._id);
+                                          // Format ngày về YYYY-MM-DD cho input type="date"
+                                          const formatDate = (d: string | undefined) => d ? new Date(d).toISOString().split('T')[0] : '';
+                                          setChungChiDangSua(detail);
+                                          setInitialCertificateData({
+                                            ...detail,
+                                            issueDate: formatDate(detail.issueDate),
+                                            expireDate: formatDate(detail.expireDate)
+                                          });
+                                          setModalCertificate(true);
+                                        }
+                                      }}
+                                      className="bg-white/80 backdrop-blur-sm text-gray-800 p-2 rounded-full hover:bg-white"
+                                    >
+                                      <Edit size={16}/>
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteCertificate(cert._id)}} className="bg-white/80 backdrop-blur-sm text-gray-800 p-2 rounded-full hover:bg-white"><Trash2 size={16}/></button>
                                 </div>
                             </div>
-                        ))}
+                        )))}
                     </div>
                   </div>
-
                 </div>
             </div>
           </div>
@@ -413,6 +588,31 @@ export default function ConsultantProfile() {
           </div>
         </div>
       </div>
+
+      {/* Image Viewer Modal */}
+      {viewImageUrl && (
+        <div 
+          className="fixed inset-0 z-[1001] flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm"
+          onClick={() => setViewImageUrl(null)}
+        >
+          <button 
+            className="absolute top-5 right-5 text-white/80 hover:text-white z-10"
+            onClick={() => setViewImageUrl(null)}
+          >
+            <X size={32} />
+          </button>
+          <img 
+            src={viewImageUrl} 
+            alt="Certificate full view"
+            className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = DEFAULT_CERT_IMAGE;
+            }}
+          />
+        </div>
+      )}
 
       {/* Toasts and Modals */}
       {toast && <div className={`fixed top-6 right-6 z-50 px-6 py-3 rounded-lg shadow-lg text-white text-base font-semibold transition-all ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>{toast.message}</div>}
@@ -492,39 +692,57 @@ export default function ConsultantProfile() {
 }
 
 // Certificate Modal Component
-function CertificateModal({ initialData, onClose, onSubmit }: { initialData: ICertificate, onClose: () => void, onSubmit: (data: ICertificate) => void }) {
+function CertificateModal({ initialData, onClose, onSubmit }: { initialData: Omit<ICertificate, '_id'>, onClose: () => void, onSubmit: (data: Omit<ICertificate, '_id' | 'consultant_id'>) => void }) {
     const [data, setData] = useState(initialData);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(data);
+        onSubmit({
+          title: data.title,
+          type: data.type || '',
+          issuedBy: data.issuedBy,
+          issueDate: data.issueDate,
+          expireDate: data.expireDate,
+          description: data.description,
+          fileUrl: data.fileUrl
+        });
     }
     
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg">
-                <h3 className="text-lg font-semibold mb-6 text-gray-900">{initialData.name ? 'Chỉnh sửa' : 'Thêm mới'} Chứng chỉ</h3>
-                <form onSubmit={handleSubmit}>
-                    <div className="space-y-4">
-                         <div>
-                            <label className="block text-gray-600 text-sm mb-1">Tên chứng chỉ</label>
-                            <input required className="w-full border border-gray-300 rounded px-3 py-2" value={data.name} onChange={e => setData({...data, name: e.target.value})} />
-                        </div>
-                         <div>
-                            <label className="block text-gray-600 text-sm mb-1">Đơn vị cấp</label>
-                            <input required className="w-full border border-gray-300 rounded px-3 py-2" value={data.issuer} onChange={e => setData({...data, issuer: e.target.value})} />
-                        </div>
-                         <div>
-                            <label className="block text-gray-600 text-sm mb-1">Ngày cấp</label>
-                            <input required type="date" className="w-full border border-gray-300 rounded px-3 py-2" value={data.issueDate} onChange={e => setData({...data, issueDate: e.target.value})} />
-                        </div>
-                         <div>
-                            <label className="block text-gray-600 text-sm mb-1">Link file chứng chỉ (URL)</label>
-                            <input required placeholder="https://example.com/certificate.pdf" type="url" className="w-full border border-gray-300 rounded px-3 py-2" value={data.fileUrl} onChange={e => setData({...data, fileUrl: e.target.value})} />
-                        </div>
+                <h3 className="text-lg font-semibold mb-6 text-gray-900">{initialData.title ? 'Chỉnh sửa' : 'Thêm mới'} Chứng chỉ</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-gray-600 text-sm mb-1">Tên chứng chỉ</label>
+                        <input required className="w-full border border-gray-300 rounded px-3 py-2" value={data.title} onChange={e => setData({...data, title: e.target.value})} />
                     </div>
-                    <div className="flex justify-end gap-4 mt-8">
-                        <button type="button" onClick={onClose} className="text-gray-600 font-medium px-4 py-2 rounded-lg">Hủy</button>
+                    <div>
+                        <label className="block text-gray-600 text-sm mb-1">Loại chứng chỉ</label>
+                        <input required className="w-full border border-gray-300 rounded px-3 py-2" value={data.type || ''} onChange={e => setData({...data, type: e.target.value})} />
+                    </div>
+                    <div>
+                        <label className="block text-gray-600 text-sm mb-1">Mã đơn vị cấp (số)</label>
+                        <input required type="number" className="w-full border border-gray-300 rounded px-3 py-2" value={data.issuedBy} onChange={e => setData({...data, issuedBy: e.target.value})} />
+                    </div>
+                    <div>
+                        <label className="block text-gray-600 text-sm mb-1">Ngày cấp</label>
+                        <input required type="date" className="w-full border border-gray-300 rounded px-3 py-2" value={data.issueDate} onChange={e => setData({...data, issueDate: e.target.value})} />
+                    </div>
+                    <div>
+                        <label className="block text-gray-600 text-sm mb-1">Ngày hết hạn (nếu có)</label>
+                        <input type="date" className="w-full border border-gray-300 rounded px-3 py-2" value={data.expireDate || ''} onChange={e => setData({...data, expireDate: e.target.value})} />
+                    </div>
+                    <div>
+                        <label className="block text-gray-600 text-sm mb-1">Mô tả</label>
+                        <textarea className="w-full border border-gray-300 rounded px-3 py-2" value={data.description || ''} onChange={e => setData({...data, description: e.target.value})} />
+                    </div>
+                    <div>
+                        <label className="block text-gray-600 text-sm mb-1">Link file chứng chỉ (URL)</label>
+                        <input required placeholder="https://example.com/certificate.pdf" type="url" className="w-full border border-gray-300 rounded px-3 py-2" value={data.fileUrl} onChange={e => setData({...data, fileUrl: e.target.value})} />
+                    </div>
+                    <div className="flex justify-end gap-4 pt-4">
+                        <button type="button" onClick={onClose} className="text-gray-600 font-medium px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">Hủy</button>
                         <button type="submit" className="bg-blue-600 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-700">Lưu</button>
                     </div>
                 </form>

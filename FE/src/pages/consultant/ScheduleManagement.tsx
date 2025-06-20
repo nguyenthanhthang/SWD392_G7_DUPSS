@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Clock, ChevronLeft, ChevronRight, MoreHorizontal, Plus, X, Edit, Trash2 } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { createSlotTimeApi, getAllSlotTimeApi, deleteSlotTimeApi } from '../../api';
+import { createSlotTimeApi, getAllSlotTimeApi, deleteSlotTimeApi, getConsultantByAccountIdApi, getAppointmentByConsultantIdApi, getSlotTimeByConsultantIdApi } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Dữ liệu mẫu cho bệnh nhân
@@ -129,14 +129,8 @@ const timeSlots = [
   "08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"
 ];
 
-function getHourFromTimeString(timeStr: string) {
-  // timeStr dạng "09:00 - 09:30"
-  const match = timeStr.match(/^(\d{2}):(\d{2})/);
-  if (!match) return 0;
-  return parseInt(match[1], 10);
-}
-
 const shiftOptions = [
+  { label: 'Tất cả', value: 'all' },
   { label: 'Ca sáng', value: 'morning' },
   { label: 'Ca chiều', value: 'afternoon' }
 ];
@@ -150,6 +144,32 @@ interface SlotTime {
   status: string;
 }
 
+interface SlotTimeRef {
+  start_time?: string;
+}
+
+interface Consultant {
+  _id: string;
+  accountId: string;
+  // thêm các trường khác nếu cần
+}
+
+interface Appointment {
+  _id: string;
+  slotTime_id?: SlotTimeRef;
+  start_time?: string;
+  user_id?: {
+    fullName?: string;
+    name?: string;
+    username?: string;
+    displayName?: string;
+    photoUrl?: string;
+  };
+  service_id?: { name?: string };
+  status?: string;
+  dateBooking?: string;
+}
+
 // Hàm lấy ngày đầu tuần (thứ 2)
 function getStartOfWeek(date: Date) {
   const d = new Date(date);
@@ -158,17 +178,26 @@ function getStartOfWeek(date: Date) {
   return new Date(d.setDate(diff));
 }
 
+// Helper lấy start time từ appointment
+const getAppointmentStartTime = (app: Appointment) => {
+  if (app.dateBooking) return new Date(app.dateBooking);
+  if (app.slotTime_id && app.slotTime_id.start_time) return new Date(app.slotTime_id.start_time);
+  if (app.start_time) return new Date(app.start_time);
+  return null;
+};
+
 // Component chính
 export default function ScheduleManagement() {
   const [weekIndex, setWeekIndex] = useState(0);
-  const [shift, setShift] = useState<'morning' | 'afternoon'>('morning');
-  const statusOptions = ['Tất cả', 'đang tiến hành', 'chờ khám', 'hoàn thành'];
+  const [shift, setShift] = useState<'all' | 'morning' | 'afternoon'>('all');
+  const statusOptions = ['Tất cả', 'đang tiến hành', 'chờ khám', 'hoàn thành', 'Chưa có người đặt'];
   const [selectedStatus, setSelectedStatus] = useState('Tất cả');
   // State cho modal đăng ký ca làm
   const [moDangKy, setMoDangKy] = useState(false);
   const [modalWeekIndex, setModalWeekIndex] = useState(0);
   const [selectedSlots, setSelectedSlots] = useState<{[key: string]: boolean}>({});
   const { user } = useAuth();
+  const [consultant, setConsultant] = useState<Consultant | null>(null);
   // Thêm state cho popup sửa/xóa slot trong modal đăng ký ca làm
   const [selectedSlotEdit, setSelectedSlotEdit] = useState<{dayIdx: number, slotIdx: number} | null>(null);
   const [allSlotTimes, setAllSlotTimes] = useState<SlotTime[]>([]);
@@ -181,6 +210,40 @@ export default function ScheduleManagement() {
   const [deleteTargets, setDeleteTargets] = useState<{ dayIdx: number, slotIdx: number, slotTimeId: string }[]>([]);
   // Sửa lại logic chọn slot: tick 1 ô khi click, tick nhiều ô khi kéo, tick cả ô đầu tiên khi kéo
   const [mouseDownSlot, setMouseDownSlot] = useState<{dayIdx: number, slotIdx: number} | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [slotTimes, setSlotTimes] = useState<SlotTime[]>([]);
+
+  useEffect(() => {
+    if (user?._id) {
+      const fetchConsultantData = async () => {
+        try {
+          const consultantData = await getConsultantByAccountIdApi(user._id);
+          setConsultant(consultantData);
+        } catch (error) {
+          console.error("Failed to fetch consultant data", error);
+          toast.error("Không thể tải dữ liệu tư vấn viên.");
+        }
+      };
+      fetchConsultantData();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (consultant?._id) {
+      getAppointmentByConsultantIdApi(consultant._id)
+        .then(data => {
+          console.log('[APPOINTMENTS API]', data);
+          setAppointments(data);
+        })
+        .catch(() => setAppointments([]));
+      // Lấy slot time của consultant
+      getSlotTimeByConsultantIdApi(consultant._id)
+        .then(data => {
+          setSlotTimes(Array.isArray(data) ? data : []);
+        })
+        .catch(() => setSlotTimes([]));
+    }
+  }, [consultant?._id]);
 
   const handleSlotMouseDown = (dayIdx: number, slotIdx: number) => {
     const key = `${modalWeekIndex}-${dayIdx}-${slotIdx}`;
@@ -262,10 +325,10 @@ export default function ScheduleManagement() {
         weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
         weekEnd.setUTCHours(23, 59, 59, 999);
         const weekSlots = allSlotTimes.filter(st => {
-          if (!user?._id) return false;
+          if (!consultant?._id) return false;
           const stDate = new Date(st.start_time);
           return (
-            st.consultant_id === user._id &&
+            st.consultant_id === consultant._id &&
             stDate.getTime() >= weekStart.getTime() &&
             stDate.getTime() <= weekEnd.getTime()
           );
@@ -323,7 +386,7 @@ export default function ScheduleManagement() {
   }
 
   const handleDangKy = async () => {
-    if (!user?._id) {
+    if (!user?._id || !consultant?._id) {
       toast.error('Không tìm thấy thông tin tư vấn viên!');
       return;
     }
@@ -342,7 +405,7 @@ export default function ScheduleManagement() {
       const weekSlots = (Array.isArray(data) ? data : []).filter(st => {
         const stDate = new Date(st.start_time);
         return (
-          st.consultant_id === user._id &&
+          st.consultant_id === consultant._id &&
           stDate.getTime() >= weekStart.getTime() &&
           stDate.getTime() <= weekEnd.getTime()
         );
@@ -358,7 +421,7 @@ export default function ScheduleManagement() {
             const exists = (Array.isArray(data) ? data : []).some(st => {
               const stDate = new Date(st.start_time);
               return (
-                st.consultant_id === user._id &&
+                st.consultant_id === consultant._id &&
                 stDate.getFullYear() === dayObj.date.getFullYear() &&
                 stDate.getMonth() === dayObj.date.getMonth() &&
                 stDate.getDate() === dayObj.date.getDate() &&
@@ -388,7 +451,7 @@ export default function ScheduleManagement() {
         return;
       }
       await createSlotTimeApi({
-        consultant_id: user._id,
+        consultant_id: consultant._id,
         slots: slotsToRegister
       });
       toast.success(`Đăng ký thành công ${slotsToRegister.length} ca làm!`);
@@ -428,12 +491,12 @@ export default function ScheduleManagement() {
 
   // Kiểm tra slot đã đăng ký chưa
   const isSlotRegistered = (dayObj: { date: Date }, slot: string): SlotTime | undefined => {
-    if (!user?._id) return undefined;
+    if (!user?._id || !consultant?._id) return undefined;
     // Tìm slot time cùng ngày, giờ, consultant
     return allSlotTimes.find(st => {
       const stDate = new Date(st.start_time);
       return (
-        st.consultant_id === user._id &&
+        st.consultant_id === consultant._id &&
         stDate.getFullYear() === dayObj.date.getFullYear() &&
         stDate.getMonth() === dayObj.date.getMonth() &&
         stDate.getDate() === dayObj.date.getDate() &&
@@ -454,10 +517,10 @@ export default function ScheduleManagement() {
     weekEnd.setUTCHours(23, 59, 59, 999);
     // Đếm số slot đã đăng ký trong tuần này (trừ slot chuẩn bị xóa)
     const weekSlots = allSlotTimes.filter(st => {
-      if (!user?._id) return false;
+      if (!user?._id || !consultant?._id) return false;
       const stDate = new Date(st.start_time);
       return (
-        st.consultant_id === user._id &&
+        st.consultant_id === consultant._id &&
         stDate.getTime() >= weekStart.getTime() &&
         stDate.getTime() <= weekEnd.getTime() &&
         st._id !== slotTimeId
@@ -487,6 +550,19 @@ export default function ScheduleManagement() {
     window.addEventListener('mouseup', handleDeleteMouseUp);
     return () => window.removeEventListener('mouseup', handleDeleteMouseUp);
   }, [isDeleting, deleteTargets]);
+
+  const isSlotHasAppointment = (dayObj: { date: Date }, slot: string) => {
+    return appointments.some(app => {
+      const date = getAppointmentStartTime(app);
+      if (!date) return false;
+      return (
+        date.getFullYear() === dayObj.date.getFullYear() &&
+        date.getMonth() === dayObj.date.getMonth() &&
+        date.getDate() === dayObj.date.getDate() &&
+        date.getHours() === parseInt(slot)
+      );
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#F7F9FB] px-0 md:px-8 py-0 md:py-8">
@@ -581,6 +657,9 @@ export default function ScheduleManagement() {
                                   {isSelected ? <span className="font-bold">✓</span> : ''}
                                 </button>
                               )}
+                              {isSlotHasAppointment(day, slot) && (
+                                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-500" title="Có appointment"></div>
+                              )}
                             </div>
                           </td>
                         );
@@ -643,13 +722,12 @@ export default function ScheduleManagement() {
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-150
                   ${shift === opt.value ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-[#283593]'}
                   focus:outline-none`}
-                onClick={() => setShift(opt.value as 'morning' | 'afternoon')}
+                onClick={() => setShift(opt.value as 'all' | 'morning' | 'afternoon')}
               >
                 {opt.label}
               </button>
             ))}
           </div>
-
         </div>
         {/* Schedule Grid */}
         <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
@@ -668,59 +746,123 @@ export default function ScheduleManagement() {
             </div>
           </div>
           <div className="grid grid-cols-7 border-t border-gray-100">
-            {weekData[weekIndex].days.map((day, idx) => (
-              <div key={idx} className="min-h-[120px] border-r border-gray-100 last:border-r-0 px-2 py-2">
-                <div className="text-center mb-2">
-                  <div className="font-medium text-[#283593]">{day.dayName}</div>
-                  <div className="text-xs text-gray-400">{day.dateString}</div>
-                </div>
-                <div className="flex flex-col gap-3">
-                  {(() => {
-                    // Lọc theo ca sáng/chiều và status
-                    const filtered = day.appointments.filter(app => {
-                      const hour = getHourFromTimeString(app.time);
-                      if (shift === 'morning' && !(hour >= 8 && hour < 12)) return false;
-                      if (shift === 'afternoon' && !(hour >= 13 && hour < 17)) return false;
-                      if (selectedStatus !== 'Tất cả' && app.status !== selectedStatus) return false;
-                      return true;
-                    });
-                    if (filtered.length === 0) {
-                      return <div className="text-gray-300 text-center text-sm min-h-[80px] flex items-center justify-center">Không có lịch hẹn</div>;
-                    }
-                    return filtered.map((appointment) => (
-                      <div key={appointment.id} className={`rounded-xl p-3 shadow-sm border border-gray-100 bg-${
-                        appointment.appointmentType === "Khám khẩn cấp" ? "red-50" :
-                        appointment.appointmentType === "Khám trực tuyến" ? "blue-50" :
-                        appointment.status === "đang tiến hành" ? "yellow-50" :
-                        appointment.status === "hoàn thành" ? "green-50" : "yellow-50"
-                      } flex flex-col gap-2 relative`}> 
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1 text-[#283593] text-sm font-medium">
-                            <Clock size={16} className="mr-1 text-gray-400" />
-                            <span>{appointment.time}</span>
-                          </div>
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal size={16} />
-                          </button>
-                        </div>
-                        <div className="flex items-center mb-1">
-                          <img src={appointment.avatar} alt={appointment.name} className="w-8 h-8 rounded-full mr-2 border-2 border-white" />
-                          <div className="min-w-0">
-                            <div className="font-medium text-[#283593] truncate max-w-[120px]">{appointment.name}</div>
-                            <div className="text-xs text-gray-500 truncate max-w-[100px]">{appointment.status}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className={`text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 truncate max-w-[90px] whitespace-nowrap overflow-hidden`}>
-                            {appointment.appointmentType}
-                          </span>
-                        </div>
+            {weekData[weekIndex].days.map((day, idx) => {
+              // Lấy slot time của ngày này
+              let filteredTimeSlots = timeSlots;
+              if (shift === 'morning') filteredTimeSlots = ["08:00", "09:00", "10:00", "11:00"];
+              else if (shift === 'afternoon') filteredTimeSlots = ["13:00", "14:00", "15:00", "16:00", "17:00"];
+              // Lấy slot theo ca
+              const daySlots = filteredTimeSlots.map(slot => {
+                // Tìm slot time object đúng ngày/giờ
+                const slotTimeObj = slotTimes.find(st => {
+                  const stDate = new Date(st.start_time);
+                  return (
+                    stDate.getFullYear() === day.date.getFullYear() &&
+                    stDate.getMonth() === day.date.getMonth() &&
+                    stDate.getDate() === day.date.getDate() &&
+                    stDate.getHours() === parseInt(slot)
+                  );
+                });
+                // Tìm appointment cho slot này
+                const appointment = appointments.find(app => {
+                  const appDate = getAppointmentStartTime(app);
+                  if (!appDate) return false;
+                  return (
+                    appDate.getFullYear() === day.date.getFullYear() &&
+                    appDate.getMonth() === day.date.getMonth() &&
+                    appDate.getDate() === day.date.getDate() &&
+                    appDate.getHours() === parseInt(slot)
+                  );
+                });
+                return { slot, slotTimeObj, appointment };
+              });
+              // Lọc theo trạng thái
+              let filteredSlots = daySlots;
+              if (selectedStatus === 'Chưa có người đặt') {
+                filteredSlots = daySlots.filter(s => s.slotTimeObj && !s.appointment);
+              } else if (selectedStatus !== 'Tất cả') {
+                filteredSlots = daySlots.filter(s => s.appointment && s.appointment.status === selectedStatus);
+              }
+              // Nếu không có lịch nào thì hiện dòng "không có lịch"
+              return (
+                <div key={idx} className="min-h-[120px] border-r border-gray-100 last:border-r-0 px-2 py-2">
+                  <div className="text-center mb-2">
+                    <div className="font-medium text-[#283593]">{day.dayName}</div>
+                    <div className="text-xs text-gray-400">{day.dateString}</div>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {filteredSlots.length === 0 ? (
+                      <div className="rounded-xl p-3 bg-gray-50 text-gray-400 text-center min-h-[120px] flex items-center justify-center border border-dashed border-gray-200">
+                        Không có lịch
                       </div>
-                    ));
-                  })()}
+                    ) : (
+                      filteredSlots.map(({ slot, slotTimeObj, appointment }, slotIdx) => {
+                        if (appointment) {
+                          // Render như cũ
+                          const date = getAppointmentStartTime(appointment);
+                          if (!date) return null;
+                          const endDate = new Date(date.getTime() + 60 * 60 * 1000);
+                          const hour = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0') + ' - ' + endDate.getHours().toString().padStart(2, '0') + ':' + endDate.getMinutes().toString().padStart(2, '0');
+                          const customerName = appointment.user_id?.fullName
+                            || appointment.user_id?.name
+                            || appointment.user_id?.username
+                            || appointment.user_id?.displayName
+                            || 'Không rõ tên';
+                          return (
+                            <div key={slot + slotIdx} className={`rounded-xl p-3 shadow-sm border border-gray-100 bg-
+                              ${appointment.service_id?.name === "Khám khẩn cấp" ? "red-50" :
+                                appointment.service_id?.name === "Khám trực tuyến" ? "blue-50" :
+                                appointment.status === "đang tiến hành" ? "yellow-50" :
+                                appointment.status === "hoàn thành" ? "green-50" : "yellow-50"
+                              } flex flex-col gap-2 relative min-h-[120px] flex-1`}>
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-1 text-[#283593] text-sm font-medium">
+                                  <Clock size={16} className="mr-1 text-gray-400" />
+                                  <span>{hour}</span>
+                                </div>
+                                <button className="text-gray-400 hover:text-gray-600">
+                                  <MoreHorizontal size={16} />
+                                </button>
+                              </div>
+                              <div className="flex items-center mb-1">
+                                <img src={appointment.user_id?.photoUrl || 'https://i.pravatar.cc/150?img=3'} alt={customerName} className="w-8 h-8 rounded-full mr-2 border-2 border-white" />
+                                <div className="min-w-0">
+                                  <div className="font-medium text-[#283593] truncate max-w-[120px]">{customerName}</div>
+                                  <div className="text-xs text-gray-500 truncate max-w-[100px]">{appointment.status}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className={`text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 truncate max-w-[180px] whitespace-nowrap overflow-hidden`}>
+                                  {appointment.service_id?.name || ''}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        } else if (slotTimeObj) {
+                          // Slot chưa có người đặt
+                          const stDate = new Date(slotTimeObj.start_time);
+                          const endDate = new Date(stDate.getTime() + 60 * 60 * 1000);
+                          const hour = stDate.getHours().toString().padStart(2, '0') + ':' + stDate.getMinutes().toString().padStart(2, '0') + ' - ' + endDate.getHours().toString().padStart(2, '0') + ':' + endDate.getMinutes().toString().padStart(2, '0');
+                          return (
+                            <div key={slot + slotIdx} className="rounded-xl p-3 shadow-sm border border-green-200 bg-green-50 text-[#283593] flex flex-col min-h-[120px] flex-1">
+                              <div className="flex items-center gap-1 text-[#283593] text-sm font-medium mb-1">
+                                <Clock size={16} className="mr-1 text-green-400" />
+                                <span>{hour}</span>
+                              </div>
+                              <div className="flex-1 flex items-center justify-center">
+                                <span className="text-sm font-medium text-[#283593] text-center">Chưa có người</span>
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          return null;
+                        }
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
