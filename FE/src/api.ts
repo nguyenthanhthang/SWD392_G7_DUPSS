@@ -153,7 +153,7 @@ export const updateStatusSlotTimeApi = async (id: string, status: string) => {
 export const deleteSlotTimeApi = async (id: string) => {
   const res = await api.delete(`/slot-times/${id}`);
   return res.data;
-};
+}; 
 
 // Event APIs
 export const getAllEventsApi = async (status?: string) => {
@@ -514,6 +514,11 @@ export const deleteCommentApi = async (blogId: string, commentId: string, userId
 
 export const getAppointmentByConsultantIdApi = async (consultantId: string) => {
   const res = await api.get(`/appointments/consultant/${consultantId}`);
+  return res.data;
+};
+
+export const getServiceByIdApi = async (id: string) => {
+  const res = await api.get(`/services/${id}`);
   return res.data;
 };
 

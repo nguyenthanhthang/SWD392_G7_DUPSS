@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi } from '../api';
+import { getAllConsultantsApi, getAllSlotTimeApi } from '../api';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FaUserTie, FaEnvelope, FaCalendarAlt, FaSearch } from 'react-icons/fa';
@@ -25,8 +25,16 @@ interface Consultant {
   accountId: User;  // This comes from the populated field
 }
 
+interface SlotTime {
+  _id: string;
+  consultant_id: string;
+  status: 'available' | 'booked' | 'cancelled' | 'deleted';
+  // ... các trường khác nếu cần
+}
+
 function ConsultingPage() {
   const [consultants, setConsultants] = useState<Consultant[]>([]);
+  const [featuredConsultants, setFeaturedConsultants] = useState<Consultant[]>([]); // Top 3 by booked slot
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -39,29 +47,42 @@ function ConsultingPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const fetchConsultants = async () => {
+    const fetchConsultantsAndSlots = async () => {
       try {
         setLoading(true);
-        const data = await getAllConsultantsApi();
-        setConsultants(data);
+        const [consultantData, slotTimeData] = await Promise.all([
+          getAllConsultantsApi(),
+          getAllSlotTimeApi(),
+        ]);
+        setConsultants(consultantData);
+        // Đếm số slot booked cho từng consultant
+        const bookedCountMap: Record<string, number> = {};
+        (slotTimeData as SlotTime[]).forEach((slot) => {
+          if (slot.status === 'booked' && slot.consultant_id) {
+            bookedCountMap[slot.consultant_id] = (bookedCountMap[slot.consultant_id] || 0) + 1;
+          }
+        });
+        // Sắp xếp consultant theo số slot booked giảm dần
+        const sortedConsultants = [...consultantData].sort((a, b) => {
+          const countA = bookedCountMap[a._id] || 0;
+          const countB = bookedCountMap[b._id] || 0;
+          return countB - countA;
+        });
+        setFeaturedConsultants(sortedConsultants.slice(0, 3));
         setError(null);
       } catch (err) {
         setError('Không thể tải danh sách chuyên gia. Vui lòng thử lại sau.');
-        console.error('Error fetching consultants:', err);
+        console.error('Error fetching consultants or slot times:', err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchConsultants();
+    fetchConsultantsAndSlots();
   }, []);
 
   // Phân trang
   const totalPage = Math.ceil(consultants.length / pageSize);
   const pagedConsultants = consultants.slice((page - 1) * pageSize, page * pageSize);
-
-  // Consultant tiêu biểu (top 3)
-  const featuredConsultants = consultants.slice(0, 3);
 
   // Lọc consultant theo searchTerm
   const filteredConsultants = pagedConsultants.filter(c =>
@@ -116,27 +137,29 @@ function ConsultingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
-                className="bg-white rounded-3xl border border-[#DBE8FA] shadow p-9 flex flex-col items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
+                className="bg-white rounded-3xl border border-[#DBE8FA] shadow p-9 flex flex-col h-full items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
               >
-                <img 
-                  src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'} 
-                  alt={consultant.accountId.fullName || 'Chuyên gia'} 
-                  className="w-24 h-24 rounded-full object-cover border-4 border-[#DBE8FA] shadow mb-6" 
-                />
-                <h3 className="text-2xl font-bold text-[#283593] mb-1 text-center">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
-                <div className="flex items-center gap-2 text-[15px] font-medium text-[#5C6BC0] mb-2 text-center">
-                  <FaUserTie className="inline-block text-[#5C6BC0] text-base" />
-                  <span>Chuyên gia tư vấn</span>
-                </div>
-                <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
-                <div className="flex items-center gap-2 text-gray-400 text-xs mb-6 text-center">
-                  <FaEnvelope className="inline-block text-gray-400 text-sm" />
-                  <span>Liên hệ: {consultant.accountId.email || 'Không có email'}</span>
+                <div className="flex flex-col flex-grow items-center w-full">
+                  <img 
+                    src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'} 
+                    alt={consultant.accountId.fullName || 'Chuyên gia'} 
+                    className="w-24 h-24 rounded-full object-cover border-4 border-[#DBE8FA] shadow mb-6" 
+                  />
+                  <h3 className="text-2xl font-bold text-[#283593] mb-1 text-center">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
+                  <div className="flex items-center gap-2 text-[15px] font-medium text-[#5C6BC0] mb-2 text-center">
+                    <FaUserTie className="inline-block text-[#5C6BC0] text-base" />
+                    <span>Chuyên gia tư vấn</span>
+                  </div>
+                  <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
+                  <div className="mt-auto w-full flex items-center gap-2 text-gray-400 text-xs text-center justify-center">
+                    <FaEnvelope className="inline-block text-gray-400 text-sm" />
+                    <span>Liên hệ: {consultant.accountId.email || 'Không có email'}</span>
+                  </div>
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.98 }}
-                  className="mt-2 px-8 py-3 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
+                  className="mt-6 px-8 py-3 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
                   onClick={() => navigate(`/consultant/${consultant._id}`)}
                 >
                   <FaCalendarAlt className="inline-block text-white text-lg mb-0.5" />
@@ -144,7 +167,7 @@ function ConsultingPage() {
                 </motion.button>
               </motion.div>
             ) : (
-              <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-xl p-8 flex flex-col items-center">
+              <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-xl p-8 flex flex-col items-center h-full">
                 <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
               </div>
             )
@@ -187,27 +210,29 @@ function ConsultingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
-                  className="bg-white rounded-2xl border border-[#DBE8FA] shadow p-7 flex flex-col items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
-                >
-                  <img
-                    src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'}
-                    alt={consultant.accountId.fullName || 'Chuyên gia'}
-                    className="w-20 h-20 rounded-full object-cover border-4 border-[#DBE8FA] shadow mb-4"
-                  />
-                  <h3 className="text-lg font-bold text-[#283593] mb-1 text-center">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
-                  <div className="flex items-center gap-2 text-[14px] font-medium text-[#5C6BC0] mb-2 text-center">
-                    <FaUserTie className="inline-block text-[#5C6BC0] text-base" />
-                    <span>Chuyên gia tư vấn</span>
-                  </div>
-                  <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
-                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-4 text-center">
-                    <FaEnvelope className="inline-block text-gray-400 text-sm" />
-                    <span>{consultant.accountId.email || 'Không có email'}</span>
+                  className="bg-white rounded-2xl border border-[#DBE8FA] shadow p-7 flex flex-col h-full items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
+                > 
+                  <div className="flex flex-col flex-grow items-center w-full">
+                    <img
+                      src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'}
+                      alt={consultant.accountId.fullName || 'Chuyên gia'}
+                      className="w-20 h-20 rounded-full object-cover border-4 border-[#DBE8FA] shadow mb-4"
+                    />
+                    <h3 className="text-lg font-bold text-[#283593] mb-1 text-center">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
+                    <div className="flex items-center gap-2 text-[14px] font-medium text-[#5C6BC0] mb-2 text-center">
+                      <FaUserTie className="inline-block text-[#5C6BC0] text-base" />
+                      <span>Chuyên gia tư vấn</span>
+                    </div>
+                    <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
+                    <div className="mt-auto w-full flex items-center gap-2 text-gray-400 text-xs text-center justify-center">
+                      <FaEnvelope className="inline-block text-gray-400 text-sm" />
+                      <span>{consultant.accountId.email || 'Không có email'}</span>
+                    </div>
                   </div>
                   <motion.button
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.98 }}
-                    className="mt-2 px-7 py-2.5 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
+                    className="mt-6 px-7 py-2.5 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
                     onClick={() => navigate(`/consultant/${consultant._id}`)}
                   >
                     <FaCalendarAlt className="inline-block text-white text-lg mb-0.5" />
@@ -215,7 +240,7 @@ function ConsultingPage() {
                   </motion.button>
                 </motion.div>
               ) : (
-                <div key={consultant._id} className="bg-red-100 rounded-2xl shadow p-6 flex flex-col items-center">
+                <div key={consultant._id} className="bg-red-100 rounded-2xl shadow p-6 flex flex-col items-center h-full">
                   <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
                 </div>
               )
