@@ -58,6 +58,15 @@ const Service: React.FC = () => {
   const totalPages = Math.ceil(services.length / rowsPerPage);
   const paginatedServices = services.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
+  // Thêm state lưu lỗi cho từng trường
+  const [errors, setErrors] = useState({
+    name: '',
+    description: '',
+    price: '',
+    image: '',
+    backend: ''
+  });
+
   useEffect(() => {
     fetchServices();
   }, []);
@@ -87,18 +96,31 @@ const Service: React.FC = () => {
       const formData = new FormData();
       formData.append('image', file);
 
+      // Log trước khi upload
+      console.log('Đang upload ảnh...');
+
       const response = await api.post('/uploads/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      setFormData(prev => ({
-        ...prev,
-        image: response.data.imageUrl
-      }));
-      
-      toast.success('Tải ảnh lên thành công!');
+      // Log kết quả upload
+      console.log('Kết quả upload:', response.data);
+
+      if (response.data && response.data.imageUrl) {
+        setFormData(prev => ({
+          ...prev,
+          image: response.data.imageUrl
+        }));
+        
+        // Reset lỗi image nếu có
+        setErrors(prev => ({...prev, image: ''}));
+        
+        toast.success('Tải ảnh lên thành công!');
+      } else {
+        toast.error('Không nhận được URL ảnh từ server!');
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Có lỗi xảy ra khi tải ảnh lên');
@@ -119,7 +141,11 @@ const Service: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/services');
-      setServices(response.data);
+      // Sắp xếp dịch vụ từ mới nhất đến cũ nhất dựa trên createdAt
+      const sortedServices = response.data.sort((a: IService, b: IService) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      setServices(sortedServices);
       setError(null);
     } catch (err) {
       setError('Có lỗi xảy ra khi tải danh sách dịch vụ');
@@ -155,6 +181,28 @@ const Service: React.FC = () => {
       ...prev,
       [name]: name === 'price' ? Number(value) : value
     }));
+    
+    // Validation khi người dùng đang nhập
+    if (name === 'name' && typeof value === 'string') {
+      if (!value.trim()) {
+        setErrors(prev => ({ ...prev, name: 'Vui lòng nhập tên dịch vụ!' }));
+      } else {
+        setErrors(prev => ({ ...prev, name: '' }));
+      }
+    }
+    
+    if (name === 'description' && typeof value === 'string') {
+      if (!value.trim()) {
+        setErrors(prev => ({ ...prev, description: 'Vui lòng nhập mô tả dịch vụ!' }));
+      } else {
+        setErrors(prev => ({ ...prev, description: '' }));
+      }
+    }
+    
+    if (name === 'price') {
+      // Đã bỏ validation giá dịch vụ
+      setErrors(prev => ({ ...prev, price: '' }));
+    }
   };
 
   // Open create modal
@@ -184,20 +232,74 @@ const Service: React.FC = () => {
   // Handle create service
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Bắt đầu xử lý tạo dịch vụ');
     
-    // Validate form
-    if (!formData.name || !formData.description || formData.price <= 0 || !formData.image) {
-      toast.error('Vui lòng điền đầy đủ thông tin!');
+    // Kiểm tra lỗi hiện tại
+    const newErrors = { ...errors };
+    let hasError = false;
+    
+    // Kiểm tra các trường chưa được validate trong quá trình nhập
+    if (!formData.name.trim()) {
+      newErrors.name = 'Vui lòng nhập tên dịch vụ!';
+      hasError = true;
+    }
+    
+    if (!formData.description.trim()) {
+      newErrors.description = 'Vui lòng nhập mô tả dịch vụ!';
+      hasError = true;
+    }
+    
+    // Đã bỏ validation giá dịch vụ
+    
+    if (!formData.image) {
+      newErrors.image = 'Vui lòng tải lên hình ảnh cho dịch vụ!';
+      hasError = true;
+    }
+    
+    // Kiểm tra xem có lỗi nào không
+    hasError = Object.values(newErrors).some(error => error !== '');
+    
+    setErrors(newErrors);
+    console.log('Form data:', formData);
+    console.log('Validation errors:', newErrors);
+    
+    if (hasError) {
+      console.log('Có lỗi validation, không submit');
       return;
     }
-
+    
     try {
-      const response = await api.post('/services', formData);
+      // Tạo đối tượng dữ liệu để gửi đi
+      const serviceData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        price: Number(formData.price),
+        image: formData.image,
+        status: formData.status
+      };
+      
+      console.log('Gửi dữ liệu lên API:', serviceData);
+      
+      // Gọi API tạo dịch vụ
+      const response = await api.post('/services', serviceData);
+      console.log('Kết quả từ API:', response.data);
+      
+      // Cập nhật danh sách dịch vụ
       setServices(prev => [...prev, response.data]);
+      
+      // Đóng modal và thông báo thành công
       handleCloseCreateModal();
       toast.success('Tạo dịch vụ thành công!');
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi tạo dịch vụ!');
+      
+      // Tải lại danh sách dịch vụ
+      fetchServices();
+    } catch (error: any) {
+      console.error('Lỗi khi tạo dịch vụ:', error);
+      
+      // Xử lý lỗi từ API
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi tạo dịch vụ!';
+      setErrors(prev => ({ ...prev, backend: errorMessage }));
+      toast.error(errorMessage);
     }
   };
 
@@ -233,15 +335,26 @@ const Service: React.FC = () => {
     if (!selectedService) return;
 
     try {
+      console.log('Dữ liệu gửi đi:', formData);
       const response = await api.put(`/services/${selectedService._id}`, formData);
-      setServices(prev =>
-        prev.map(service =>
-          service._id === selectedService._id ? response.data : service
-        )
-      );
+      console.log('Kết quả từ API:', response.data);
+      
+      // Cập nhật danh sách dịch vụ với dữ liệu từ response
+      if (response.data && response.data.data) {
+        setServices(prev =>
+          prev.map(service =>
+            service._id === selectedService._id ? response.data.data : service
+          )
+        );
+      } else {
+        // Tải lại danh sách dịch vụ nếu không có dữ liệu trả về
+        fetchServices();
+      }
+      
       handleCloseUpdateModal();
       toast.success('Cập nhật dịch vụ thành công!');
     } catch (error) {
+      console.error('Lỗi chi tiết:', error);
       toast.error('Có lỗi xảy ra khi cập nhật dịch vụ!');
     }
   };
@@ -340,7 +453,6 @@ const Service: React.FC = () => {
               <th className="px-4 py-3">Giá</th>
               <th className="px-4 py-3">Hình ảnh</th>
               <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3">Ngày tạo</th>
               <th className="px-4 py-3 rounded-tr-lg">Thao tác</th>
             </tr>
           </thead>
@@ -370,7 +482,6 @@ const Service: React.FC = () => {
                     {service.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
                   </span>
                 </td>
-                <td className="px-4 py-3">{formatDate(service.createdAt)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center space-x-3">
                     <Tooltip text="Cập nhật">
@@ -454,12 +565,13 @@ const Service: React.FC = () => {
       {/* Modal Tạo dịch vụ mới */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg p-6 w-full max-w-xl shadow-lg">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Thêm dịch vụ mới</h2>
+              <h2 className="text-xl font-semibold text-indigo-700">Thêm dịch vụ mới</h2>
               <button
+                type="button"
                 onClick={handleCloseCreateModal}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -467,87 +579,109 @@ const Service: React.FC = () => {
               </button>
             </div>
 
+            {errors.backend && (
+              <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 rounded">
+                <div className="flex">
+                  <svg className="h-4 w-4 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>{errors.backend}</span>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleCreateService} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tên dịch vụ</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Tên dịch vụ</label>
+                  <input
+                    id="name"
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    onBlur={handleInputChange}
+                    placeholder="Nhập tên dịch vụ"
+                    className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                  />
+                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                </div>
+
+                <div>
+                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Giá (VNĐ)</label>
+                  <input
+                    id="price"
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    onBlur={handleInputChange}
+                    step="1000"
+                    placeholder="Nhập giá dịch vụ"
+                    className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                  />
+                  {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
                 <textarea
+                  id="description"
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
+                  onBlur={handleInputChange}
                   rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
+                  placeholder="Nhập mô tả chi tiết về dịch vụ"
+                  className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Giá (VNĐ)</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="1000"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
+                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh</label>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 mb-2">
                   <button
                     type="button"
                     onClick={handleSelectImage}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
+                    className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors flex items-center text-sm"
                     disabled={uploading}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     {uploading ? 'Đang tải lên...' : 'Chọn ảnh'}
                   </button>
                   {formData.image && (
-                    <span className="text-sm text-green-600"></span>
+                    <span className="text-sm text-green-600 flex items-center">
+                      <svg className="h-4 w-4 text-green-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Đã tải ảnh lên
+                    </span>
                   )}
                 </div>
                 {formData.image && (
-                  <div className="mt-3">
+                  <div className="mt-2 border rounded overflow-hidden shadow-sm">
                     <img 
                       src={formData.image}
                       alt="Preview"
-                      className="w-full h-40 object-cover rounded-md"
+                      className="w-full h-40 object-cover"
                     />
                   </div>
                 )}
-                <input
-                  type="hidden"
-                  name="image"
-                  value={formData.image}
-                  required
-                />
+                {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
                 <select
+                  id="status"
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
@@ -558,16 +692,18 @@ const Service: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCloseCreateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
-                  disabled={!formData.image || uploading}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
+                    uploading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                  disabled={uploading}
                 >
-                  Tạo dịch vụ
+                  {uploading ? 'Đang tải lên...' : 'Tạo dịch vụ'}
                 </button>
               </div>
             </form>
@@ -578,12 +714,12 @@ const Service: React.FC = () => {
       {/* Modal Cập nhật dịch vụ */}
       {isUpdateModalOpen && selectedService && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg p-6 w-full max-w-xl shadow-lg">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Cập nhật dịch vụ</h2>
+              <h2 className="text-xl font-semibold text-indigo-700">Cập nhật dịch vụ</h2>
               <button
                 onClick={handleCloseUpdateModal}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -592,68 +728,80 @@ const Service: React.FC = () => {
             </div>
 
             <form onSubmit={handleUpdateService} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tên dịch vụ</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tên dịch vụ</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    onBlur={handleInputChange}
+                    placeholder="Nhập tên dịch vụ"
+                    className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Giá (VNĐ)</label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    onBlur={handleInputChange}
+                    step="1000"
+                    placeholder="Nhập giá dịch vụ"
+                    className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
+                  onBlur={handleInputChange}
                   rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Giá (VNĐ)</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="1000"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  placeholder="Nhập mô tả chi tiết về dịch vụ"
+                  className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh</label>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 mb-2">
                   <button
                     type="button"
                     onClick={handleSelectImage}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
+                    className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors flex items-center text-sm"
                     disabled={uploading}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     {uploading ? 'Đang tải lên...' : 'Chọn ảnh'}
                   </button>
                   {formData.image && (
-                    <span className="text-sm text-green-600"></span>
+                    <span className="text-sm text-green-600 flex items-center">
+                      <svg className="h-4 w-4 text-green-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Đã tải ảnh lên
+                    </span>
                   )}
                 </div>
                 {formData.image && (
-                  <div className="mt-3">
+                  <div className="mt-2 border rounded overflow-hidden shadow-sm">
                     <img 
                       src={formData.image}
                       alt="Preview"
-                      className="w-full h-40 object-cover rounded-md"
+                      className="w-full h-40 object-cover"
                     />
                   </div>
                 )}
@@ -666,12 +814,12 @@ const Service: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                 >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
@@ -682,13 +830,13 @@ const Service: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCloseUpdateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
                   disabled={!formData.image || uploading}
                 >
                   Cập nhật
@@ -702,12 +850,12 @@ const Service: React.FC = () => {
       {/* Modal Xác nhận xóa */}
       {isDeleteModalOpen && selectedService && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Xác nhận xóa</h2>
+              <h2 className="text-xl font-semibold text-red-600">Xác nhận xóa</h2>
               <button
                 onClick={handleCloseDeleteModal}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -715,22 +863,32 @@ const Service: React.FC = () => {
               </button>
             </div>
 
-            <div className="mb-6">
-              <p>Bạn có chắc chắn muốn xóa dịch vụ "{selectedService.name}"?</p>
-              <p className="text-sm text-gray-500 mt-2">Hành động này không thể hoàn tác.</p>
+            <div className="mb-6 p-3 bg-red-50 border-l-4 border-red-500 rounded">
+              <div className="flex items-start">
+                <svg className="h-5 w-5 text-red-600 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <p className="text-base font-medium text-gray-800">Bạn có chắc chắn muốn xóa dịch vụ "<span className="font-bold">{selectedService.name}</span>"?</p>
+                  <p className="text-sm text-gray-600 mt-1">Hành động này không thể hoàn tác.</p>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end space-x-3">
               <button
                 onClick={handleCloseDeleteModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
                 Hủy
               </button>
               <button
                 onClick={handleDeleteService}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors flex items-center"
               >
+                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
                 Xóa
               </button>
             </div>

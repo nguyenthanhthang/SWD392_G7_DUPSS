@@ -1,28 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Search, Eye, X, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, Search, Eye, X, CheckCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAppointmentByUserIdApi } from '../api';
+import { formatInTimeZone } from 'date-fns-tz';
 
 const AppointmentsPage = () => {
   const navigate = useNavigate();
   interface Appointment {
     _id: string;
-    consultant_id?: { fullName?: string; photoUrl?: string };
-    service_id?: { name?: string };
+    consultant_id?: { 
+      _id?: string;
+      accountId?: {
+        fullName?: string;
+        photoUrl?: string;
+        email?: string;
+      };
+      introduction?: string;
+    };
+    service_id?: { name?: string; price?: number };
     slotTime_id?: { start_time?: string; end_time?: string };
     dateBooking?: string;
     type?: string;
     location?: string;
     status?: string;
     reason?: string;
+    note?: string;
   }
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDate, setFilterDate] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,275 +56,289 @@ const AppointmentsPage = () => {
 
   const filteredAppointments = appointments.filter((apt: Appointment) => {
     const matchesStatus = filterStatus === 'all' || apt.status === filterStatus;
-    const matchesSearch = (apt.consultant_id?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (apt.consultant_id?.accountId?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (apt.service_id?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
+  // Format date from ISO string to readable format
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      return formatInTimeZone(new Date(dateString), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm');
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  // Get status display information (text, color, bg)
+  const getStatusInfo = (status?: string) => {
+    switch (status) {
+      case 'confirmed':
+        return { text: 'Đã xác nhận', color: 'text-sky-700', bg: 'bg-sky-50', border: 'border-sky-200' };
+      case 'completed':
+        return { text: 'Đã hoàn thành', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' };
+      case 'cancelled':
+        return { text: 'Đã hủy', color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' };
+      case 'pending':
+      default:
+        return { text: 'Chờ xác nhận', color: 'text-sky-700', bg: 'bg-sky-50', border: 'border-sky-200' };
+    }
+  };
+
+  // Get gradient background for cards based on status
+  const getCardGradient = (status?: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'from-sky-50 via-cyan-50 to-white hover:from-sky-100';
+      case 'completed':
+        return 'from-blue-50 via-sky-50 to-white hover:from-blue-100';
+      case 'cancelled':
+        return 'from-red-50 via-pink-50 to-white hover:from-red-100';
+      case 'pending':
+      default:
+        return 'from-sky-50 via-cyan-50 to-white hover:from-sky-100';
+    }
+  };
+
+  // Get title based on current filter
+  const getStatusTitle = () => {
+    switch (filterStatus) {
+      case 'confirmed':
+        return 'Lịch hẹn đã xác nhận';
+      case 'completed':
+        return 'Lịch hẹn đã hoàn thành';
+      case 'cancelled':
+        return 'Lịch hẹn đã hủy';
+      case 'pending':
+        return 'Lịch hẹn chờ xác nhận';
+      default:
+        return 'Tất cả lịch hẹn';
+    }
+  };
+
   return (
-    <div className="bg-gray-50 w-full">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Appointments</h1>
-            <p className="text-gray-600 mt-1">Manage your medical consultations</p>
-          </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+    <div className="p-7">
+      <div className="font-semibold text-gray-700 mb-4 text-lg">Lịch hẹn của bạn</div>
+      
+      {/* Filter và Search */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+        <select 
+          value={filterStatus} 
+          onChange={e => setFilterStatus(e.target.value)} 
+          className="rounded-lg border border-sky-100 px-3 py-2 text-sm focus:ring-sky-500 focus:border-sky-500"
+        >
+          <option value="all">Tất cả trạng thái</option>
+          <option value="pending">Chờ xác nhận</option>
+          <option value="confirmed">Đã xác nhận</option>
+          <option value="completed">Đã hoàn thành</option>
+          <option value="cancelled">Đã hủy</option>
+        </select>
+        
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          placeholder="Tìm theo tên chuyên gia hoặc dịch vụ..."
+          className="rounded-lg border border-sky-100 px-3 py-2 text-sm focus:ring-sky-500 focus:border-sky-500 w-full md:w-64"
+        />
+        
+        <div className="ml-auto">
+          <button
             onClick={() => navigate('/service')}
+            className="bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            Book New Appointment
+            Đặt lịch mới
           </button>
         </div>
       </div>
 
-      <div className="px-6 py-6">
-        
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6 ">
-          {/* Confirmed */}
-          <div
-            className={`bg-white rounded-lg p-4 shadow-sm border flex flex-col items-center justify-center transition-all min-w-[200px] max-w-[240px] h-25 mx-auto cursor-pointer ${filterStatus === 'confirmed' ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200'}`}
-            onClick={() => setFilterStatus('confirmed')}
-          >
-            <div className="p-2 bg-green-100 rounded-lg mb-1 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <p className="text-sm text-gray-600 mb-0.5">Confirmed</p>
-            <p className="text-2xl font-bold text-gray-900">{appointments.filter(a => a.status === 'confirmed').length}</p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {/* Pending */}
+        <div
+          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+          onClick={() => setFilterStatus('pending')}
+        >
+          <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+            <Clock className="w-5 h-5 text-sky-600" />
           </div>
-          {/* Completed */}
-          <div
-            className={`bg-white rounded-lg p-4 shadow-sm border flex flex-col items-center justify-center transition-all min-w-[200px] max-w-[240px] h-25 mx-auto cursor-pointer ${filterStatus === 'completed' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}`}
-            onClick={() => setFilterStatus('completed')}
-          >
-            <div className="p-2 bg-blue-100 rounded-lg mb-1 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-blue-600" />
-            </div>
-            <p className="text-sm text-gray-600 mb-0.5">Completed</p>
-            <p className="text-2xl font-bold text-gray-900">{appointments.filter(a => a.status === 'completed').length}</p>
-          </div>
-          {/* Cancelled */}
-          <div
-            className={`bg-white rounded-lg p-4 shadow-sm border flex flex-col items-center justify-center transition-all min-w-[200px] max-w-[240px] h-25 mx-auto cursor-pointer ${filterStatus === 'cancelled' ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-200'}`}
-            onClick={() => setFilterStatus('cancelled')}
-          >
-            <div className="p-2 bg-red-100 rounded-lg mb-1 flex items-center justify-center">
-              <X className="w-6 h-6 text-red-600" />
-            </div>
-            <p className="text-sm text-gray-600 mb-0.5">Cancelled</p>
-            <p className="text-2xl font-bold text-gray-900">{appointments.filter(a => a.status === 'cancelled').length}</p>
-          </div>
-          {/* Pending */}
-          <div
-            className={`bg-white rounded-lg p-4 shadow-sm border flex flex-col items-center justify-center transition-all min-w-[200px] max-w-[240px] h-25 mx-auto cursor-pointer ${filterStatus === 'pending' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-gray-200'}`}
-            onClick={() => setFilterStatus('pending')}
-          >
-            <div className="p-2 bg-yellow-100 rounded-lg mb-1 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600" />
-            </div>
-            <p className="text-sm text-gray-600 mb-0.5">Pending</p>
-            <p className="text-2xl font-bold text-gray-900">{appointments.filter(a => a.status === 'pending').length}</p>
-          </div>
+          <p className="text-sm text-gray-600 mb-1">Chờ xác nhận</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => a.status === 'pending').length}</p>
         </div>
-
-        {/* Filters & Search */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search by doctor or specialty..."
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <select
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="pending">Pending</option>
-            </select>
-
-            {/* Date Filter */}
-            <select
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="upcoming">Upcoming</option>
-            </select>
-
         
+        {/* Confirmed */}
+        <div
+          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'confirmed' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+          onClick={() => setFilterStatus('confirmed')}
+        >
+          <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+            <CheckCircle className="w-5 h-5 text-sky-600" />
           </div>
+          <p className="text-sm text-gray-600 mb-1">Đã xác nhận</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => a.status === 'confirmed').length}</p>
         </div>
-
-        {/* Appointments List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Appointments ({filteredAppointments.length})
-            </h2>
+        
+        {/* Completed */}
+        <div
+          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'completed' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+          onClick={() => setFilterStatus('completed')}
+        >
+          <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+            <CheckCircle className="w-5 h-5 text-sky-600" />
           </div>
-          <div className="divide-y divide-gray-200">
-            {loading ? (
-              <div className="p-8 text-center text-gray-500">Đang tải dữ liệu...</div>
-            ) : filteredAppointments.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">Bạn chưa có lịch hẹn nào.</div>
-            ) : filteredAppointments.map((appointment: Appointment) => (
-              <div
-                key={appointment._id}
-                className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => navigate(`/appointments/${appointment._id}`)}
+          <p className="text-sm text-gray-600 mb-1">Đã hoàn thành</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => a.status === 'completed').length}</p>
+        </div>
+        
+        {/* Cancelled */}
+        <div
+          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'cancelled' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+          onClick={() => setFilterStatus('cancelled')}
+        >
+          <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+            <X className="w-5 h-5 text-sky-600" />
+          </div>
+          <p className="text-sm text-gray-600 mb-1">Đã hủy</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => a.status === 'cancelled').length}</p>
+        </div>
+      </div>
+
+      {/* Danh sách lịch hẹn */}
+      <div>
+        <div className={`font-semibold mb-2 text-sky-700`}>
+          {getStatusTitle()}
+        </div>
+        
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">Đang tải dữ liệu...</div>
+        ) : filteredAppointments.length === 0 ? (
+          <div className="text-gray-500 italic">Không tìm thấy lịch hẹn nào.</div>
+        ) : (
+          <div className="space-y-3">
+            {filteredAppointments.map(appointment => (
+              <div 
+                key={appointment._id} 
+                className={`bg-gradient-to-r ${getCardGradient(appointment.status)} transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm cursor-pointer border border-sky-100`}
+                onClick={() => { setSelectedAppointment(appointment); setShowDetailModal(true); }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
-                      {appointment.consultant_id?.photoUrl ? (
-                        <img src={appointment.consultant_id.photoUrl} alt="avatar" className="w-10 h-10 rounded-full" />
-                      ) : (
-                        <span role="img" aria-label="doctor">👨‍⚕️</span>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{appointment.consultant_id?.fullName || '---'}</h3>
-                      <p className="text-sm text-gray-600">{appointment.service_id?.name || ''}</p>
-                    </div>
+                <div>
+                  <div className="font-medium text-base text-gray-800">
+                    {appointment.service_id?.name || 'Dịch vụ không xác định'}
                   </div>
-                  <div className="flex items-center space-x-6">
-                    <div className="text-right">
-                      <div className="flex items-center text-gray-900 font-medium">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {appointment.dateBooking ? new Date(appointment.dateBooking).toLocaleDateString('vi-VN') : '--'}
-                      </div>
-                      <div className="flex items-center text-gray-600 text-sm mt-1">
-                        <Clock className="w-4 h-4 mr-2" />
-                        {appointment.slotTime_id?.start_time || ''} - {appointment.slotTime_id?.end_time || ''}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center text-gray-600 text-sm">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        {appointment.type || '---'}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1 max-w-32 truncate">
-                        {appointment.location || ''}
-                      </p>
-                    </div>
-                    <div className={`px-3 py-1.5 rounded-full text-xs font-medium border flex items-center`}>
-                      <span className="ml-1.5 capitalize">{appointment.status || ''}</span>
-                    </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    Chuyên gia: {appointment.consultant_id?.accountId?.fullName || 'Không xác định'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-sky-500" />
+                    {formatDate(appointment.dateBooking)}
+                  </div>
+                  <div className={`text-xs ${getStatusInfo(appointment.status).color} font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${getStatusInfo(appointment.status).bg} ${getStatusInfo(appointment.status).border}`}>
+                    {getStatusInfo(appointment.status).text}
                   </div>
                 </div>
-                {appointment.reason && (
-                  <div className="mt-3 ml-16">
-                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-                      <strong>Notes:</strong> {appointment.reason}
-                    </p>
+                <div className="flex items-center">
+                  <div className="text-lg font-semibold text-sky-700">
+                    {appointment.service_id?.price?.toLocaleString('vi-VN')}đ
                   </div>
-                )}
+                  <ChevronRight className="w-5 h-5 text-sky-400 ml-2" />
+                </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {filteredAppointments.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your filters or search terms</p>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              onClick={() => navigate('/service')}
-            >
-              Book Your First Appointment
-            </button>
           </div>
         )}
       </div>
 
-      {/* Action Modal */}
-      {selectedAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Appointment Actions</h3>
-              <button 
-                onClick={() => setSelectedAppointment(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* Modal xem chi tiết lịch hẹn */}
+      {showDetailModal && selectedAppointment && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto relative p-6">
+            <button
+              onClick={() => setShowDetailModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Chi tiết lịch hẹn</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Dịch vụ</div>
+                <div className="font-medium">{selectedAppointment.service_id?.name || 'Không xác định'}</div>
+              </div>
+              
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Chuyên gia</div>
+                <div className="flex items-center gap-3">
+                  {selectedAppointment.consultant_id ? (
+                    <>
+                      <img 
+                        src={selectedAppointment.consultant_id.accountId?.photoUrl || "/avarta.png"} 
+                        alt="avatar" 
+                        className="w-10 h-10 rounded-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "/avarta.png";
+                        }}
+                      />
+                      <div className="font-medium">{selectedAppointment.consultant_id.accountId?.fullName || 'Không xác định'}</div>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                        <span className="text-gray-500">?</span>
+                      </div>
+                      <div className="font-medium">Không xác định</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Thời gian</div>
+                <div className="font-medium">{formatDate(selectedAppointment.dateBooking)}</div>
+              </div>
+              
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Trạng thái</div>
+                <div className={`inline-block px-3 py-1 rounded-full ${getStatusInfo(selectedAppointment.status).bg} ${getStatusInfo(selectedAppointment.status).border}`}>
+                  <span className={`font-medium ${getStatusInfo(selectedAppointment.status).color}`}>
+                    {getStatusInfo(selectedAppointment.status).text}
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Giá dịch vụ</div>
+                <div className="font-medium text-lg text-sky-600">
+                  {selectedAppointment.service_id?.price?.toLocaleString('vi-VN')}đ
+                </div>
+              </div>
+              
+              {selectedAppointment.reason && (
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Lý do tư vấn</div>
+                  <div className="bg-sky-50 p-3 rounded-lg text-gray-700">{selectedAppointment.reason}</div>
+                </div>
+              )}
+              
+              {selectedAppointment.note && (
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Ghi chú</div>
+                  <div className="bg-sky-50 p-3 rounded-lg text-gray-700">{selectedAppointment.note}</div>
+                </div>
+              )}
             </div>
             
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg flex items-center">
-                <Eye className="w-5 h-5 mr-3 text-gray-400" />
-                View Details
-              </button>
-              <button className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg flex items-center">
-                <Calendar className="w-5 h-5 mr-3 text-gray-400" />
-                Reschedule
-              </button>
-              <button className="w-full text-left px-4 py-3 hover:bg-red-50 rounded-lg flex items-center text-red-600">
-                <X className="w-5 h-5 mr-3" />
-                Cancel Appointment
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal xác nhận hủy lịch hẹn */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900">Xác nhận hủy lịch hẹn</h3>
-            <p className="mb-6 text-gray-700">Bạn có chắc chắn muốn hủy lịch hẹn này không?</p>
-            <div className="flex justify-end gap-3">
+            <div className="mt-6 flex justify-end">
               <button
-                className="px-5 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200"
-                onClick={() => setShowCancelModal(false)}
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 bg-sky-100 hover:bg-sky-200 text-sky-700 rounded-lg font-medium"
               >
                 Đóng
               </button>
-              <button
-                className="px-5 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
-                onClick={() => {
-                  setShowCancelModal(false);
-                  setShowSuccessModal(true);
-                  setTimeout(() => setShowSuccessModal(false), 1500);
-                }}
-              >
-                Đồng ý
-              </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal thông báo đã hủy thành công */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm flex flex-col items-center">
-            <svg className="w-12 h-12 text-green-500 mb-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            <h3 className="text-lg font-semibold mb-2 text-gray-900">Đã hủy lịch hẹn thành công!</h3>
           </div>
         </div>
       )}

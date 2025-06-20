@@ -31,10 +31,12 @@ interface Blog {
   image?: string;
   thumbnail?: string;
   topics?: string[];
-  published: boolean;
+  published: 'draft' | 'published' | 'rejected';
+  comments: { userId: string; username: string; content: string; createdAt: string }[];
   createdAt: string;
   updatedAt: string;
   anDanh?: boolean;
+  rejectionReason?: string;
 }
 
 const menuTabs = [
@@ -502,7 +504,11 @@ export default function Profile() {
                   <div className="font-semibold text-gray-700 mb-4 text-lg">Bài viết của bạn</div>
                   {/* Filter */}
                   <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
-                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                    <select 
+                      value={filterStatus} 
+                      onChange={e => setFilterStatus(e.target.value)} 
+                      className="rounded-lg border border-sky-100 px-3 py-2 text-sm focus:ring-sky-500 focus:border-sky-500"
+                    >
                       <option value="all">Tất cả</option>
                       <option value="published">Đã xuất bản</option>
                       <option value="pending">Chưa duyệt</option>
@@ -513,88 +519,113 @@ export default function Profile() {
                       value={filterKeyword}
                       onChange={e => setFilterKeyword(e.target.value)}
                       placeholder="Tìm theo tiêu đề..."
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-cyan-500 focus:border-cyan-500 w-full md:w-64"
+                      className="rounded-lg border border-sky-100 px-3 py-2 text-sm focus:ring-sky-500 focus:border-sky-500 w-full md:w-64"
                     />
                   </div>
-                  {/* Bài viết đã xuất bản */}
-                  <div className="mb-8">
-                    <div className="font-semibold text-green-700 mb-2">Bài viết đã xuất bản</div>
-                    {filteredBlogs.filter(blog => blog.published === 'published').length === 0 ? (
-                      <div className="text-gray-500 italic">Bạn chưa có bài viết nào đã xuất bản.</div>
-                    ) : (
-                      <div className="space-y-3">
-                        {filteredBlogs.filter(blog => blog.published === 'published').map(blog => (
-                          <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
-                            <div>
-                              <div className="font-medium text-base text-gray-800">{blog.title}</div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Đã xuất bản • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
-                              <button onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} className="text-indigo-600 hover:underline text-sm font-medium">Chỉnh sửa</button>
-                            </div>
-                          </div>
-                        ))}
+
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    {/* Đã xuất bản */}
+                    <div
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'published' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+                      onClick={() => setFilterStatus('published')}
+                    >
+                      <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                       </div>
-                    )}
-                  </div>
-                  {/* Bài viết chưa duyệt */}
-                  <div className="mb-8">
-                    <div className="font-semibold text-yellow-700 mb-2">Bài viết chưa duyệt</div>
-                    {filteredBlogs.filter(blog => blog.published === 'draft').length === 0 ? (
-                      <div className="text-gray-500 italic">Bạn không có bài viết nào đang chờ duyệt.</div>
-                    ) : (
-                      <div className="space-y-3">
-                        {filteredBlogs.filter(blog => blog.published === 'draft').map(blog => (
-                          <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
-                            <div>
-                              <div className="font-medium text-base text-gray-800">{blog.title}</div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Chưa duyệt • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
-                              <button onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} className="text-indigo-600 hover:underline text-sm font-medium">Chỉnh sửa</button>
-                            </div>
-                          </div>
-                        ))}
+                      <p className="text-sm text-gray-600 mb-1">Đã xuất bản</p>
+                      <p className="text-xl font-bold text-gray-900">{blogs.filter(blog => blog.published === 'published').length}</p>
+                    </div>
+                    
+                    {/* Chưa duyệt */}
+                    <div
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+                      onClick={() => setFilterStatus('pending')}
+                    >
+                      <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                       </div>
-                    )}
+                      <p className="text-sm text-gray-600 mb-1">Chưa duyệt</p>
+                      <p className="text-xl font-bold text-gray-900">{blogs.filter(blog => blog.published === 'draft').length}</p>
+                    </div>
+                    
+                    {/* Đã từ chối */}
+                    <div
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'rejected' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+                      onClick={() => setFilterStatus('rejected')}
+                    >
+                      <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1">Đã từ chối</p>
+                      <p className="text-xl font-bold text-gray-900">{blogs.filter(blog => blog.published === 'rejected').length}</p>
+                    </div>
                   </div>
-                  {/* Bài viết bị từ chối */}
+
+                  {/* Danh sách bài viết */}
                   <div>
-                    <div className="font-semibold text-red-700 mb-2">Bài viết bị từ chối</div>
-                    {filteredBlogs.filter(blog => blog.published === 'rejected').length === 0 ? (
-                      <div className="text-gray-500 italic">Bạn không có bài viết nào bị từ chối.</div>
+                    <div className="font-semibold mb-2 text-sky-700">
+                      {filterStatus === 'published' ? 'Bài viết đã xuất bản' : 
+                       filterStatus === 'pending' ? 'Bài viết chưa duyệt' : 
+                       filterStatus === 'rejected' ? 'Bài viết bị từ chối' : 
+                       'Tất cả bài viết'}
+                    </div>
+                    
+                    {filteredBlogs.length === 0 ? (
+                      <div className="text-gray-500 italic">Không tìm thấy bài viết nào.</div>
                     ) : (
                       <div className="space-y-3">
-                        {filteredBlogs.filter(blog => blog.published === 'rejected').map(blog => (
-                          <div key={blog._id} className="bg-gradient-to-r from-red-50 via-pink-50 to-white hover:from-red-100 hover:via-pink-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
+                        {filteredBlogs.map(blog => (
+                          <div 
+                            key={blog._id} 
+                            className={`bg-gradient-to-r from-sky-50 via-cyan-50 to-white hover:from-sky-100 transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm cursor-pointer border border-sky-100`}
+                          >
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Đã từ chối • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
+                              <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                <svg className="w-3 h-3 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
                               </div>
                               <div className="text-xs text-gray-500 mt-1">
                                 Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
                               </div>
-                              {blog.rejectionReason && (
+                              <div className={`text-xs ${
+                                blog.published === 'published' ? 'text-sky-700' : 'text-red-700'
+                              } font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${
+                                blog.published === 'published' ? 'bg-sky-50 border-sky-200' : 'bg-red-50 border-red-200'
+                              } border`}>
+                                {blog.published === 'published' ? 'Đã xuất bản' : 
+                                 blog.published === 'draft' ? 'Chưa duyệt' : 'Đã từ chối'}
+                              </div>
+                              {blog.published === 'rejected' && blog.rejectionReason && (
                                 <div className="text-xs text-red-600 mt-1">
                                   Lý do từ chối: {blog.rejectionReason}
                                 </div>
                               )}
                             </div>
-                            <div className="flex gap-2">
-                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} 
+                                className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                Xem chi tiết
+                              </button>
+                              {blog.published !== 'rejected' && (
+                                <button 
+                                  onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} 
+                                  className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  Chỉnh sửa
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
