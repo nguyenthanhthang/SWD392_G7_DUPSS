@@ -275,12 +275,12 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-[#DBE8FA] flex flex-col items-center py-4 px-2 relative overflow-x-hidden">
       {/* Bóng tròn 2 màu chủ đạo */}
-      <div className="absolute top-10 left-[-80px] w-60 h-60 bg-[#283593] rounded-full opacity-40 blur-2xl z-0"></div>
-      <div className="absolute top-1/3 left-[-100px] w-72 h-72 bg-[#DBE8FA] rounded-full opacity-35 blur-2xl z-0"></div>
-      <div className="absolute bottom-20 left-[-60px] w-44 h-44 bg-[#283593] rounded-full opacity-35 blur-2xl z-0"></div>
-      <div className="absolute top-20 right-[-80px] w-60 h-60 bg-[#DBE8FA] rounded-full opacity-40 blur-2xl z-0"></div>
-      <div className="absolute top-1/2 right-[-100px] w-72 h-72 bg-[#283593] rounded-full opacity-35 blur-2xl z-0"></div>
-      <div className="absolute bottom-10 right-[-60px] w-44 h-44 bg-[#DBE8FA] rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute top-10 left-[-80px] w-60 h-60 bg-[#e3f2fd] rounded-full opacity-20 blur-2xl z-0"></div>
+      <div className="absolute top-1/3 left-[-100px] w-72 h-72 bg-[#b3e5fc] rounded-full opacity-20 blur-2xl z-0"></div>
+      <div className="absolute bottom-20 left-[-60px] w-44 h-44 bg-[#e3f2fd] rounded-full opacity-20 blur-2xl z-0"></div>
+      <div className="absolute top-20 right-[-80px] w-60 h-60 bg-[#b3e5fc] rounded-full opacity-20 blur-2xl z-0"></div>
+      <div className="absolute top-1/2 right-[-100px] w-72 h-72 bg-[#e3f2fd] rounded-full opacity-20 blur-2xl z-0"></div>
+      <div className="absolute bottom-10 right-[-60px] w-44 h-44 bg-[#b3e5fc] rounded-full opacity-20 blur-2xl z-0"></div>
       <div className="bg-white rounded-3xl shadow-sm flex flex-col w-full max-w-6xl overflow-hidden relative">
         {/* Main content container */}
         <div className="flex flex-row w-full">
@@ -530,7 +530,7 @@ export default function Profile() {
                       className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'published' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
                       onClick={() => setFilterStatus('published')}
                     >
-                      <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+                      <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
                         <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -544,7 +544,7 @@ export default function Profile() {
                       className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
                       onClick={() => setFilterStatus('pending')}
                     >
-                      <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+                      <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
                         <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -558,7 +558,7 @@ export default function Profile() {
                       className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'rejected' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
                       onClick={() => setFilterStatus('rejected')}
                     >
-                      <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+                      <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
                         <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>

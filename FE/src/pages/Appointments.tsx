@@ -45,8 +45,13 @@ const AppointmentsPage = () => {
       }
       try {
         const data = await getAppointmentByUserIdApi(userId);
+        console.log('Appointments data:', data);
+        if (data && data.length > 0) {
+          console.log('First appointment consultant_id:', data[0].consultant_id);
+        }
         setAppointments(data || []);
-      } catch {
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
         setAppointments([]);
       }
       setLoading(false);
@@ -56,8 +61,13 @@ const AppointmentsPage = () => {
 
   const filteredAppointments = appointments.filter((apt: Appointment) => {
     const matchesStatus = filterStatus === 'all' || apt.status === filterStatus;
-    const matchesSearch = (apt.consultant_id?.accountId?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (apt.service_id?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const consultantName = apt.consultant_id?.accountId?.fullName || 
+                          (typeof apt.consultant_id === 'object' && 'fullName' in apt.consultant_id 
+                            ? (apt.consultant_id as any).fullName 
+                            : '');
+    const serviceName = apt.service_id?.name || '';
+    const matchesSearch = consultantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         serviceName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -160,7 +170,7 @@ const AppointmentsPage = () => {
           className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
           onClick={() => setFilterStatus('pending')}
         >
-          <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
             <Clock className="w-5 h-5 text-sky-600" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Chờ xác nhận</p>
@@ -172,7 +182,7 @@ const AppointmentsPage = () => {
           className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'confirmed' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
           onClick={() => setFilterStatus('confirmed')}
         >
-          <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
             <CheckCircle className="w-5 h-5 text-sky-600" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã xác nhận</p>
@@ -184,7 +194,7 @@ const AppointmentsPage = () => {
           className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'completed' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
           onClick={() => setFilterStatus('completed')}
         >
-          <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
             <CheckCircle className="w-5 h-5 text-sky-600" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã hoàn thành</p>
@@ -196,7 +206,7 @@ const AppointmentsPage = () => {
           className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'cancelled' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
           onClick={() => setFilterStatus('cancelled')}
         >
-          <div className="p-2.5 bg-gradient-to-r from-sky-100 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
             <X className="w-5 h-5 text-sky-600" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã hủy</p>
@@ -227,7 +237,12 @@ const AppointmentsPage = () => {
                     {appointment.service_id?.name || 'Dịch vụ không xác định'}
                   </div>
                   <div className="text-sm text-gray-600 mt-1">
-                    Chuyên gia: {appointment.consultant_id?.accountId?.fullName || 'Không xác định'}
+                    Chuyên gia: {
+                      appointment.consultant_id?.accountId?.fullName || 
+                      (typeof appointment.consultant_id === 'object' && 'fullName' in appointment.consultant_id 
+                        ? (appointment.consultant_id as any).fullName 
+                        : 'Không xác định')
+                    }
                   </div>
                   <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                     <Calendar className="w-3 h-3 text-sky-500" />
@@ -271,10 +286,16 @@ const AppointmentsPage = () => {
               <div>
                 <div className="text-sm text-gray-500 mb-1">Chuyên gia</div>
                 <div className="flex items-center gap-3">
+                  {(() => { console.log('Selected appointment:', selectedAppointment); return null; })()}
                   {selectedAppointment.consultant_id ? (
                     <>
                       <img 
-                        src={selectedAppointment.consultant_id.accountId?.photoUrl || "/avarta.png"} 
+                        src={
+                          selectedAppointment.consultant_id.accountId?.photoUrl || 
+                          (typeof selectedAppointment.consultant_id === 'object' && 'photoUrl' in selectedAppointment.consultant_id 
+                            ? (selectedAppointment.consultant_id as any).photoUrl 
+                            : "/avarta.png")
+                        } 
                         alt="avatar" 
                         className="w-10 h-10 rounded-full object-cover"
                         onError={(e) => {
@@ -282,7 +303,12 @@ const AppointmentsPage = () => {
                           e.currentTarget.src = "/avarta.png";
                         }}
                       />
-                      <div className="font-medium">{selectedAppointment.consultant_id.accountId?.fullName || 'Không xác định'}</div>
+                      <div className="font-medium">
+                        {selectedAppointment.consultant_id.accountId?.fullName || 
+                         (typeof selectedAppointment.consultant_id === 'object' && 'fullName' in selectedAppointment.consultant_id 
+                           ? (selectedAppointment.consultant_id as any).fullName 
+                           : 'Không xác định')}
+                      </div>
                     </>
                   ) : (
                     <div className="flex items-center gap-3">

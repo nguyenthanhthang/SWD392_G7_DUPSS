@@ -332,11 +332,11 @@ export default function ServicePage() {
                 <div key={step.title} className="flex flex-col items-center">
                   <div 
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg border-2 transition-all ${
-                      currentStep === idx
+                    currentStep === idx
                         ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-cyan-500 scale-110 shadow-lg'
-                        : currentStep > idx
+                      : currentStep > idx
                           ? 'bg-cyan-100 text-cyan-600 border-cyan-400 cursor-pointer hover:scale-105'
-                          : 'bg-white text-gray-400 border-gray-300'
+                        : 'bg-white text-gray-400 border-gray-300'
                     }`}
                     onClick={() => {
                       // Chỉ cho phép quay lại các bước đã hoàn thành
@@ -370,16 +370,16 @@ export default function ServicePage() {
                   <div className="flex items-center gap-4 mb-8">
                     <div className="w-14 h-14 bg-gradient-to-br from-cyan-100 to-sky-200 rounded-2xl flex items-center justify-center shadow-sm">
                       <Sparkles className="w-6 h-6 text-cyan-600" />
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                       <h3 className="text-xl font-semibold text-gray-800">Dịch vụ tư vấn</h3>
                       <p className="text-sm text-gray-500">Chọn gói phù hợp với nhu cầu</p>
+                      </div>
                     </div>
-                  </div>
                   
                   <div className="space-y-4 mb-8">
-                    {(expandServices ? services : services.slice(0, MAX_VISIBLE_SERVICES)).map(service => (
-                                            <div
+                      {(expandServices ? services : services.slice(0, MAX_VISIBLE_SERVICES)).map(service => (
+                        <div
                           key={service._id}
                           className={`p-5 rounded-2xl border transition-all duration-300 cursor-pointer group ${
                             form.serviceId === service._id 
@@ -417,13 +417,13 @@ export default function ServicePage() {
                             <div className="flex-1">
                               <div className="mb-2 flex items-center gap-2">
                                 <span className="font-medium text-gray-800 truncate max-w-[180px]">{service.name}</span>
-                                {service.category === 'vip' && (
+                            {service.category === 'vip' && (
                                   <span className="px-2 py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-xs rounded-full font-medium shadow-sm">VIP</span>
-                                )}
-                                {service.category === 'premium' && (
+                            )}
+                            {service.category === 'premium' && (
                                   <span className="px-2 py-0.5 bg-gradient-to-r from-sky-400 to-cyan-500 text-white text-xs rounded-full font-medium shadow-sm">Premium</span>
-                                )}
-                              </div>
+                            )}
+                          </div>
                               {service.description && (
                                 <div className="text-sm text-gray-500 mb-2 line-clamp-2">{service.description}</div>
                               )}
@@ -431,15 +431,15 @@ export default function ServicePage() {
                             </div>
                           </div>
                         </div>
-                    ))}
-                    {!expandServices && services.length > MAX_VISIBLE_SERVICES && (
+                      ))}
+                      {!expandServices && services.length > MAX_VISIBLE_SERVICES && (
                       <div className="h-12 rounded-2xl border border-dashed border-sky-200 bg-white/80 flex items-center justify-center text-sky-500 text-2xl font-bold cursor-pointer hover:bg-sky-50 transition-all select-none"
-                        onClick={() => setExpandServices(true)}
-                      >
+                          onClick={() => setExpandServices(true)}
+                        >
                         + Xem thêm dịch vụ
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      )}
+                    </div>
                   
                   <div className="flex justify-end">
                     <button
@@ -457,164 +457,164 @@ export default function ServicePage() {
             {currentStep === 1 && (
               <div className="w-full animate-fadeIn">
                 <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-cyan-100 shadow-[0_10px_40px_rgba(14,165,233,0.08)]">
-                  <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center gap-4 mb-8">
                     <div className="w-14 h-14 bg-gradient-to-br from-sky-100 to-blue-200 rounded-2xl flex items-center justify-center shadow-sm">
                       <Calendar className="w-6 h-6 text-sky-600" />
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                       <h3 className="text-xl font-semibold text-gray-800">Chọn thời gian</h3>
                       <p className="text-sm text-gray-500">Lịch khám có sẵn cho bạn</p>
-                    </div>
-                  </div>
-                  
-                  {/* Calendar Navigation */}
-                  <div className="flex items-center justify-between mb-8">
-                    <button
-                      className="w-14 h-14 rounded-2xl bg-white border border-sky-100 flex items-center justify-center text-sky-500 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50 transition-all disabled:opacity-30"
-                      disabled={Number(currentWeek) === 0}
-                      onClick={() => setCurrentWeek(0)}
-                    >
-                      <ChevronLeft className="w-6 h-6" />
-                    </button>
-                    <div className="text-center">
-                      <div className="text-2xl font-medium text-gray-800 mb-1">
-                        {(() => {
-                          const today = new Date();
-                          const currentDate = new Date(today);
-                          currentDate.setDate(today.getDate() + (currentWeek * 7));
-                          const monday = new Date(currentDate);
-                          const dayOfWeek = currentDate.getDay();
-                          const diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-                          monday.setDate(diff);
-                          const sunday = new Date(monday);
-                          sunday.setDate(monday.getDate() + 6);
-                          return `Tuần ${monday.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} - ${sunday.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
-                        })()}
                       </div>
-                      <div className="text-sm text-gray-500">Tháng {new Date().getMonth() + 1}, {new Date().getFullYear()}</div>
                     </div>
-                    <button
+                  
+                    {/* Calendar Navigation */}
+                    <div className="flex items-center justify-between mb-8">
+                      <button
                       className="w-14 h-14 rounded-2xl bg-white border border-sky-100 flex items-center justify-center text-sky-500 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50 transition-all disabled:opacity-30"
-                      disabled={Number(currentWeek) === 1}
-                      onClick={() => setCurrentWeek(1)}
-                    >
-                      <ChevronRight className="w-6 h-6" />
-                    </button>
-                  </div>
-                  
-                  {/* Time Filter */}
-                  <div className="flex justify-center mb-8">
-                    <div className="bg-sky-50/80 rounded-2xl p-1.5 inline-flex shadow-sm">
-                      <button
-                        className={`px-8 py-2.5 rounded-xl font-medium transition-all text-base ${
-                          timeFilter === 'morning' 
-                            ? 'bg-white text-sky-700 shadow-md' 
-                            : 'text-gray-600 hover:text-sky-700'
-                        }`}
-                        onClick={() => setTimeFilter('morning')}
+                        disabled={Number(currentWeek) === 0}
+                        onClick={() => setCurrentWeek(0)}
                       >
-                        Buổi sáng
+                      <ChevronLeft className="w-6 h-6" />
                       </button>
+                      <div className="text-center">
+                      <div className="text-2xl font-medium text-gray-800 mb-1">
+                          {(() => {
+                            const today = new Date();
+                            const currentDate = new Date(today);
+                            currentDate.setDate(today.getDate() + (currentWeek * 7));
+                            const monday = new Date(currentDate);
+                            const dayOfWeek = currentDate.getDay();
+                            const diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                            monday.setDate(diff);
+                            const sunday = new Date(monday);
+                            sunday.setDate(monday.getDate() + 6);
+                            return `Tuần ${monday.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} - ${sunday.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
+                          })()}
+                        </div>
+                        <div className="text-sm text-gray-500">Tháng {new Date().getMonth() + 1}, {new Date().getFullYear()}</div>
+                      </div>
                       <button
-                        className={`px-8 py-2.5 rounded-xl font-medium transition-all text-base ${
-                          timeFilter === 'afternoon' 
-                            ? 'bg-white text-sky-700 shadow-md' 
-                            : 'text-gray-600 hover:text-sky-700'
-                        }`}
-                        onClick={() => setTimeFilter('afternoon')}
+                      className="w-14 h-14 rounded-2xl bg-white border border-sky-100 flex items-center justify-center text-sky-500 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50 transition-all disabled:opacity-30"
+                        disabled={Number(currentWeek) === 1}
+                        onClick={() => setCurrentWeek(1)}
                       >
-                        Buổi chiều
+                      <ChevronRight className="w-6 h-6" />
                       </button>
                     </div>
-                  </div>
                   
-                  {/* Calendar Grid */}
+                    {/* Time Filter */}
+                    <div className="flex justify-center mb-8">
+                    <div className="bg-sky-50/80 rounded-2xl p-1.5 inline-flex shadow-sm">
+                        <button
+                        className={`px-8 py-2.5 rounded-xl font-medium transition-all text-base ${
+                            timeFilter === 'morning' 
+                            ? 'bg-white text-sky-700 shadow-md' 
+                            : 'text-gray-600 hover:text-sky-700'
+                          }`}
+                          onClick={() => setTimeFilter('morning')}
+                        >
+                          Buổi sáng
+                        </button>
+                        <button
+                        className={`px-8 py-2.5 rounded-xl font-medium transition-all text-base ${
+                            timeFilter === 'afternoon' 
+                            ? 'bg-white text-sky-700 shadow-md' 
+                            : 'text-gray-600 hover:text-sky-700'
+                          }`}
+                          onClick={() => setTimeFilter('afternoon')}
+                        >
+                          Buổi chiều
+                        </button>
+                      </div>
+                    </div>
+                  
+                    {/* Calendar Grid */}
                   <div className="bg-white/80 rounded-2xl p-6 shadow-sm border border-sky-50">
-                    {/* Header */}
-                    <div className="grid grid-cols-8 gap-3 mb-6">
+                      {/* Header */}
+                      <div className="grid grid-cols-8 gap-3 mb-6">
                       <div className="text-center text-sm font-medium text-gray-500">Giờ</div>
-                      {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => (
+                        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => (
                         <div key={day} className={`text-center text-sm font-semibold py-2 ${
                           dayIdx === 6 ? 'text-red-500' : 'text-sky-700'
-                        }`}>
-                          {day}
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* Time Slots */}
-                    <div className="space-y-4">
-                      {(timeFilter === 'morning' ? ['08:00', '09:00', '10:00', '11:00'] : ['13:00', '14:00', '15:00', '16:00', '17:00']).map(slot => (
-                        <div key={slot} className="grid grid-cols-8 gap-3 items-center">
-                          {/* Time Label */}
-                          <div className="text-center text-sm font-medium text-gray-600 py-3">
-                            {slot}
+                          }`}>
+                            {day}
                           </div>
-                          {/* Day Buttons */}
-                          {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => {
-                            const isSelected = selectedSlot?.day === day && selectedSlot?.time === slot;
-                            const today = new Date();
-                            const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
-                            const slotDate = addDays(weekStart, dayIdx);
-                            const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-                            const slotHour = slot;
-                            const isAvailable = allSlotTimes.some(st => {
-                              if (st.status !== 'available') return false;
-                              const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-                              const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
-                              return stDateStr === slotDateStr && stHour === slotHour;
-                            });
-                            return (
-                              <button
-                                key={day + slot}
+                        ))}
+                      </div>
+                    
+                      {/* Time Slots */}
+                    <div className="space-y-4">
+                        {(timeFilter === 'morning' ? ['08:00', '09:00', '10:00', '11:00'] : ['13:00', '14:00', '15:00', '16:00', '17:00']).map(slot => (
+                          <div key={slot} className="grid grid-cols-8 gap-3 items-center">
+                            {/* Time Label */}
+                          <div className="text-center text-sm font-medium text-gray-600 py-3">
+                              {slot}
+                            </div>
+                            {/* Day Buttons */}
+                            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => {
+                              const isSelected = selectedSlot?.day === day && selectedSlot?.time === slot;
+                              const today = new Date();
+                              const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
+                              const slotDate = addDays(weekStart, dayIdx);
+                              const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+                              const slotHour = slot;
+                              const isAvailable = allSlotTimes.some(st => {
+                                if (st.status !== 'available') return false;
+                                const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+                                const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+                                return stDateStr === slotDateStr && stHour === slotHour;
+                              });
+                              return (
+                                <button
+                                  key={day + slot}
                                 className={`h-14 w-full rounded-xl border transition-all duration-200 ${
-                                  isAvailable
-                                    ? (isSelected 
+                                    isAvailable
+                                      ? (isSelected 
                                         ? 'bg-gradient-to-r from-sky-500 to-cyan-500 border-sky-500 text-white shadow-lg transform scale-105' 
                                         : 'bg-white border-sky-100 hover:border-sky-300 hover:bg-sky-50 text-gray-600 hover:shadow-sm')
-                                    : 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                                }`}
-                                onClick={isAvailable ? () => handleOpenConsultantDrawer(day, slot) : undefined}
-                                disabled={!isAvailable}
+                                      : 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                                  }`}
+                                  onClick={isAvailable ? () => handleOpenConsultantDrawer(day, slot) : undefined}
+                                  disabled={!isAvailable}
                                 title={isAvailable ? '' : 'Không có tư vấn viên'}
-                              >
+                                >
                                 {isSelected && <Check className="w-5 h-5 mx-auto" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ))}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
                   
                   {/* Summary & Navigation */}
                   <div className="mt-8 p-6 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-2xl border border-sky-100 shadow-md">
-                    <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center">
                       <div className="space-y-2">
-                        {form.serviceId && (
+                            {form.serviceId && (
                           <div className="text-base text-gray-700">
-                            <span className="font-medium">{services.find(s => s._id === form.serviceId)?.name}</span> • {services.find(s => s._id === form.serviceId)?.duration || ''}
-                          </div>
-                        )}
-                        {selectedSlot && (
+                                <span className="font-medium">{services.find(s => s._id === form.serviceId)?.name}</span> • {services.find(s => s._id === form.serviceId)?.duration || ''}
+                              </div>
+                            )}
+                            {selectedSlot && (
                           <div className="text-base text-gray-700">
-                            {selectedSlot.day}, {getSelectedSlotDateStr()}, {selectedSlot.time}
-                            {selectedConsultant && (
-                              <>
-                                <span className="mx-2">|</span>
+                                {selectedSlot.day}, {getSelectedSlotDateStr()}, {selectedSlot.time}
+                                {selectedConsultant && (
+                                  <>
+                                    <span className="mx-2">|</span>
                                 <span>Chuyên viên: <span className="font-semibold">{consultants.find(c => c._id === selectedConsultant)?.accountId?.fullName || "Không xác định"}</span></span>
-                              </>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            {form.serviceId && (
+                          <div className="text-xl font-semibold text-sky-700">
+                                {services.find(s => s._id === form.serviceId)?.price?.toLocaleString('vi-VN')}đ
+                              </div>
                             )}
                           </div>
-                        )}
-                        {form.serviceId && (
-                          <div className="text-xl font-semibold text-sky-700">
-                            {services.find(s => s._id === form.serviceId)?.price?.toLocaleString('vi-VN')}đ
-                          </div>
-                        )}
-                      </div>
                       <div className="flex gap-4">
-                        <button
+                          <button
                           className="bg-gray-100 text-gray-700 py-3 px-8 rounded-xl font-semibold hover:bg-gray-200 transition-colors shadow-sm text-base border border-gray-200"
                           onClick={handleBack}
                         >
@@ -622,17 +622,17 @@ export default function ServicePage() {
                         </button>
                         <button
                           className="bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white py-3 px-10 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-base"
-                          onClick={handleNext}
+                            onClick={handleNext}
                           disabled={!form.serviceId}
-                        >
-                          Tiếp tục
-                        </button>
+                          >
+                            Tiếp tục
+                          </button>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
+                        </div>
+                      </div>
+                    )}
             
             {/* Step 3: Chọn chuyên gia tư vấn */}
             {currentStep === 2 && (
@@ -641,12 +641,12 @@ export default function ServicePage() {
                   <div className="flex items-center gap-4 mb-8">
                     <div className="w-14 h-14 bg-gradient-to-br from-sky-100 to-indigo-200 rounded-2xl flex items-center justify-center shadow-sm">
                       <User className="w-6 h-6 text-indigo-600" />
-                    </div>
+                  </div>
                     <div>
                       <h3 className="text-xl font-semibold text-gray-800">Chọn chuyên gia tư vấn</h3>
                       <p className="text-sm text-gray-500">Chọn chuyên gia phù hợp với nhu cầu của bạn</p>
-                    </div>
-                  </div>
+                </div>
+              </div>
                   
                   {selectedSlot ? (
                     <>
@@ -968,11 +968,11 @@ export default function ServicePage() {
                   <p className="text-gray-600 text-lg">Cảm ơn bạn đã tin tưởng sử dụng dịch vụ!</p>
                 </div>
                 <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 p-6 rounded-2xl border border-emerald-100 shadow-md">
-                  <div className="flex flex-col gap-4 text-base text-gray-700">
+                <div className="flex flex-col gap-4 text-base text-gray-700">
                     <div className="flex justify-between border-b border-emerald-100 pb-3">
                       <span className="text-gray-600">Dịch vụ:</span>
                       <span className="font-semibold text-gray-800">{bill.service?.name}</span>
-                    </div>
+                </div>
                     <div className="flex justify-between border-b border-emerald-100 pb-3">
                       <span className="text-gray-600">Chuyên viên:</span>
                       <span className="font-semibold text-gray-800">{bill.consultant?.accountId?.fullName || "Không xác định"}</span>
@@ -998,7 +998,7 @@ export default function ServicePage() {
                       <span className="font-medium">{bill.reason}</span>
                     </div>
                     <div className="flex justify-between items-center pt-3 text-lg font-bold">
-                      <span>Tổng cộng:</span>
+                  <span>Tổng cộng:</span>
                       <span className="text-emerald-700">{bill.price?.toLocaleString('vi-VN')}đ</span>
                     </div>
                   </div>
@@ -1022,8 +1022,8 @@ export default function ServicePage() {
                 <div className="w-10 h-10 bg-gradient-to-br from-sky-100 to-cyan-200 rounded-xl flex items-center justify-center shadow-sm">
                   <User className="w-5 h-5 text-sky-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800">Chọn chuyên gia tư vấn</h3>
-              </div>
+              <h3 className="text-xl font-semibold text-gray-800">Chọn chuyên gia tư vấn</h3>
+            </div>
               <button className="text-gray-400 hover:text-sky-600 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-sky-50 transition-all" onClick={() => setShowConsultantDrawer(false)}>&times;</button>
             </div>
             <div className="flex-1 overflow-y-auto p-8 space-y-4">
