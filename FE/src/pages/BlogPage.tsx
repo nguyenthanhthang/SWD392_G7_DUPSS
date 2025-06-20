@@ -99,7 +99,14 @@ function BlogPage() {
   // Get current blogs for pagination
   const indexOfLastBlog = currentPage * blogsPerPage;
   const indexOfFirstBlog = indexOfLastBlog - blogsPerPage;
-  const currentBlogs = filteredBlogs.slice(indexOfFirstBlog, indexOfLastBlog);
+  
+  // Separate the newest blog
+  const newestBlog = filteredBlogs.length > 0 ? filteredBlogs[0] : null;
+  
+  // Get the rest of the blogs for the grid (excluding the newest one if on first page)
+  const currentBlogs = currentPage === 1 
+    ? filteredBlogs.slice(1, indexOfLastBlog) 
+    : filteredBlogs.slice(indexOfFirstBlog, indexOfLastBlog);
 
   // Change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -115,10 +122,10 @@ function BlogPage() {
   };
 
   // Truncate content for preview
-  const truncateContent = (content: string) => {
+  const truncateContent = (content: string, maxLength = 150) => {
     const strippedContent = content.replace(/<[^>]*>?/gm, ''); // Remove HTML tags
-    return strippedContent.length > 150 
-      ? strippedContent.substring(0, 150) + '...' 
+    return strippedContent.length > maxLength 
+      ? strippedContent.substring(0, maxLength) + '...' 
       : strippedContent;
   };
 
@@ -158,7 +165,7 @@ function BlogPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 bg-gradient-to-b from-blue-50 to-white min-h-screen">
+      <div className="container mx-auto px-4 py-12 bg-gradient-to-b from-blue-50 via-cyan-50 to-white min-h-screen">
         {/* Create blog button - show different versions based on login state */}
         {!showCreateForm && (
           <div className="mb-8 flex justify-center">
@@ -207,6 +214,69 @@ function BlogPage() {
                 </svg>
               </div>
             </div>
+            
+            {/* Featured Newest Blog */}
+            {currentPage === 1 && newestBlog && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold text-blue-800 mb-6 border-l-4 border-cyan-400 pl-4 bg-cyan-50 py-2 rounded-r-lg shadow-sm">
+                  Bài viết mới nhất
+                </h2>
+                <Link
+                  to={'/blogs/' + newestBlog._id}
+                  className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden flex flex-col md:flex-row h-full group border border-cyan-100"
+                >
+                  <div className="md:w-1/2 h-64 md:h-auto overflow-hidden relative">
+                    {newestBlog.image ? (
+                      <img 
+                        src={newestBlog.image}
+                        alt={newestBlog.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
+                      />
+                    ) : (
+                      <div className="h-full bg-gradient-to-br from-cyan-100 to-blue-100 flex items-center justify-center p-6 relative">
+                        <div className="text-center">
+                          <svg className="w-24 h-24 text-blue-300 mx-auto mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                          <p className="text-sm font-medium text-blue-400 italic">Hình ảnh minh họa</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-blue-900/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </div>
+                  
+                  <div className="md:w-1/2 p-8 bg-gradient-to-br from-white to-cyan-50">
+                    <div className="flex items-center mb-4">
+                      <span className="text-sm text-blue-500 bg-blue-50 px-3 py-1 rounded-full">{formatDate(newestBlog.createdAt)}</span>
+                      <span className="mx-2 text-blue-200">•</span>
+                      <span className="text-sm text-cyan-700 font-medium">{newestBlog.author}</span>
+                    </div>
+                    <h3 className="text-2xl md:text-3xl font-bold mb-4 text-blue-900 group-hover:text-cyan-700 transition-colors">{newestBlog.title}</h3>
+                    <p className="text-blue-700 mb-6 text-base">{truncateContent(newestBlog.content, 300)}</p>
+                    
+                    {/* Topics */}
+                    {newestBlog.topics && newestBlog.topics.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {newestBlog.topics.map((topic, idx) => (
+                          <span key={idx} className="text-sm bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full">
+                            {topic}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-end mt-auto pt-4 border-t border-cyan-100">
+                      <span className="text-cyan-700 font-medium group-hover:text-blue-800 transition flex items-center text-base">
+                        Đọc tiếp
+                        <svg className="w-5 h-5 ml-1 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            )}
 
             {/* Blog cards - Blue theme */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -214,7 +284,7 @@ function BlogPage() {
                 <Link
                   key={blog._id}
                   to={'/blogs/' + blog._id}
-                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full group"
+                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full group border border-cyan-50"
                 >
                   {blog.image ? (
                     <div className="h-56 overflow-hidden relative">
@@ -236,7 +306,7 @@ function BlogPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-blue-200/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </div>
                   )}
-                  <div className="flex flex-col flex-1 p-6">
+                  <div className="flex flex-col flex-1 p-6 bg-gradient-to-br from-white to-cyan-50/40">
                     <div className="flex items-center mb-3">
                       <span className="text-xs text-blue-500 bg-blue-50 px-3 py-1 rounded-full">{formatDate(blog.createdAt)}</span>
                       <span className="mx-2 text-blue-200">•</span>
@@ -254,7 +324,7 @@ function BlogPage() {
                         ))}
                       </div>
                     )}
-                    <div className="flex justify-end mt-auto pt-3 border-t border-blue-100">
+                    <div className="flex justify-end mt-auto pt-3 border-t border-cyan-100">
                       <span className="text-cyan-700 font-medium group-hover:text-blue-800 transition flex items-center text-sm">
                         Đọc tiếp
                         <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -270,13 +340,13 @@ function BlogPage() {
             {/* Pagination - Blue theme */}
             {filteredBlogs.length > blogsPerPage && (
               <div className="flex justify-center mt-12">
-                <nav className="inline-flex bg-white rounded-lg shadow-lg overflow-hidden border border-blue-100">
+                <nav className="inline-flex bg-white rounded-lg shadow-lg overflow-hidden border border-cyan-100">
                   <button
                     onClick={() => paginate(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                     className={currentPage === 1 
-                      ? 'px-4 py-2 border-r border-blue-100 flex items-center bg-blue-50 text-blue-300 cursor-not-allowed'
-                      : 'px-4 py-2 border-r border-blue-100 flex items-center text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
+                      ? 'px-4 py-2 border-r border-cyan-100 flex items-center bg-blue-50 text-blue-300 cursor-not-allowed'
+                      : 'px-4 py-2 border-r border-cyan-100 flex items-center text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
                     }
                   >
                     <svg className="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -291,8 +361,8 @@ function BlogPage() {
                         key={pageNumber}
                         onClick={() => paginate(pageNumber)}
                         className={pageNumber === currentPage
-                          ? 'w-10 border-r border-blue-100 bg-cyan-600 text-white font-medium'
-                          : 'w-10 border-r border-blue-100 text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
+                          ? 'w-10 border-r border-cyan-100 bg-cyan-600 text-white font-medium'
+                          : 'w-10 border-r border-cyan-100 text-blue-700 hover:bg-cyan-50 hover:text-cyan-700'
                         }
                       >
                         {pageNumber}
