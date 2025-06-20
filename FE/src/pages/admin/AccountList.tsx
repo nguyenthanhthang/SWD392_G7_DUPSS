@@ -197,8 +197,6 @@ const AccountList: React.FC = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 8;
-  const totalPages = Math.ceil(accounts.length / rowsPerPage);
-  const paginatedAccounts = accounts.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   useEffect(() => {
     // Hàm để lấy danh sách tài khoản
@@ -682,6 +680,9 @@ const AccountList: React.FC = () => {
 
     return matchesSearch && matchesRole && matchesStatus && matchesGender;
   });
+
+  const paginatedAccounts = filteredAccounts.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const totalPages = Math.ceil(filteredAccounts.length / rowsPerPage);
 
   if (loading) {
     return (
