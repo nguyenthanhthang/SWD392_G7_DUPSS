@@ -212,8 +212,9 @@ export default function Profile() {
   const filteredBlogs = blogs.filter(blog => {
     const matchStatus =
       filterStatus === 'all' ||
-      (filterStatus === 'published' && blog.published) ||
-      (filterStatus === 'pending' && !blog.published);
+      (filterStatus === 'published' && blog.published === 'published') ||
+      (filterStatus === 'pending' && blog.published === 'draft') ||
+      (filterStatus === 'rejected' && blog.published === 'rejected');
     const matchKeyword =
       blog.title.toLowerCase().includes(filterKeyword.toLowerCase());
     return matchStatus && matchKeyword;
@@ -505,6 +506,7 @@ export default function Profile() {
                       <option value="all">Tất cả</option>
                       <option value="published">Đã xuất bản</option>
                       <option value="pending">Chưa duyệt</option>
+                      <option value="rejected">Đã từ chối</option>
                     </select>
                     <input
                       type="text"
@@ -517,11 +519,11 @@ export default function Profile() {
                   {/* Bài viết đã xuất bản */}
                   <div className="mb-8">
                     <div className="font-semibold text-green-700 mb-2">Bài viết đã xuất bản</div>
-                    {filteredBlogs.filter(blog => blog.published).length === 0 ? (
+                    {filteredBlogs.filter(blog => blog.published === 'published').length === 0 ? (
                       <div className="text-gray-500 italic">Bạn chưa có bài viết nào đã xuất bản.</div>
                     ) : (
                       <div className="space-y-3">
-                        {filteredBlogs.filter(blog => blog.published).map(blog => (
+                        {filteredBlogs.filter(blog => blog.published === 'published').map(blog => (
                           <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
@@ -542,13 +544,13 @@ export default function Profile() {
                     )}
                   </div>
                   {/* Bài viết chưa duyệt */}
-                  <div>
+                  <div className="mb-8">
                     <div className="font-semibold text-yellow-700 mb-2">Bài viết chưa duyệt</div>
-                    {filteredBlogs.filter(blog => !blog.published).length === 0 ? (
+                    {filteredBlogs.filter(blog => blog.published === 'draft').length === 0 ? (
                       <div className="text-gray-500 italic">Bạn không có bài viết nào đang chờ duyệt.</div>
                     ) : (
                       <div className="space-y-3">
-                        {filteredBlogs.filter(blog => !blog.published).map(blog => (
+                        {filteredBlogs.filter(blog => blog.published === 'draft').map(blog => (
                           <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
@@ -562,6 +564,37 @@ export default function Profile() {
                             <div className="flex gap-2">
                               <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
                               <button onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} className="text-indigo-600 hover:underline text-sm font-medium">Chỉnh sửa</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Bài viết bị từ chối */}
+                  <div>
+                    <div className="font-semibold text-red-700 mb-2">Bài viết bị từ chối</div>
+                    {filteredBlogs.filter(blog => blog.published === 'rejected').length === 0 ? (
+                      <div className="text-gray-500 italic">Bạn không có bài viết nào bị từ chối.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {filteredBlogs.filter(blog => blog.published === 'rejected').map(blog => (
+                          <div key={blog._id} className="bg-gradient-to-r from-red-50 via-pink-50 to-white hover:from-red-100 hover:via-pink-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
+                            <div>
+                              <div className="font-medium text-base text-gray-800">{blog.title}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Đã từ chối • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
+                              </div>
+                              {blog.rejectionReason && (
+                                <div className="text-xs text-red-600 mt-1">
+                                  Lý do từ chối: {blog.rejectionReason}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
                             </div>
                           </div>
                         ))}
@@ -692,7 +725,7 @@ export default function Profile() {
               onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(user?._id) getBlogsByUserIdApi(user._id).then(setBlogs); }}
               onSubmit={async (data) => {
                 const dataUpdate = { ...data };
-                if (blogDangSua.published) dataUpdate.published = false;
+                if (blogDangSua.published === 'published') dataUpdate.published = 'draft';
                 await updateBlogApi(blogDangSua._id, dataUpdate);
               }}
             />

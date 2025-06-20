@@ -18,7 +18,7 @@ interface CreateBlogFormProps {
     author?: string;
     topics?: string;
     image?: string;
-    published?: boolean;
+    published?: 'draft' | 'published' | 'rejected';
   };
   onSubmit?: (data: BlogData) => Promise<void>;
   isAdmin?: boolean;
@@ -61,6 +61,9 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [anDanh, setAnDanh] = useState(false);
+  const [trangThai, setTrangThai] = useState<'draft' | 'published' | 'rejected'>(
+    initialData?.published || 'draft'
+  );
 
   useEffect(() => {
     const storedUserInfo = localStorage.getItem("userInfo");
@@ -174,7 +177,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
         content: noiDung,
         author: tacGia,
         topics: topics.split(",").map((topic: string) => topic.trim()),
-        published: isAdmin ? initialData?.published ?? false : false,
+        published: isAdmin ? trangThai : 'draft',
       };
       if (hinhAnh) {
         blogData.image = hinhAnh;
@@ -201,21 +204,17 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-sky-200 via-pink-100 to-pink-200 overflow-hidden">
-      {/* Pastel color bubbles */}
-      <div className="absolute top-8 left-1/4 w-32 h-32 rounded-full bg-pink-200 opacity-30 blur-xl"></div>
-      <div className="absolute top-20 right-1/4 w-40 h-40 rounded-full bg-blue-200 opacity-30 blur-xl"></div>
-      <div className="absolute bottom-10 left-1/3 w-24 h-24 rounded-full bg-green-200 opacity-20 blur-xl"></div>
-      <div className="absolute bottom-0 right-1/3 w-36 h-36 rounded-full bg-yellow-200 opacity-20 blur-xl"></div>
+    <div className="relative min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-50 via-cyan-100 to-blue-100 overflow-hidden">
+      {/* Blue bubbles */}
+      <div className="absolute top-8 left-1/4 w-32 h-32 rounded-full bg-cyan-200 opacity-30 blur-xl"></div>
+      <div className="absolute top-20 right-1/4 w-40 h-40 rounded-full bg-blue-300 opacity-30 blur-xl"></div>
+      <div className="absolute bottom-10 left-1/3 w-24 h-24 rounded-full bg-cyan-100 opacity-20 blur-xl"></div>
+      <div className="absolute bottom-0 right-1/3 w-36 h-36 rounded-full bg-blue-200 opacity-20 blur-xl"></div>
       {/* Bubble animation */}
       {[...Array(12)].map((_, i) => (
         <div
           key={i}
-          className={`absolute bottom-0 left-[${5 + i * 7}%] w-${
-            ((i % 3) + 2) * 3
-          } h-${
-            ((i % 3) + 2) * 3
-          } rounded-full bg-white opacity-30 animate-bubble`}
+          className={`absolute bottom-0 left-[${5 + i * 7}%] w-${((i % 3) + 2) * 3} h-${((i % 3) + 2) * 3} rounded-full bg-blue-100 opacity-30 animate-bubble`}
           style={{ animationDelay: `${i * 0.8}s` }}
         />
       ))}
@@ -230,24 +229,23 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
         }
       `}</style>
       {/* Form card */}
-      <div className="relative z-10 w-full max-w-xl bg-white/90 rounded-3xl shadow-2xl px-10 py-10 flex flex-col items-center backdrop-blur-md">
+      <div className="relative z-10 bg-white/90 rounded-2xl shadow-2xl p-8 w-full max-w-xl border border-blue-100 backdrop-blur-md">
         <div className="mb-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-2 drop-shadow-lg">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-blue-900 mb-2 drop-shadow-lg">
             {initialData ? "Sửa Blog" : "Tạo Blog Mới"}
           </h2>
-          <p className="text-lg text-gray-600 font-medium">
-            Chia sẻ kiến thức, cảm xúc hoặc kinh nghiệm của bạn với cộng đồng
-            HopeHub!
+          <p className="text-lg text-cyan-700 font-medium">
+            Chia sẻ kiến thức, cảm xúc hoặc kinh nghiệm của bạn với cộng đồng HopeHub!
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6 w-full">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-blue-800">
               Tiêu đề
             </label>
             <input
               type="text"
-              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
+              className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 bg-blue-50 text-blue-900 placeholder-blue-400"
               value={tieuDe}
               onChange={(e) => {
                 setTieuDe(e.target.value);
@@ -256,7 +254,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               required
               style={{
                 borderColor:
-                  touched.tieuDe && formErrors.tieuDe ? "#f56565" : "#e2e8f0",
+                  touched.tieuDe && formErrors.tieuDe ? "#f56565" : "#bae6fd",
               }}
             />
             {touched.tieuDe && formErrors.tieuDe && (
@@ -268,12 +266,12 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
           {/* Ẩn trường tác giả nếu không phải admin */}
           {isAdmin ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-blue-800">
                 Tác giả
               </label>
               <input
                 type="text"
-                className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
+                className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 bg-blue-50 text-blue-900 placeholder-blue-400"
                 value={tacGia}
                 onChange={(e) => {
                   setTacGia(e.target.value);
@@ -282,7 +280,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
                 required
                 style={{
                   borderColor:
-                    touched.tacGia && formErrors.tacGia ? "#f56565" : "#e2e8f0",
+                    touched.tacGia && formErrors.tacGia ? "#f56565" : "#bae6fd",
                 }}
               />
               {touched.tacGia && formErrors.tacGia && (
@@ -298,15 +296,15 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
                 type="checkbox"
                 checked={anDanh}
                 onChange={(e) => setAnDanh(e.target.checked)}
-                className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+                className="h-4 w-4 text-cyan-600 border-blue-200 rounded focus:ring-cyan-500"
               />
               <label
                 htmlFor="anDanh"
-                className="text-sm text-gray-700 select-none cursor-pointer"
+                className="text-sm text-blue-800 select-none cursor-pointer"
               >
                 Đăng ẩn danh
               </label>
-              <span className="text-gray-500 text-sm">
+              <span className="text-cyan-700 text-sm">
                 {anDanh
                   ? "Ẩn danh"
                   : userInfo?.fullName || userInfo?.username || ""}
@@ -314,10 +312,10 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-blue-800">
               Nội dung
             </label>
-            <div className="bg-white rounded-xl border border-gray-300 focus:border-cyan-500 focus:ring-cyan-500">
+            <div className="bg-white rounded-xl border border-blue-200 focus:border-cyan-500 focus:ring-cyan-500">
               <Editor
                 editorState={editorState}
                 onEditorStateChange={(state: EditorState) => {
@@ -386,8 +384,8 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
                   },
                 }}
                 wrapperClassName="wysiwyg-wrapper"
-                editorClassName="wysiwyg-editor min-h-[180px] px-3 py-2"
-                toolbarClassName="wysiwyg-toolbar rounded-t-xl"
+                editorClassName="wysiwyg-editor min-h-[180px] px-3 py-2 text-blue-900"
+                toolbarClassName="wysiwyg-toolbar rounded-t-xl bg-blue-50 border-blue-200"
                 onBlur={() => handleBlur("noiDung")}
               />
             </div>
@@ -398,7 +396,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-blue-800">
               Ảnh đại diện blog
             </label>
             <input
@@ -406,7 +404,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               accept="image/*"
               onChange={handleImageChange}
               onBlur={() => handleBlur("hinhAnh")}
-              className="mt-1 block w-full text-base"
+              className="mt-1 block w-full text-base bg-blue-50 text-blue-900"
               style={{
                 color:
                   touched.hinhAnh && formErrors.hinhAnh ? "#f56565" : "inherit",
@@ -421,12 +419,12 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               <img
                 src={imagePreview}
                 alt="Preview"
-                className="mt-2 w-40 h-28 object-cover rounded-xl border mx-auto"
+                className="mt-2 w-40 h-28 object-cover rounded-xl border border-blue-200 mx-auto"
               />
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-blue-800">
               Chủ đề (phân tách bằng dấu phẩy)
             </label>
             <input
@@ -435,10 +433,10 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               onChange={(e) => setTopics(e.target.value)}
               onBlur={() => handleBlur("topics")}
               placeholder="Ví dụ: sức khỏe, tâm lý, dinh dưỡng"
-              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3"
+              className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 bg-blue-50 text-blue-900 placeholder-blue-400"
               style={{
                 borderColor:
-                  touched.topics && formErrors.topics ? "#f56565" : "#e2e8f0",
+                  touched.topics && formErrors.topics ? "#f56565" : "#bae6fd",
               }}
             />
             {touched.topics && formErrors.topics && (
@@ -447,20 +445,37 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               </p>
             )}
           </div>
-          <div className="flex justify-end space-x-3 mt-6">
+          
+          {/* Trạng thái xuất bản - chỉ hiển thị cho admin */}
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-blue-800">
+                Trạng thái xuất bản
+              </label>
+              <select
+                value={trangThai}
+                onChange={(e) => setTrangThai(e.target.value as 'draft' | 'published' | 'rejected')}
+                className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 bg-blue-50 text-blue-900"
+              >
+                <option value="draft">Chưa xuất bản</option>
+                <option value="published">Đã xuất bản</option>
+                <option value="rejected">Từ chối</option>
+              </select>
+            </div>
+          )}
+          
+          <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 border border-blue-200"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={dangTai}
-              className={`px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md ${
-                dangTai ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-md shadow-md border border-cyan-700 ${dangTai ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {dangTai ? "Đang xử lý..." : initialData ? "Cập nhật" : "Tạo mới"}
             </button>

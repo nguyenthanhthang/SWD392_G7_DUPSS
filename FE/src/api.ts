@@ -4,7 +4,7 @@ export interface BlogData {
   title: string;
   content: string;
   author: string;
-  published: boolean;
+  published: 'draft' | 'published' | 'rejected';
   topics?: string[];
   image?: File | string; // Có thể là File khi upload hoặc URL string khi hiển thị
 }
@@ -306,8 +306,22 @@ export const getAllBlogsApi = async () => {
 };
 
 export const getBlogByIdApi = async (id: string) => {
-  const res = await api.get(`/blogs/${id}`);
-  return res.data;
+  try {
+    const res = await api.get('/blogs/' + id);
+    return res.data;
+  } catch (error: any) {
+    // Xử lý các loại lỗi cụ thể
+    if (error.response) {
+      // Server trả về response với status code nằm ngoài range 2xx
+      throw new Error(error.response.data.message || 'Không thể tải bài viết');
+    } else if (error.request) {
+      // Request được gửi nhưng không nhận được response
+      throw new Error('Không thể kết nối đến server');
+    } else {
+      // Có lỗi khi thiết lập request
+      throw new Error('Có lỗi xảy ra khi tải bài viết');
+    }
+  }
 };
 
 export const createBlogApi = async (data: BlogData) => {
@@ -332,6 +346,8 @@ export const createBlogApi = async (data: BlogData) => {
 };
 
 export const updateBlogApi = async (id: string, data: BlogData) => {
+  console.log('updateBlogApi called with:', { id, data }); // Debug log
+  
   if (data.image instanceof File) {
     const form = new FormData();
     form.append("title", data.title);
@@ -340,11 +356,16 @@ export const updateBlogApi = async (id: string, data: BlogData) => {
     form.append("published", data.published.toString());
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
     form.append("image", data.image);
+    
+    console.log('Sending FormData with published:', data.published); // Debug log
+    
     const res = await api.put(`/blogs/${id}`, form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
+    console.log('Sending JSON with published:', data.published); // Debug log
+    
     const res = await api.put(`/blogs/${id}`, data);
     return res.data;
   }
@@ -440,6 +461,22 @@ export const getAllSlotTimeApi = async () => {
 // Lấy danh sách tư vấn viên rảnh cho từng khung giờ trong một ngày
 export const getAvailableConsultantsByDayApi = async (date: string) => {
   const res = await api.get(`/slot-times/available-by-day/${date}`);
+  return res.data;
+};
+
+// Comment APIs
+export const getCommentsApi = async (blogId: string) => {
+  const res = await api.get(`/blogs/${blogId}/comments`);
+  return res.data;
+};
+
+export const addCommentApi = async (blogId: string, data: { userId: string; username: string; content: string }) => {
+  const res = await api.post(`/blogs/${blogId}/comments`, data);
+  return res.data;
+};
+
+export const deleteCommentApi = async (blogId: string, commentId: string, userId: string) => {
+  const res = await api.delete(`/blogs/${blogId}/comments/${commentId}`, { data: { userId } });
   return res.data;
 };
 
