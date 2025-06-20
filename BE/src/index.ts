@@ -11,6 +11,7 @@ import slotTimeRoutes from "./routes/slotTimeRoutes";
 import eventRoutes from "./routes/eventRoutes";
 import appointmentRoutes from "./routes/appointmentRoutes";
 import blogRoutes from "./routes/blogRoutes";
+import quizRoutes from "./routes/quizRoutes";
 const uploadRouter = require("./routes/upload");
 
 // Load biến môi trường
@@ -44,6 +45,7 @@ app.use("/api/events", eventRoutes);
 app.use("/api/uploads", uploadRouter);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/blogs", blogRoutes);
+app.use("/api/quizzes", quizRoutes);
 
 // Route kiểm tra
 app.get("/", (_req, res) => {

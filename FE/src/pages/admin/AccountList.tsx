@@ -40,6 +40,14 @@ interface CreateAccountForm {
   role: 'customer' | 'consultant';  // Restrict role types
 }
 
+// Interface cho form consultant
+interface ConsultantForm {
+  introduction: string;
+  contact: string;
+  experience: number;
+  startDateofWork: string;
+}
+
 // Available roles for account creation
 const AVAILABLE_ROLES = [
   { value: 'customer', label: 'Khách hàng' },
@@ -173,6 +181,13 @@ const AccountList: React.FC = () => {
     gender: '',
     role: 'customer'
   });
+  const [consultantForm, setConsultantForm] = useState<ConsultantForm>({
+    introduction: '',
+    contact: '',
+    experience: 0,
+    startDateofWork: new Date().toISOString().split('T')[0]
+  });
+  const [consultantFormErrors, setConsultantFormErrors] = useState<{[key: string]: string}>({});
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   // State cho upload ảnh đại diện
@@ -345,28 +360,111 @@ const AccountList: React.FC = () => {
     e.preventDefault();
     if (!selectedAccount) return;
 
-    // Nếu là admin đang cập nhật chính mình, không cho phép thay đổi role
-    if (currentUser && currentUser._id === selectedAccount._id && updateForm.role !== selectedAccount.role) {
-      toast.error('Không thể thay đổi role của chính mình');
+    // Nếu chuyển từ customer sang consultant thì validate các trường tư vấn viên
+    if (selectedAccount.role === 'customer' && updateForm.role === 'consultant') {
+      if (!validateConsultantForm()) {
+        // Nếu có lỗi, không submit
+        return;
+      }
+    }
+
+    try {
+      setIsSubmitting(true);
+      setFormErrors({});
+
+      const response = await api.put(`/accounts/${selectedAccount._id}`, {
+        ...updateForm,
+        ...(selectedAccount.role === 'customer' && updateForm.role === 'consultant' ? consultantForm : {})
+      });
+      setAccounts(accounts.map(acc => acc._id === selectedAccount._id ? response.data : acc));
+      toast.success('Cập nhật tài khoản thành công!');
+      handleCloseUpdateModal();
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        setFormErrors({ submit: error.response.data.message });
+      } else {
+        setFormErrors({ submit: 'Có lỗi xảy ra khi cập nhật tài khoản' });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Hàm xử lý thay đổi form consultant
+  const handleConsultantFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setConsultantForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Xóa lỗi khi người dùng thay đổi giá trị
+    if (consultantFormErrors[name]) {
+      setConsultantFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  // Hàm validate form consultant
+  const validateConsultantForm = (): boolean => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!consultantForm.introduction.trim()) {
+      errors.introduction = 'Vui lòng nhập giới thiệu';
+    }
+    if (!consultantForm.contact.trim()) {
+      errors.contact = 'Vui lòng nhập thông tin liên hệ';
+    }
+    if (!consultantForm.startDateofWork) {
+      errors.startDateofWork = 'Vui lòng chọn ngày bắt đầu làm việc';
+    }
+
+    setConsultantFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Hàm xử lý submit form consultant
+  const handleConsultantSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAccount) return;
+
+    if (!validateConsultantForm()) {
       return;
     }
 
     try {
-      const response = await api.put(`/accounts/${selectedAccount._id}`, updateForm);
-      
-      // Cập nhật state sau khi cập nhật thành công
-      setAccounts(accounts.map(account => 
-        account._id === selectedAccount._id 
-          ? {...account, ...response.data} 
-          : account
-      ));
-
+      setIsSubmitting(true);
+      const response = await api.put(`/accounts/${selectedAccount._id}`, {
+        ...updateForm,
+        ...consultantForm
+      });
+      setAccounts(accounts.map(acc => acc._id === selectedAccount._id ? response.data : acc));
+      toast.success('Nâng cấp tài khoản lên tư vấn viên thành công!');
       handleCloseUpdateModal();
-      toast.success('Cập nhật tài khoản thành công!');
-    } catch (err: any) {
-      console.error('Lỗi khi cập nhật tài khoản:', err);
-      toast.error(err.response?.data?.message || 'Không thể cập nhật tài khoản');
+      setIsConsultantModalOpen(false);
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        setConsultantFormErrors({ submit: error.response.data.message });
+      } else {
+        setConsultantFormErrors({ submit: 'Có lỗi xảy ra khi nâng cấp tài khoản' });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  // Hàm đóng modal consultant
+  const handleCloseConsultantModal = () => {
+    setIsConsultantModalOpen(false);
+    setConsultantForm({
+      introduction: '',
+      contact: '',
+      experience: 0,
+      startDateofWork: new Date().toISOString().split('T')[0]
+    });
+    setConsultantFormErrors({});
   };
 
   const handleOpenCreateModal = () => {
@@ -870,128 +968,178 @@ const AccountList: React.FC = () => {
       {/* Modal Cập nhật tài khoản */}
       {isUpdateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Cập nhật tài khoản</h2>
-              <button
-                onClick={handleCloseUpdateModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleUpdateAccount}>
-              <div className="space-y-4">
-                {/* Ảnh đại diện */}
-                <div className="flex flex-col items-center">
-                  <img
-                    src={avatarPreview || updateForm.photoUrl || selectedAccount?.photoUrl || '/avarta.png'}
-                    alt="avatar"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-indigo-200 mb-2"
-                  />
-                  <label className="block text-sm font-medium text-gray-700">Ảnh đại diện</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="mt-1 block w-full text-sm"
-                    disabled={isUploadingAvatar}
-                  />
-                  {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Họ tên</label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={updateForm.fullName}
-                    onChange={handleUpdateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Tên tài khoản</label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={updateForm.username}
-                    disabled
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100 cursor-not-allowed"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={updateForm.email}
-                    disabled
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100 cursor-not-allowed"
-                    required
-                  />
-                </div>
-                <PhoneNumberInput
-                  value={updateForm.phoneNumber}
-                  onChange={handleUpdateFormChange}
-                  excludeId={selectedAccount?._id}
-                />
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Giới tính</label>
-                  <select
-                    name="gender"
-                    value={updateForm.gender}
-                    onChange={handleUpdateFormChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  >
-                    <option value="">Chọn giới tính</option>
-                    <option value="male">Nam</option>
-                    <option value="female">Nữ</option>
-                    <option value="other">Khác</option>
-                  </select>
-                </div>
-
-                {/* Thêm trường role */}
-                {selectedAccount && canModifyRole(selectedAccount) && (
+          <div className="bg-white rounded-lg p-0 w-full max-w-md">
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-xl font-semibold">Cập nhật tài khoản</h2>
+                <button
+                  onClick={handleCloseUpdateModal}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              <form onSubmit={handleUpdateAccount}>
+                <div className="space-y-4">
+                  {/* Ảnh đại diện */}
+                  <div className="flex flex-col items-center">
+                    <img
+                      src={avatarPreview || updateForm.photoUrl || selectedAccount?.photoUrl || '/avarta.png'}
+                      alt="avatar"
+                      className="w-24 h-24 rounded-full object-cover border-2 border-indigo-200 mb-2"
+                    />
+                    <label className="block text-sm font-medium text-gray-700">Ảnh đại diện</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      className="mt-1 block w-full text-sm"
+                      disabled={isUploadingAvatar}
+                    />
+                    {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
+                  </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Vai trò</label>
+                    <label className="block text-sm font-medium text-gray-700">Họ tên</label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={updateForm.fullName}
+                      onChange={handleUpdateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Tên tài khoản</label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={updateForm.username}
+                      disabled
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100 cursor-not-allowed"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={updateForm.email}
+                      disabled
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100 cursor-not-allowed"
+                      required
+                    />
+                  </div>
+                  <PhoneNumberInput
+                    value={updateForm.phoneNumber}
+                    onChange={handleUpdateFormChange}
+                    excludeId={selectedAccount?._id}
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Giới tính</label>
                     <select
-                      name="role"
-                      value={updateForm.role}
+                      name="gender"
+                      value={updateForm.gender}
                       onChange={handleUpdateFormChange}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     >
-                      <option value="customer">Customer</option>
-                      <option value="consultant">Consultant</option>
-                      {/* Admin không thể thay đổi role của mình */}
-                      {selectedAccount.role === 'admin' && (
-                        <option value="admin">Admin</option>
-                      )}
+                      <option value="">Chọn giới tính</option>
+                      <option value="male">Nam</option>
+                      <option value="female">Nữ</option>
+                      <option value="other">Khác</option>
                     </select>
-                    {selectedAccount.role === 'admin' && currentUser && currentUser._id === selectedAccount._id && (
-                      <p className="mt-1 text-xs text-red-500">Admin không thể thay đổi vai trò của chính mình</p>
-                    )}
                   </div>
-                )}
-              </div>
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={handleCloseUpdateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
-                >
-                  Cập nhật
-                </button>
-              </div>
-            </form>
+
+                  {/* Thêm trường role */}
+                  {selectedAccount && canModifyRole(selectedAccount) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Vai trò</label>
+                      <select
+                        name="role"
+                        value={updateForm.role}
+                        onChange={handleUpdateFormChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      >
+                        {/* Nếu là consultant thì không cho phép chọn customer */}
+                        {selectedAccount.role !== 'consultant' && (
+                          <option value="customer">Customer</option>
+                        )}
+                        <option value="consultant">Consultant</option>
+                        {selectedAccount.role === 'admin' && (
+                          <option value="admin">Admin</option>
+                        )}
+                      </select>
+                      {selectedAccount.role === 'admin' && currentUser && currentUser._id === selectedAccount._id && (
+                        <p className="mt-1 text-xs text-red-500">Admin không thể thay đổi vai trò của chính mình</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Nếu chuyển từ customer sang consultant thì hiện form tư vấn viên */}
+                  {selectedAccount && selectedAccount.role === 'customer' && updateForm.role === 'consultant' && (
+                    <div className="border-t pt-4 mt-4">
+                      <h3 className="text-base font-semibold mb-2 text-indigo-600">Thông tin tư vấn viên</h3>
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-gray-700">Giới thiệu</label>
+                        <textarea
+                          name="introduction"
+                          value={consultantForm.introduction}
+                          onChange={handleConsultantFormChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          rows={2}
+                        />
+                        {consultantFormErrors.introduction && (
+                          <p className="mt-1 text-sm text-red-600">{consultantFormErrors.introduction}</p>
+                        )}
+                      </div>
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-gray-700">Thông tin liên hệ</label>
+                        <input
+                          type="text"
+                          name="contact"
+                          value={consultantForm.contact}
+                          onChange={handleConsultantFormChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
+                        {consultantFormErrors.contact && (
+                          <p className="mt-1 text-sm text-red-600">{consultantFormErrors.contact}</p>
+                        )}
+                      </div>
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu làm việc</label>
+                        <input
+                          type="date"
+                          name="startDateofWork"
+                          value={consultantForm.startDateofWork}
+                          onChange={handleConsultantFormChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
+                        {consultantFormErrors.startDateofWork && (
+                          <p className="mt-1 text-sm text-red-600">{consultantFormErrors.startDateofWork}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleCloseUpdateModal}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+                  >
+                    Cập nhật
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -1330,7 +1478,7 @@ const AccountList: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCloseCreateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
                 >
                   Hủy
                 </button>

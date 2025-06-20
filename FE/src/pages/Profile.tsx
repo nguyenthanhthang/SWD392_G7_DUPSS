@@ -53,6 +53,8 @@ export default function Profile() {
   const [modalBlog, setModalBlog] = useState(false);
   const [blogDangSua, setBlogDangSua] = useState<any | null>(null);
   const [modalEdit, setModalEdit] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterKeyword, setFilterKeyword] = useState('');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -189,15 +191,27 @@ export default function Profile() {
     setPwdLoading(false);
   };
 
+  // Hàm lọc blog
+  const filteredBlogs = blogs.filter(blog => {
+    const matchStatus =
+      filterStatus === 'all' ||
+      (filterStatus === 'published' && blog.published === 'published') ||
+      (filterStatus === 'pending' && blog.published === 'draft') ||
+      (filterStatus === 'rejected' && blog.published === 'rejected');
+    const matchKeyword =
+      blog.title.toLowerCase().includes(filterKeyword.toLowerCase());
+    return matchStatus && matchKeyword;
+  });
+
   return (
-    <div className="min-h-screen bg-[#f6f8fb] flex flex-col items-center py-4 px-2 relative overflow-x-hidden">
-      {/* Bóng tròn pastel/hologram hai bên */}
-      <div className="absolute top-10 left-[-80px] w-60 h-60 bg-cyan-200 rounded-full opacity-40 blur-2xl z-0"></div>
-      <div className="absolute top-1/3 left-[-100px] w-72 h-72 bg-pink-200 rounded-full opacity-35 blur-2xl z-0"></div>
-      <div className="absolute bottom-20 left-[-60px] w-44 h-44 bg-blue-200 rounded-full opacity-35 blur-2xl z-0"></div>
-      <div className="absolute top-20 right-[-80px] w-60 h-60 bg-cyan-200 rounded-full opacity-40 blur-2xl z-0"></div>
-      <div className="absolute top-1/2 right-[-100px] w-72 h-72 bg-pink-200 rounded-full opacity-35 blur-2xl z-0"></div>
-      <div className="absolute bottom-10 right-[-60px] w-44 h-44 bg-blue-200 rounded-full opacity-35 blur-2xl z-0"></div>
+    <div className="min-h-screen bg-[#DBE8FA] flex flex-col items-center py-4 px-2 relative overflow-x-hidden">
+      {/* Bóng tròn 2 màu chủ đạo */}
+      <div className="absolute top-10 left-[-80px] w-60 h-60 bg-[#283593] rounded-full opacity-40 blur-2xl z-0"></div>
+      <div className="absolute top-1/3 left-[-100px] w-72 h-72 bg-[#DBE8FA] rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute bottom-20 left-[-60px] w-44 h-44 bg-[#283593] rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute top-20 right-[-80px] w-60 h-60 bg-[#DBE8FA] rounded-full opacity-40 blur-2xl z-0"></div>
+      <div className="absolute top-1/2 right-[-100px] w-72 h-72 bg-[#283593] rounded-full opacity-35 blur-2xl z-0"></div>
+      <div className="absolute bottom-10 right-[-60px] w-44 h-44 bg-[#DBE8FA] rounded-full opacity-35 blur-2xl z-0"></div>
       <div className="bg-white rounded-3xl shadow-sm flex flex-col w-full max-w-6xl overflow-hidden relative">
         {/* Main content container */}
         <div className="flex flex-row w-full">
@@ -395,14 +409,30 @@ export default function Profile() {
               {tab === 'blogs' && (
                 <div className="p-7">
                   <div className="font-semibold text-gray-700 mb-4 text-lg">Bài viết của bạn</div>
+                  {/* Filter */}
+                  <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-cyan-500 focus:border-cyan-500">
+                      <option value="all">Tất cả</option>
+                      <option value="published">Đã xuất bản</option>
+                      <option value="pending">Chưa duyệt</option>
+                      <option value="rejected">Đã từ chối</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={filterKeyword}
+                      onChange={e => setFilterKeyword(e.target.value)}
+                      placeholder="Tìm theo tiêu đề..."
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-cyan-500 focus:border-cyan-500 w-full md:w-64"
+                    />
+                  </div>
                   {/* Bài viết đã xuất bản */}
                   <div className="mb-8">
                     <div className="font-semibold text-green-700 mb-2">Bài viết đã xuất bản</div>
-                    {blogs.filter(blog => blog.published).length === 0 ? (
+                    {filteredBlogs.filter(blog => blog.published === 'published').length === 0 ? (
                       <div className="text-gray-500 italic">Bạn chưa có bài viết nào đã xuất bản.</div>
                     ) : (
                       <div className="space-y-3">
-                        {blogs.filter(blog => blog.published).map(blog => (
+                        {filteredBlogs.filter(blog => blog.published === 'published').map(blog => (
                           <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
@@ -423,13 +453,13 @@ export default function Profile() {
                     )}
                   </div>
                   {/* Bài viết chưa duyệt */}
-                  <div>
+                  <div className="mb-8">
                     <div className="font-semibold text-yellow-700 mb-2">Bài viết chưa duyệt</div>
-                    {blogs.filter(blog => !blog.published).length === 0 ? (
+                    {filteredBlogs.filter(blog => blog.published === 'draft').length === 0 ? (
                       <div className="text-gray-500 italic">Bạn không có bài viết nào đang chờ duyệt.</div>
                     ) : (
                       <div className="space-y-3">
-                        {blogs.filter(blog => !blog.published).map(blog => (
+                        {filteredBlogs.filter(blog => blog.published === 'draft').map(blog => (
                           <div key={blog._id} className="bg-gradient-to-r from-purple-50 via-cyan-50 to-white hover:from-purple-100 hover:via-cyan-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
                             <div>
                               <div className="font-medium text-base text-gray-800">{blog.title}</div>
@@ -443,6 +473,37 @@ export default function Profile() {
                             <div className="flex gap-2">
                               <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
                               <button onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} className="text-indigo-600 hover:underline text-sm font-medium">Chỉnh sửa</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Bài viết bị từ chối */}
+                  <div>
+                    <div className="font-semibold text-red-700 mb-2">Bài viết bị từ chối</div>
+                    {filteredBlogs.filter(blog => blog.published === 'rejected').length === 0 ? (
+                      <div className="text-gray-500 italic">Bạn không có bài viết nào bị từ chối.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {filteredBlogs.filter(blog => blog.published === 'rejected').map(blog => (
+                          <div key={blog._id} className="bg-gradient-to-r from-red-50 via-pink-50 to-white hover:from-red-100 hover:via-pink-50 hover:to-white transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-md">
+                            <div>
+                              <div className="font-medium text-base text-gray-800">{blog.title}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Đã từ chối • {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
+                              </div>
+                              {blog.rejectionReason && (
+                                <div className="text-xs text-red-600 mt-1">
+                                  Lý do từ chối: {blog.rejectionReason}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Link to="#" onClick={e => {e.preventDefault(); setBlogDangXem(blog); setModalBlog(true);}} className="text-blue-600 hover:underline text-sm font-medium">Xem chi tiết</Link>
                             </div>
                           </div>
                         ))}
@@ -474,7 +535,7 @@ export default function Profile() {
               className="w-full"
             >
               <path
-                fill="#b1e2f3"
+                fill="#DBE8FA"
                 fillOpacity="1"
                 d="M0,128L48,133.3C96,139,192,149,288,144C384,139,480,117,576,128C672,139,768,181,864,176C960,171,1056,117,1152,96C1248,75,1344,85,1392,90.7L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
               ></path>
@@ -573,7 +634,7 @@ export default function Profile() {
               onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(user?._id) getBlogsByUserIdApi(user._id).then(setBlogs); }}
               onSubmit={async (data) => {
                 const dataUpdate = { ...data };
-                if (blogDangSua.published) dataUpdate.published = false;
+                if (blogDangSua.published === 'published') dataUpdate.published = 'draft';
                 await updateBlogApi(blogDangSua._id, dataUpdate);
               }}
             />

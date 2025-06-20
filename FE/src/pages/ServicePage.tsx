@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi, getAllServicesApi } from '../api';
+import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi } from '../api';
 import { ChevronLeft, ChevronRight, Check, User, Sparkles, Calendar } from 'lucide-react';
+import { addDays, startOfWeek } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 
 const steps = [
   { title: 'Chọn lịch & dịch vụ', desc: 'Chọn thời gian, tư vấn viên, dịch vụ' },
@@ -16,7 +18,7 @@ interface User {
   photoUrl: string;
   email: string;
   phoneNumber: string;
-}
+} 
 
 interface Consultant {
   _id: string;
@@ -41,6 +43,44 @@ interface Service {
   duration?: string;
 }
 
+interface SlotTime {
+  _id: string;
+  consultant_id: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+}
+
+interface AvailableConsultant {
+  _id: string;
+  fullName: string;
+  photoUrl?: string;
+  email?: string;
+  phoneNumber?: string;
+  gender?: string;
+  introduction?: string;
+  experience?: number;
+  contact?: string;
+}
+
+interface Bill {
+  slotTime_id: string;
+  user_id: string;
+  consultant_id: string;
+  service_id: string;
+  dateBooking: string;
+  reason: string;
+  note: string;
+  service?: Service;
+  consultant?: Consultant;
+  slot?: { day: string; time: string };
+  dateStr?: string;
+  price?: number;
+  fullName?: string;
+  phone?: string;
+  gender?: string;
+}
+
 export default function ServicePage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedConsultant, setSelectedConsultant] = useState('');
@@ -54,7 +94,8 @@ export default function ServicePage() {
     gender: 'male',
     reason: '',
     serviceId: '',
-    paymentMethod: 'card'
+    paymentMethod: 'card',
+    note: '',
   });
   const [timeFilter, setTimeFilter] = useState<'morning' | 'afternoon'>('morning');
   const [showConsultantDrawer, setShowConsultantDrawer] = useState(false);
@@ -64,6 +105,10 @@ export default function ServicePage() {
   const [expandConsultants, setExpandConsultants] = useState(false);
   const MAX_VISIBLE_SERVICES = 5;
   const [expandServices, setExpandServices] = useState(false);
+  const [allSlotTimes, setAllSlotTimes] = useState<SlotTime[]>([]);
+  const [availableConsultants, setAvailableConsultants] = useState<AvailableConsultant[]>([]);
+  const [bill, setBill] = useState<Bill | null>(null);
+  const [showError, setShowError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,6 +119,9 @@ export default function ServicePage() {
         ]);
         setConsultants(consultantsData);
         setServices(servicesData);
+        const slotTimes = await getAllSlotTimeApi();
+        console.log('Slot times from API:', slotTimes);
+        setAllSlotTimes(slotTimes);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -92,9 +140,84 @@ export default function ServicePage() {
     if (currentStep > 0) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Đã gửi yêu cầu đặt lịch thành công!\nNgày giờ: ${selectedSlot?.day || ''} - ${selectedSlot?.time || ''}\nDịch vụ: ${services.find(s => s._id === form.serviceId)?.name || ''}\nTư vấn viên: ${consultants.find(c => c._id === selectedConsultant)?.accountId?.fullName || ''}\nHọ tên: ${form.name}\nSĐT: ${form.phone}\nGiới tính: ${form.gender === 'male' ? 'Nam' : 'Nữ'}\nLý do: ${form.reason}\nPhương thức thanh toán: ${form.paymentMethod === 'card' ? 'Thẻ tín dụng' : 'Chuyển khoản'}`);
+    const userInfo = localStorage.getItem('userInfo');
+    const user = userInfo ? JSON.parse(userInfo) : null;
+    if (!user || !selectedConsultant || !selectedSlot || !form.serviceId) {
+      setShowError('Thiếu thông tin!');
+      return;
+    }
+    const today = new Date();
+    const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
+    const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
+    const slotDate = addDays(weekStart, dayIdx);
+    const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+    const slotHour = selectedSlot.time;
+    const slotTimeObj = allSlotTimes.find(st => {
+      if (st.status !== 'available') return false;
+      const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+      const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+      return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
+    });
+    if (!slotTimeObj) {
+      setShowError('Không tìm thấy slot time phù hợp!');
+      return;
+    }
+    try {
+      const payload = {
+        slotTime_id: slotTimeObj._id,
+        user_id: user._id,
+        consultant_id: selectedConsultant,
+        service_id: form.serviceId,
+        dateBooking: slotTimeObj.start_time,
+        reason: form.reason,
+        note: form.note,
+      };
+      await createAppointmentApi(payload);
+      setBill({
+        ...payload,
+        service: services.find(s => s._id === form.serviceId),
+        consultant: consultants.find(c => c._id === selectedConsultant),
+        slot: selectedSlot,
+        dateStr: getSelectedSlotDateStr(),
+        price: services.find(s => s._id === form.serviceId)?.price,
+        fullName: form.name,
+        phone: form.phone,
+        gender: form.gender,
+      });
+      setCurrentStep(3); // Hiển thị bill
+    } catch {
+      setShowError('Đặt lịch thất bại! Vui lòng thử lại hoặc liên hệ hỗ trợ.');
+    }
+  };
+
+  const handleOpenConsultantDrawer = async (slotDay: string, slotTime: string) => {
+    setPendingSlot({ day: slotDay, time: slotTime });
+    setShowConsultantDrawer(true);
+    setPendingConsultant(selectedConsultant || (consultants[0]?._id || ''));
+    const today = new Date();
+    const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
+    const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(slotDay);
+    const slotDate = addDays(weekStart, dayIdx);
+    const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+    try {
+      const res = await getAvailableConsultantsByDayApi(slotDateStr);
+      const slot = res.slots.find((s: { time: string }) => s.time === slotTime);
+      setAvailableConsultants(slot?.availableConsultants || []);
+    } catch {
+      setAvailableConsultants([]);
+    }
+  };
+
+  // Helper để lấy ngày yyyy-MM-dd từ slot đang chọn
+  const getSelectedSlotDateStr = () => {
+    if (!selectedSlot) return '';
+    const today = new Date();
+    const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
+    const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
+    const slotDate = addDays(weekStart, dayIdx);
+    return formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy');
   };
 
   return (
@@ -251,9 +374,9 @@ export default function ServicePage() {
                       {/* Header */}
                       <div className="grid grid-cols-8 gap-3 mb-6">
                         <div className="text-center text-sm font-medium text-gray-400">Giờ</div>
-                        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, idx) => (
+                        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => (
                           <div key={day} className={`text-center text-sm font-medium py-2 ${
-                            idx === 6 ? 'text-red-400' : 'text-gray-600'
+                            dayIdx === 6 ? 'text-red-400' : 'text-gray-600'
                           }`}>
                             {day}
                           </div>
@@ -268,21 +391,32 @@ export default function ServicePage() {
                               {slot}
                             </div>
                             {/* Day Buttons */}
-                            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => {
+                            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, dayIdx) => {
                               const isSelected = selectedSlot?.day === day && selectedSlot?.time === slot;
+                              const today = new Date();
+                              const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 });
+                              const slotDate = addDays(weekStart, dayIdx);
+                              const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+                              const slotHour = slot;
+                              const isAvailable = allSlotTimes.some(st => {
+                                if (st.status !== 'available') return false;
+                                const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+                                const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+                                return stDateStr === slotDateStr && stHour === slotHour;
+                              });
                               return (
                                 <button
                                   key={day + slot}
                                   className={`h-12 w-full rounded-xl border transition-all duration-200 ${
-                                    isSelected 
-                                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500 border-blue-500 text-white shadow-lg transform scale-105' 
-                                      : 'bg-white/80 border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 text-gray-600'
+                                    isAvailable
+                                      ? (isSelected 
+                                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500 border-blue-500 text-white shadow-lg transform scale-105' 
+                                          : 'bg-white/80 border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 text-gray-600')
+                                      : 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed opacity-60'
                                   }`}
-                                  onClick={() => {
-                                    setPendingSlot({ day, time: slot });
-                                    setShowConsultantDrawer(true);
-                                    setPendingConsultant(selectedConsultant || (consultants[0]?._id || ''));
-                                  }}
+                                  onClick={isAvailable ? () => handleOpenConsultantDrawer(day, slot) : undefined}
+                                  disabled={!isAvailable}
+                                  title={isAvailable ? '' : 'không có tư vấn viên'}
                                 >
                                   {isSelected && <Check className="w-4 h-4 mx-auto" />}
                                 </button>
@@ -304,7 +438,7 @@ export default function ServicePage() {
                             )}
                             {selectedSlot && (
                               <div className="text-sm text-gray-600">
-                                {selectedSlot.day}, {selectedSlot.time}
+                                {selectedSlot.day}, {getSelectedSlotDateStr()}, {selectedSlot.time}
                                 {selectedConsultant && (
                                   <>
                                     <span className="mx-2">|</span>
@@ -394,6 +528,17 @@ export default function ServicePage() {
                       onChange={handleChange}
                     />
                   </div>
+                  <div>
+                    <label className="block text-gray-700 mb-1 text-base font-medium">Ghi chú (tuỳ chọn)</label>
+                    <textarea
+                      name="note"
+                      placeholder="Ghi chú cho chuyên viên (nếu có)"
+                      className="w-full border border-blue-100 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm hover:border-blue-300 text-base resize-none"
+                      rows={2}
+                      value={form.note}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </div>
                 <div className="flex justify-between gap-2 mt-4">
                   <button
@@ -448,7 +593,7 @@ export default function ServicePage() {
                   <div className="flex justify-between items-center bg-blue-50/60 rounded-xl px-6 py-4">
                     <span className="text-gray-600">Thời gian:</span>
                     <span className="font-medium">
-                      {selectedSlot ? `${selectedSlot.day}, ${selectedSlot.time}` : '--'}
+                      {selectedSlot ? `${selectedSlot.day}, ${getSelectedSlotDateStr()}, ${selectedSlot.time}` : '--'}
                     </span>
                   </div>
                   <div className="border-t border-gray-200 pt-4 mb-2">
@@ -507,6 +652,36 @@ export default function ServicePage() {
                 </p>
               </form>
             )}
+            {/* Step 4: Bill */}
+            {currentStep === 3 && bill && (
+              <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl p-10 border border-blue-100 flex flex-col gap-8 animate-fadeIn">
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center gap-3 mb-4">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span className="text-sm font-medium text-green-600 tracking-wide uppercase">Đặt lịch thành công</span>
+                    <div className="w-8 h-px bg-gradient-to-r from-green-500 to-transparent"></div>
+                  </div>
+                  <h2 className="text-3xl font-bold text-green-700 mb-2 tracking-tight">Hóa đơn đặt lịch</h2>
+                  <p className="text-gray-600 font-light text-lg">Cảm ơn bạn đã tin tưởng sử dụng dịch vụ!</p>
+                </div>
+                <div className="flex flex-col gap-4 text-base text-gray-700">
+                  <div className="flex justify-between"><span>Dịch vụ:</span><span className="font-semibold">{bill.service?.name}</span></div>
+                  <div className="flex justify-between"><span>Chuyên viên:</span><span className="font-semibold">{bill.consultant?.accountId?.fullName}</span></div>
+                  <div className="flex justify-between"><span>Thời gian:</span><span>{bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time}` : '--'}</span></div>
+                  <div className="flex justify-between"><span>Khách hàng:</span><span>{bill.fullName}</span></div>
+                  <div className="flex justify-between"><span>SĐT:</span><span>{bill.phone}</span></div>
+                  <div className="flex justify-between"><span>Giới tính:</span><span>{bill.gender === 'male' ? 'Nam' : 'Nữ'}</span></div>
+                  <div className="flex justify-between"><span>Lý do tư vấn:</span><span>{bill.reason}</span></div>
+                </div>
+                <div className="border-t border-gray-200 pt-4 mb-2 flex justify-between items-center text-lg font-bold">
+                  <span>Tổng cộng:</span>
+                  <span className="text-blue-700">{bill.price?.toLocaleString('vi-VN')}đ</span>
+                </div>
+                <div className="flex justify-center mt-6">
+                  <button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105" onClick={() => window.location.reload()}>Đặt lịch mới</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -521,7 +696,7 @@ export default function ServicePage() {
               <button className="text-gray-400 hover:text-gray-700 text-2xl font-bold" onClick={() => setShowConsultantDrawer(false)}>&times;</button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {(expandConsultants ? consultants : consultants.slice(0, MAX_VISIBLE_CONSULTANTS)).map(consultant => (
+              {(expandConsultants ? availableConsultants : availableConsultants.slice(0, MAX_VISIBLE_CONSULTANTS)).map(consultant => (
                 <div
                   key={consultant._id}
                   className={`p-4 rounded-2xl border transition-all duration-300 cursor-pointer ${
@@ -537,10 +712,10 @@ export default function ServicePage() {
                     setExpandConsultants(false);
                   }}
                 >
-                  <div className="font-medium text-gray-900 truncate max-w-[180px]">{consultant.accountId?.fullName}</div>
+                  <div className="font-medium text-gray-900 truncate max-w-[180px]">{consultant.fullName}</div>
                 </div>
               ))}
-              {!expandConsultants && consultants.length > MAX_VISIBLE_CONSULTANTS && (
+              {!expandConsultants && availableConsultants.length > MAX_VISIBLE_CONSULTANTS && (
                 <div className="h-10 p-4 rounded-2xl border border-dashed border-blue-200 bg-white/80 flex items-center justify-center text-blue-500 text-2xl font-bold cursor-pointer hover:bg-blue-50 transition-all select-none"
                   onClick={() => setExpandConsultants(true)}
                 >
@@ -548,6 +723,16 @@ export default function ServicePage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal/cửa sổ thông báo lỗi */}
+      {showError && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full flex flex-col items-center animate-fadeIn">
+            <div className="text-3xl text-red-500 mb-2">&#9888;</div>
+            <div className="text-lg font-semibold text-red-700 mb-2">{showError}</div>
+            <button className="mt-4 px-6 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700" onClick={() => setShowError(null)}>Đóng</button>
           </div>
         </div>
       )}

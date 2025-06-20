@@ -1,5 +1,14 @@
 import axios from "axios";
 
+export interface BlogData {
+  title: string;
+  content: string;
+  author: string;
+  published: 'draft' | 'published' | 'rejected';
+  topics?: string[];
+  image?: File | string; // Có thể là File khi upload hoặc URL string khi hiển thị
+}
+
 const api = axios.create({
   baseURL: "http://localhost:5000/api", // Đổi lại nếu BE chạy port khác hoặc có prefix khác
   headers: {
@@ -122,9 +131,7 @@ export const getSlotTimeByConsultantIdApi = async (consultantId: string) => {
 
 export const createSlotTimeApi = async (data: {
   consultant_id: string;
-  start_time: string;
-  end_time: string;
-  status: string;
+  slots: { start_time: string; end_time: string }[];
 }) => {
   const res = await api.post("/slot-times", data);
   return res.data;
@@ -224,8 +231,14 @@ export const getEventAttendanceApi = async (eventId: string) => {
   return res.data;
 };
 
-export const checkPhoneNumberExistsApi = async (phone: string, excludeId?: string) => {
-  const res = await api.get(`/accounts/check-phone/${phone}` + (excludeId ? `?excludeId=${excludeId}` : ''));
+export const checkPhoneNumberExistsApi = async (
+  phone: string,
+  excludeId?: string
+) => {
+  const res = await api.get(
+    `/accounts/check-phone/${phone}` +
+      (excludeId ? `?excludeId=${excludeId}` : "")
+  );
   return res.data;
 };
 
@@ -243,19 +256,30 @@ export const createAppointmentApi = async (data: {
   reason: string;
   note?: string;
 }) => {
-  const res = await api.post('/appointments', data);
+  const res = await api.post("/appointments", data);
   return res.data;
 };
 
 // Cập nhật thông tin account
-export const updateAccountApi = async (id: string, data: Partial<{ fullName: string; phoneNumber: string }>) => {
+export const updateAccountApi = async (
+  id: string,
+  data: Partial<{ fullName: string; phoneNumber: string }>
+) => {
   const res = await api.put(`/accounts/${id}`, data);
   return res.data;
 };
 
 // Đổi mật khẩu
-export const changePasswordApi = async (email: string, password: string, confirmPassword: string) => {
-  const res = await api.post(`/accounts/change-password`, { email, password, confirmPassword });
+export const changePasswordApi = async (
+  email: string,
+  password: string,
+  confirmPassword: string
+) => {
+  const res = await api.post(`/accounts/change-password`, {
+    email,
+    password,
+    confirmPassword,
+  });
   return res.data;
 };
 
@@ -266,56 +290,78 @@ export const getAppointmentByUserIdApi = async (userId: string) => {
 
 // Gửi OTP quên mật khẩu
 export const sendResetPasswordEmailApi = async (email: string) => {
-  const res = await api.post('/auth/send-reset-password-email', { email });
+  const res = await api.post("/auth/send-reset-password-email", { email });
   return res.data;
 };
 
 // Blog APIs
+
 export const getAllBlogsApi = async () => {
   const res = await api.get("/blogs");
   return res.data;
 };
 
 export const getBlogByIdApi = async (id: string) => {
-  const res = await api.get(`/blogs/${id}`);
-  return res.data;
+  try {
+    const res = await api.get('/blogs/' + id);
+    return res.data;
+  } catch (error: any) {
+    // Xử lý các loại lỗi cụ thể
+    if (error.response) {
+      // Server trả về response với status code nằm ngoài range 2xx
+      throw new Error(error.response.data.message || 'Không thể tải bài viết');
+    } else if (error.request) {
+      // Request được gửi nhưng không nhận được response
+      throw new Error('Không thể kết nối đến server');
+    } else {
+      // Có lỗi khi thiết lập request
+      throw new Error('Có lỗi xảy ra khi tải bài viết');
+    }
+  }
 };
 
-export const createBlogApi = async (data: any) => {
+export const createBlogApi = async (data: BlogData) => {
   // Nếu có file (data.image là File), gửi FormData
   if (data.image instanceof File) {
     const form = new FormData();
-    form.append('title', data.title);
-    form.append('content', data.content);
-    form.append('author', data.author);
-    form.append('published', data.published);
-    if (data.topics) form.append('topics', JSON.stringify(data.topics));
-    form.append('image', data.image);
-    const res = await api.post('/blogs', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    form.append("title", data.title);
+    form.append("content", data.content);
+    form.append("author", data.author);
+    form.append("published", data.published.toString());
+    if (data.topics) form.append("topics", JSON.stringify(data.topics));
+    form.append("image", data.image);
+    const res = await api.post("/blogs", form, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
-    // Không có file, gửi JSON bình thường
-    const res = await api.post('/blogs', data);
+    // Không có file hoặc image là URL, gửi JSON bình thường
+    const res = await api.post("/blogs", data);
     return res.data;
   }
 };
 
-export const updateBlogApi = async (id: string, data: any) => {
+export const updateBlogApi = async (id: string, data: BlogData) => {
+  console.log('updateBlogApi called with:', { id, data }); // Debug log
+  
   if (data.image instanceof File) {
     const form = new FormData();
-    form.append('title', data.title);
-    form.append('content', data.content);
-    form.append('author', data.author);
-    form.append('published', data.published);
-    if (data.topics) form.append('topics', JSON.stringify(data.topics));
-    form.append('image', data.image);
+    form.append("title", data.title);
+    form.append("content", data.content);
+    form.append("author", data.author);
+    form.append("published", data.published.toString());
+    if (data.topics) form.append("topics", JSON.stringify(data.topics));
+    form.append("image", data.image);
+    
+    console.log('Sending FormData with published:', data.published); // Debug log
+    
     const res = await api.put(`/blogs/${id}`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
+    console.log('Sending JSON with published:', data.published); // Debug log
+    
     const res = await api.put(`/blogs/${id}`, data);
     return res.data;
   }
@@ -333,6 +379,100 @@ export const getBlogsByAuthorApi = async (author: string) => {
 
 export const getBlogsByUserIdApi = async (userId: string) => {
   const res = await api.get(`/blogs/user/${userId}`);
+  return res.data;
+};
+
+// Cập nhật thông tin consultant
+export const updateConsultantApi = async (
+  id: string,
+  data: Partial<{ introduction: string; startDateofWork: string }>
+) => {
+  const res = await api.put(`/consultants/${id}`, data);
+  return res.data;
+};
+
+// ===== QUIZ APIs =====
+
+// Lấy danh sách các bài quiz
+export const getAllQuizzesApi = async (ageGroup?: string) => {
+  const params = ageGroup ? `?ageGroup=${ageGroup}` : "";
+  const res = await api.get(`/quizzes${params}`);
+  return res.data;
+};
+
+// Lấy câu hỏi theo quiz và age group
+export const getQuizQuestionsApi = async (
+  quizId: string,
+  ageGroup?: string,
+  limit?: number
+) => {
+  const params = new URLSearchParams();
+  if (ageGroup) params.append("ageGroup", ageGroup);
+  if (limit) params.append("limit", limit.toString());
+  const res = await api.get(
+    `/quizzes/${quizId}/questions?${params.toString()}`
+  );
+  return res.data;
+};
+
+// Submit kết quả làm bài quiz
+export const submitQuizResultApi = async (data: {
+  quizId: string;
+  userId?: string;
+  sessionId?: string;
+  answers: { questionId: string; selectedOption: number }[];
+}) => {
+  const res = await api.post("/quizzes/quiz-results", data);
+  return res.data;
+};
+
+// Lấy lịch sử kết quả quiz của user
+export const getUserQuizResultsApi = async (
+  userId: string,
+  limit?: number,
+  page?: number
+) => {
+  const params = new URLSearchParams();
+  if (limit) params.append("limit", limit.toString());
+  if (page) params.append("page", page.toString());
+  const res = await api.get(
+    `/quizzes/quiz-results/${userId}?${params.toString()}`
+  );
+  return res.data;
+};
+
+// Lấy chi tiết một kết quả quiz
+export const getQuizResultByIdApi = async (resultId: string) => {
+  const res = await api.get(`/quizzes/quiz-results/result/${resultId}`);
+  return res.data;
+};
+
+// ===== SLOT TIME APIs =====
+
+export const getAllSlotTimeApi = async () => {
+  const res = await api.get("/slot-times");
+  return res.data;
+};
+
+// Lấy danh sách tư vấn viên rảnh cho từng khung giờ trong một ngày
+export const getAvailableConsultantsByDayApi = async (date: string) => {
+  const res = await api.get(`/slot-times/available-by-day/${date}`);
+  return res.data;
+};
+
+// Comment APIs
+export const getCommentsApi = async (blogId: string) => {
+  const res = await api.get(`/blogs/${blogId}/comments`);
+  return res.data;
+};
+
+export const addCommentApi = async (blogId: string, data: { userId: string; username: string; content: string }) => {
+  const res = await api.post(`/blogs/${blogId}/comments`, data);
+  return res.data;
+};
+
+export const deleteCommentApi = async (blogId: string, commentId: string, userId: string) => {
+  const res = await api.delete(`/blogs/${blogId}/comments/${commentId}`, { data: { userId } });
   return res.data;
 };
 

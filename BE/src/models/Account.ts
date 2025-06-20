@@ -10,6 +10,7 @@ export interface IAccount extends Document {
   isVerified: boolean;
   isDisabled: boolean;
   photoUrl?: string;
+  gender?: string;
   verificationToken?: string;
   verificationTokenExpiresAt?: Date;
   phoneNumber?: string;
@@ -32,6 +33,7 @@ const accountSchema = new Schema<IAccount>(
     isVerified: { type: Boolean, default: false },
     isDisabled: { type: Boolean, default: false },
     photoUrl: { type: String },
+    gender: { type: String },
     verificationToken: { type: String },
     verificationTokenExpiresAt: { type: Date },
     phoneNumber: { type: String },

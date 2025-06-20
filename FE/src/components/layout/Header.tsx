@@ -47,15 +47,18 @@ function Header() {
                 alt="Logo"
                 className="h-10 w-10 object-cover rounded-full mr-2"
               />
-              <span className="ml-2 text-xl font-bold text-gray-900">
+              <span className="ml-2 text-xl font-semibold text-[#283593]">
                 HopeHub
               </span>
             </Link>
           </div>
 
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8 text-lg font-medium">
             <Link to="/" className="text-gray-600 hover:text-gray-900">
               Home
+            </Link>
+            <Link to="/quizz" className="text-gray-600 hover:text-gray-900">
+              Quiz
             </Link>
             <Link
               to="/consulting"

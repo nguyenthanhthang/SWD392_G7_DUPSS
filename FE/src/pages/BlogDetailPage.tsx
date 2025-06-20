@@ -12,7 +12,8 @@ interface Blog {
   image?: string;
   thumbnail?: string;
   topics?: string[];
-  published: boolean;
+  published: 'draft' | 'published' | 'rejected';
+  comments?: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -31,36 +32,43 @@ function BlogDetailPage() {
       if (!id) return;
       
       setLoading(true);
+      setError(null); // Reset error state
+      
       try {
         const blogData = await getBlogByIdApi(id);
         
         // Nếu blog chưa được xuất bản, chuyển hướng về trang blogs
-        if (!blogData.published) {
-          navigate('/blogs');
+        if (blogData.published !== 'published') {
+          setError('Bài viết này chưa được xuất bản');
           return;
         }
         
         setBlog(blogData);
-        setError(null);
         
         // Set page title
         document.title = `${blogData.title} | HopeHub Blog`;
 
         // Lấy bài viết liên quan theo tag
         if (blogData.topics && blogData.topics.length > 0) {
-          const allBlogs = await getAllBlogsApi();
-          const related = allBlogs.filter((b: Blog) =>
-            b._id !== blogData._id &&
-            b.published &&
-            b.topics && b.topics.some((tag: string) => blogData.topics.includes(tag))
-          ).slice(0, 3);
-          setRelatedBlogs(related);
+          try {
+            const allBlogs = await getAllBlogsApi(); // This will only return published blogs
+            const related = allBlogs.filter((b: Blog) =>
+              b._id !== blogData._id &&
+              b.topics && b.topics.some((tag: string) => blogData.topics.includes(tag))
+            ).slice(0, 3);
+            setRelatedBlogs(related);
+          } catch (err) {
+            console.error('Error fetching related blogs:', err);
+            // Không set error vì đây không phải lỗi nghiêm trọng
+            setRelatedBlogs([]);
+          }
         } else {
           setRelatedBlogs([]);
         }
-      } catch (err) {
-        setError('Không thể tải bài viết. Vui lòng thử lại sau.');
+      } catch (err: any) {
+        setError(err.message || 'Không thể tải bài viết. Vui lòng thử lại sau.');
         console.error('Error fetching blog:', err);
+        setBlog(null);
       } finally {
         setLoading(false);
       }
@@ -98,9 +106,11 @@ function BlogDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h1 className="text-2xl font-bold text-red-500 mb-4">
-              {error || 'Không tìm thấy bài viết'}
+              {error || 'Bài viết không khả dụng'}
             </h1>
-            <p className="text-gray-600 mb-6">Bài viết bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+            <p className="text-gray-600 mb-6">
+              {error || 'Bài viết này có thể chưa được xuất bản, đã bị xóa hoặc không tồn tại.'}
+            </p>
             <Link
               to="/blogs"
               className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-full hover:from-cyan-600 hover:to-blue-600 transition shadow-md flex items-center justify-center max-w-xs mx-auto"

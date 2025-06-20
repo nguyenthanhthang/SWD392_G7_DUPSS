@@ -4,6 +4,14 @@ import Consultant from "../models/Consultant";
 import bcrypt from "bcryptjs";
 import { isStrongPassword } from "../utils";
 
+// Interface cho request body khi cập nhật account thành consultant
+interface IUpdateAccountRequest extends Partial<IAccount> {
+  introduction?: string;
+  contact?: string;
+  experience?: number;
+  startDateofWork?: Date;
+}
+
 // [POST] /api/accounts – Tạo tài khoản
 export const createAccount = async (
   req: Request<{}, {}, IAccount>,
@@ -64,7 +72,7 @@ export const getAccountById = async (
 
 // [PUT] /api/accounts/:id – Cập nhật
 export const updateAccount = async (
-  req: Request<{ id: string }, {}, Partial<IAccount>>,
+  req: Request<{ id: string }, {}, IUpdateAccountRequest>,
   res: Response
 ): Promise<void> => {
   try {
@@ -80,14 +88,24 @@ export const updateAccount = async (
       delete req.body.email;
     }
 
-    // Kiểm tra trùng số điện thoại (nếu cập nhật phoneNumber)
-    if (req.body.phoneNumber) {
+    // Kiểm tra trùng số điện thoại và validate chỉ khi thay đổi
+    if (
+      req.body.phoneNumber &&
+      req.body.phoneNumber !== currentAccount.phoneNumber
+    ) {
+      // Kiểm tra trùng
       const existedPhone = await Account.findOne({
         phoneNumber: req.body.phoneNumber,
         _id: { $ne: req.params.id }
       });
       if (existedPhone) {
         res.status(400).json({ message: "Số điện thoại đã tồn tại" });
+        return;
+      }
+      // Validate định dạng
+      const phone = req.body.phoneNumber.trim();
+      if (!/^0\d{9}$/.test(phone)) {
+        res.status(400).json({ message: "Số điện thoại phải 10 số, bắt đầu bằng 0!" });
         return;
       }
     }
@@ -107,15 +125,6 @@ export const updateAccount = async (
       const exists = await Account.findOne({ fullName: name, _id: { $ne: req.params.id } });
       if (exists) {
         res.status(400).json({ message: "Tên này đã được sử dụng!" });
-        return;
-      }
-    }
-
-    // Validate số điện thoại
-    if (req.body.phoneNumber) {
-      const phone = req.body.phoneNumber.trim();
-      if (!/^0\d{9}$/.test(phone)) {
-        res.status(400).json({ message: "Số điện thoại phải 10 số, bắt đầu bằng 0!" });
         return;
       }
     }
@@ -156,13 +165,27 @@ export const updateAccount = async (
       });
 
       if (!existingConsultant) {
-        // Tạo consultant mới nếu chưa tồn tại
+        // Kiểm tra thông tin consultant bắt buộc
+        const { introduction, contact, experience, startDateofWork } = req.body;
+        if (!introduction || !contact || !startDateofWork) {
+          res.status(400).json({ 
+            message: "Vui lòng nhập đầy đủ thông tin tư vấn viên: giới thiệu, liên hệ và ngày bắt đầu làm việc" 
+          });
+          return;
+        }
+
+        // Tạo consultant mới với thông tin đầy đủ
         const newConsultant = new Consultant({
           accountId: updated._id,
+          introduction,
+          contact,
           status: "active",
         });
         await newConsultant.save();
       } else {
+        // Nếu đã tồn tại, cập nhật thông tin nếu có
+        if (req.body.introduction) existingConsultant.introduction = req.body.introduction;
+        if (req.body.contact) existingConsultant.contact = req.body.contact;
         existingConsultant.status = "active";
         await existingConsultant.save();
       }

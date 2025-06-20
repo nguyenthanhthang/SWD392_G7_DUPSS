@@ -2,7 +2,7 @@ import { FaFacebookF, FaTwitter, FaInstagram } from "react-icons/fa";
 
 function Footer() {
   return (
-    <footer className="relative bg-gradient-to-t from-blue-200 via-purple-200 to-white text-gray-800 pt-16 pb-24 px-4 md:px-20 overflow-hidden">
+    <footer className="relative bg-gradient-to-t from-[#DBE8FA] via-[#DBE8FA] to-white text-[#283593] pt-16 pb-24 px-4 md:px-20 overflow-hidden">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-12 md:gap-0 justify-between items-start">
         {/* Logo và social */}
         <div className="flex-1 min-w-[220px] flex flex-col items-center md:items-start">
@@ -57,7 +57,7 @@ function Footer() {
         </div>
       </div>
       {/* Copyright & links */}
-      <div className="mt-16 border-t border-blue-100 pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-blue-700">
+      <div className="mt-16 border-t border-[#DBE8FA] pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-[#283593]">
         <div>
           @2023 - All Rights Reserved by Adminmart.com. Distributed by ThemeWagon
         </div>
@@ -70,9 +70,8 @@ function Footer() {
       {/* SVG sóng nước hologram full width, không có voi */}
       <div className="absolute left-0 bottom-0 w-full flex justify-center pointer-events-none select-none" style={{zIndex:1}}>
         <svg width="100%" height="120" viewBox="0 0 1440 120" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Sóng nước pastel hologram */}
-          <path d="M0 80 Q 360 120 720 80 T 1440 80 V120 H0Z" fill="#b4d8fe" fillOpacity="0.7"/>
-          <path d="M0 100 Q 480 140 960 100 T 1440 100 V120 H0Z" fill="#d1c4e9" fillOpacity="0.8"/>
+          <path d="M0 80 Q 360 120 720 80 T 1440 80 V120 H0Z" fill="#DBE8FA" fillOpacity="0.7"/>
+          <path d="M0 100 Q 480 140 960 100 T 1440 100 V120 H0Z" fill="#283593" fillOpacity="0.8"/>
         </svg>
       </div>
     </footer>

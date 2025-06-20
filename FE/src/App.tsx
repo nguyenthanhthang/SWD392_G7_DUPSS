@@ -26,9 +26,13 @@ import ServicePage from "./pages/ServicePage";
 import AppointmentsPage from "./pages/Appointments";
 import PaymentHistory from "./pages/PaymentHistory";
 import BlogManagement from "./pages/admin/BlogManagement";
-
+import ConsultantLayout from "./components/layout/ConsultantLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import ConsultantDashboard from "./pages/consultant/ConsultantDashboard";
+import ScheduleManagement from "./pages/consultant/ScheduleManagement";
+import PatientManagement from "./pages/consultant/PatientManagement";
+import ReportsAndUpdates from "./pages/consultant/Reports&Updates";
+import ConsultantProfile from "./pages/consultant/ConsultantProfile";
 import { useEffect } from "react";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -156,14 +160,20 @@ function AppContent() {
 
         {/* Consultant Routes */}
         <Route
-          path="/consultant/*"
+          path="/consultants/*"
           element={
             <ConsultantRoute>
+              <ConsultantLayout>
                 <Routes>
-                  <Route path="" element={<ConsultantDashboard />} /> 
+                  <Route index element={<ConsultantDashboard />} />
+                  <Route path="dashboard" element={<ConsultantDashboard />} />
                   <Route path="events" element={<EventManagement />} />
-                  <Route path="consultants" element={<Consultant />} />
+                  <Route path="schedule" element={<ScheduleManagement />} />
+                  <Route path="patient" element={<PatientManagement />} />
+                  <Route path="reports" element={<ReportsAndUpdates />} />
+                  <Route path="consultant-profile" element={<ConsultantProfile />} />
                 </Routes>
+              </ConsultantLayout>
             </ConsultantRoute>
           }
         />
