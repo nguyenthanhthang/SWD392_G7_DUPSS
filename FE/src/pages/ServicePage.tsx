@@ -615,7 +615,7 @@ export default function ServicePage() {
                                     disabled={status !== 'available'}
                                     title={status === 'past' ? 'Thời gian đã qua' : status === 'booked' ? 'Bạn đã đặt lịch này' : `Chọn lịch ${displayTime} ${day}`}
                                   >
-                                    {status === 'booked' ? 'Đã đặt' : slot}
+                                    {status === 'booked' ? 'Đã đặt' : ''}
                                   </button>
                                 </div>
                               );
