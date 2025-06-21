@@ -60,8 +60,8 @@ function AdminHeader({ isSidebarCollapsed = false }: AdminHeaderProps) {
       {/* SVG background sóng */}
       <div className="absolute inset-0 w-full h-full pointer-events-none select-none" aria-hidden="true">
         <svg viewBox="0 0 1600 200" width="100%" height="100%" preserveAspectRatio="none" className="w-full h-full">
-          <path d="M0,0 L1600,0 L1600,80 Q1200,120 900,80 Q600,40 0,120 Z" fill="#a5b4fc" />
-          <path d="M0,120 Q600,40 900,80 Q1200,120 1600,80 L1600,140 Q1200,180 900,140 Q600,100 0,180 Z" fill="#4fd1c5" />
+          <path d="M0,0 L1600,0 L1600,80 Q1200,120 900,80 Q600,40 0,120 Z" fill="#0ea5e9" />
+          <path d="M0,120 Q600,40 900,80 Q1200,120 1600,80 L1600,140 Q1200,180 900,140 Q600,100 0,180 Z" fill="#22d3ee" />
           <path d="M0,180 Q600,100 900,140 Q1200,180 1600,140 L1600,200 L0,200 Z" fill="#fff" />
         </svg>
       </div>
@@ -106,7 +106,7 @@ function AdminHeader({ isSidebarCollapsed = false }: AdminHeaderProps) {
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-100">
                 <button
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 flex items-center"
+                  className="w-full text-left px-4 py-2 hover:bg-sky-50 text-gray-700 flex items-center"
                   onClick={() => { setShowDropdown(false); navigate('/admin/profile'); }}
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,7 +115,7 @@ function AdminHeader({ isSidebarCollapsed = false }: AdminHeaderProps) {
                   Thông tin cá nhân
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 flex items-center"
+                  className="w-full text-left px-4 py-2 hover:bg-sky-50 text-gray-700 flex items-center"
                   onClick={handleLogout}
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

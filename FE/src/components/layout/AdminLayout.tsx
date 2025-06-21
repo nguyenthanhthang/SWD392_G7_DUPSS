@@ -168,7 +168,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const baseUrl = user?.role === "admin" ? "/admin" : "/consultant-portal";
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-sky-50">
       {/* Admin Header */}
       <AdminHeader />
       <div className="flex">
@@ -177,7 +177,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div>
             {/* Logo */}
             <div className="flex items-center justify-center h-16">
-              <Link to={baseUrl} className="text-xl font-bold text-indigo-600">
+              <Link to={baseUrl} className="text-xl font-bold text-sky-600">
                 {user?.role === "admin" ? "DUPSS Admin" : "DUPSS Consultant"}
               </Link>
             </div>
@@ -190,8 +190,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       to={item.path}
                       className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors ${
                         isActive(item.path)
-                          ? "bg-blue-50 text-blue-700"
-                          : "text-gray-600 hover:bg-gray-50"
+                          ? "bg-sky-50 text-sky-700 border border-sky-100"
+                          : "text-gray-600 hover:bg-sky-50/50 hover:text-sky-700"
                       }`}
                     >
                       {item.icon}

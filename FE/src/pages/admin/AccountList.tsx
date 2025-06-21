@@ -131,7 +131,7 @@ const PhoneNumberInput: React.FC<{
           value={value}
           onChange={onChange}
           disabled={disabled}
-          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-10 ${phoneExists ? 'border-red-500' : ''}`}
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm pr-10 ${phoneExists ? 'border-red-500' : ''}`}
         />
         {/* Icon trạng thái, luôn giữ chỗ, luôn căn giữa dọc */}
         <span
@@ -228,7 +228,7 @@ const AccountList: React.FC = () => {
       case 'admin':
         return 'bg-red-100 text-red-800';
       case 'consultant':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-sky-100 text-sky-800';
       default: // customer
         return 'bg-emerald-100 text-emerald-800';
     }
@@ -721,242 +721,283 @@ const AccountList: React.FC = () => {
         pauseOnHover
         theme="colored"
       />
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold text-indigo-400">Quản lý tài khoản</h1>
+      <div className="px-4 py-5 sm:px-6">
+        <h1 className="text-2xl font-semibold text-gray-800">Quản lý tài khoản</h1>
       </div>
 
       {/* Phần tìm kiếm và lọc */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-700">Tìm kiếm và Lọc</h2>
-          {(searchTerm || roleFilter || statusFilter || genderFilter) && (
-            <button
-              onClick={handleResetFilters}
-              className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Đặt lại bộ lọc
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-medium text-gray-800 mb-4">Tìm kiếm và Lọc</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Tìm kiếm */}
-          <div className="lg:col-span-2">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={handleSearch}
-                placeholder="Tìm theo tên, email..."
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pl-10"
-              />
+            <div className="relative rounded-md shadow-sm">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={handleSearch}
+                placeholder="Tìm theo tên, email..."
+                className="focus:ring-sky-500 focus:border-sky-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+              />
             </div>
           </div>
-
           {/* Lọc theo vai trò */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò</label>
             <select
               value={roleFilter}
               onChange={handleRoleFilter}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
             >
               <option value="">Tất cả vai trò</option>
+              <option value="admin">Admin</option>
               <option value="consultant">Tư vấn viên</option>
               <option value="customer">Khách hàng</option>
             </select>
           </div>
-
           {/* Lọc theo trạng thái */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
             <select
               value={statusFilter}
               onChange={handleStatusFilter}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="active">Đang hoạt động</option>
-              <option value="disabled">Đã khóa</option>
+              <option value="disabled">Đã bị khóa</option>
             </select>
           </div>
-
           {/* Lọc theo giới tính */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
             <select
               value={genderFilter}
               onChange={handleGenderFilter}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
             >
               <option value="">Tất cả giới tính</option>
-              <option value="nam">Nam</option>
-              <option value="nữ">Nữ</option>
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+              <option value="other">Khác</option>
             </select>
           </div>
         </div>
-
-        {/* Hiển thị số lượng kết quả và bộ lọc đang áp dụng */}
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-          <span className="font-medium">Kết quả: {filteredAccounts.length} tài khoản</span>
-          {(searchTerm || roleFilter || statusFilter || genderFilter) && (
-            <span className="mx-2">|</span>
-          )}
-          {searchTerm && (
-            <span className="bg-gray-100 px-2 py-1 rounded-full">
-              Tìm kiếm: "{searchTerm}"
+        <div className="mt-4 flex justify-between items-center">
+          <div>
+            <span className="text-sm text-gray-500">
+              Kết quả: {filteredAccounts.length} tài khoản
             </span>
-          )}
-          {roleFilter && (
-            <span className="bg-gray-100 px-2 py-1 rounded-full">
-              Vai trò: {roleFilter === 'consultant' ? 'Tư vấn viên' : 'Khách hàng'}
-            </span>
-          )}
-          {statusFilter && (
-            <span className="bg-gray-100 px-2 py-1 rounded-full">
-              Trạng thái: {statusFilter === 'active' ? 'Đang hoạt động' : 'Đã khóa'}
-            </span>
-          )}
-          {genderFilter && (
-            <span className="bg-gray-100 px-2 py-1 rounded-full">
-              Giới tính: {genderFilter === 'nam' ? 'Nam' : 'Nữ'}
-            </span>
-          )}
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={handleResetFilters}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+            >
+              <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Đặt lại
+            </button>
+            <button
+              onClick={handleOpenCreateModal}
+              className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+            >
+              <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Thêm tài khoản
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
-        <table className="min-w-full bg-white table-fixed">
-          <thead>
-            <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
-              <th className="px-4 py-3 rounded-tl-lg w-1/5">Họ tên</th>
-              <th className="px-4 py-3 w-1/5">Email</th>
-              <th className="px-4 py-3 w-1/5">Tên tài khoản</th>
-              <th className="px-4 py-3 w-1/6">Vai trò</th>
-              <th className="px-4 py-3 w-1/6">Trạng thái</th>
-              <th className="px-4 py-3 rounded-tr-lg w-1/6">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
-            {paginatedAccounts.map((account) => (
-              <tr key={account._id} className="border-b border-gray-200 hover:bg-purple-50">
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 flex-shrink-0 mr-3">
-                      <img
-                        className="h-10 w-10 rounded-full object-cover"
-                        src={account.photoUrl || '/avarta.png'}
-                        alt={account.fullName || account.username}
-                      />
-                    </div>
-                    <div>
-                      <p className="font-medium">{account.fullName || 'Chưa cập nhật'}</p>
-                      <p className="text-xs text-gray-500">{account.gender || 'Chưa cập nhật'}</p>
-                    </div>
+      {/* Bảng danh sách tài khoản */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
+          </div>
+        ) : error ? (
+          <div className="p-6 text-center text-red-500">{error}</div>
+        ) : (
+          <>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Họ tên
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tên tài khoản
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vai trò
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trạng thái
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedAccounts.map((account) => (
+                  <tr key={account._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <img
+                            className="h-10 w-10 rounded-full object-cover"
+                            src={account.photoUrl || '/avarta.png'}
+                            alt={account.username}
+                          />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{account.fullName || 'Chưa cập nhật'}</div>
+                          <div className="text-sm text-gray-500">{account.gender || 'Chưa cập nhật'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{account.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{account.username}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(account.role)}`}>
+                        {account.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${account.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                        {account.isDisabled ? 'Đã bị khóa' : 'Đang hoạt động'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex space-x-2 justify-end">
+                        <Tooltip text="Khóa/Mở khóa">
+                          <button
+                            onClick={() => openConfirmToggleModal(account._id, account.isDisabled)}
+                            disabled={isAdminAccount(account)}
+                            className={`text-gray-400 hover:text-gray-500 ${isAdminAccount(account) ? 'cursor-not-allowed opacity-50' : ''}`}
+                          >
+                            {account.isDisabled ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                            )}
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Cập nhật">
+                          <button
+                            onClick={() => handleOpenUpdateModal(account)}
+                            className="text-yellow-400 hover:text-yellow-500"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Chi tiết">
+                          <button
+                            onClick={() => handleOpenDetailModal(account._id)}
+                            className="text-sky-400 hover:text-sky-500"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Phân trang */}
+            {filteredAccounts.length > rowsPerPage && (
+              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      Hiển thị <span className="font-medium">{(currentPage - 1) * rowsPerPage + 1}</span> đến{" "}
+                      <span className="font-medium">
+                        {Math.min(currentPage * rowsPerPage, filteredAccounts.length)}
+                      </span>{" "}
+                      trong tổng số <span className="font-medium">{filteredAccounts.length}</span> kết quả
+                    </p>
                   </div>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">{account.email}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{account.username}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${getRoleBadgeClass(account.role)}`}>
-                    {account.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${account.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                    {account.isDisabled ? 'Bị khóa' : 'Hoạt động'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center space-x-3">
-                    {/* Chỉ hiện nút khóa/mở khóa cho các tài khoản không phải admin */}
-                    {!isAdminAccount(account) && (
-                      <Tooltip text={account.isDisabled ? 'Mở khóa' : 'Khóa'}>
-                        <button 
-                          onClick={() => openConfirmToggleModal(account._id, account.isDisabled)}
-                          className={`p-2 rounded-full ${
-                            account.isDisabled 
-                              ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                              : 'bg-red-100 text-red-600 hover:bg-red-200'
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                      <button
+                        onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
+                        disabled={currentPage === 1}
+                        className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                          currentPage === 1 
+                            ? 'text-gray-300 cursor-not-allowed' 
+                            : 'text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="sr-only">Previous</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      
+                      {/* Hiển thị các nút số trang */}
+                      {Array.from({ length: Math.ceil(filteredAccounts.length / rowsPerPage) }).map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentPage(index + 1)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            currentPage === index + 1
+                              ? 'z-10 bg-sky-50 border-sky-500 text-sky-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
                           }`}
                         >
-                          {account.isDisabled ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                            </svg>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                          )}
+                          {index + 1}
                         </button>
-                      </Tooltip>
-                    )}
-                    
-                    <Tooltip text="Cập nhật">
-                      <button 
-                        onClick={() => handleOpenUpdateModal(account)}
-                        className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                      ))}
+                      
+                      <button
+                        onClick={() => setCurrentPage(currentPage < Math.ceil(filteredAccounts.length / rowsPerPage) ? currentPage + 1 : currentPage)}
+                        disabled={currentPage >= Math.ceil(filteredAccounts.length / rowsPerPage)}
+                        className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                          currentPage >= Math.ceil(filteredAccounts.length / rowsPerPage)
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-gray-500 hover:bg-gray-50'
+                        }`}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <span className="sr-only">Next</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                         </svg>
                       </button>
-                    </Tooltip>
-                    
-                    <Tooltip text="Chi tiết">
-                      <button 
-                        onClick={() => handleOpenDetailModal(account._id)}
-                        className="p-2 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                    </Tooltip>
+                    </nav>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex justify-center items-center mt-4 gap-2">
-        <button
-          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-        >
-          Trước
-        </button>
-        {Array.from({ length: totalPages }, (_, i) => (
-          <button
-            key={i}
-            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            onClick={() => setCurrentPage(i + 1)}
-          >
-            {i + 1}
-          </button>
-        ))}
-        <button
-          className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
-        >
-          Sau
-        </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Modal Cập nhật tài khoản */}
@@ -1001,7 +1042,7 @@ const AccountList: React.FC = () => {
                       name="fullName"
                       value={updateForm.fullName}
                       onChange={handleUpdateFormChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                     />
                   </div>
                   <div>
@@ -1011,7 +1052,7 @@ const AccountList: React.FC = () => {
                       name="username"
                       value={updateForm.username}
                       disabled
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100 cursor-not-allowed"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-gray-100 cursor-not-allowed"
                       required
                     />
                   </div>
@@ -1022,7 +1063,7 @@ const AccountList: React.FC = () => {
                       name="email"
                       value={updateForm.email}
                       disabled
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100 cursor-not-allowed"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-gray-100 cursor-not-allowed"
                       required
                     />
                   </div>
@@ -1037,7 +1078,7 @@ const AccountList: React.FC = () => {
                       name="gender"
                       value={updateForm.gender}
                       onChange={handleUpdateFormChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                     >
                       <option value="">Chọn giới tính</option>
                       <option value="male">Nam</option>
@@ -1054,7 +1095,7 @@ const AccountList: React.FC = () => {
                         name="role"
                         value={updateForm.role}
                         onChange={handleUpdateFormChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                       >
                         {/* Nếu là consultant thì không cho phép chọn customer */}
                         {selectedAccount.role !== 'consultant' && (
@@ -1074,14 +1115,14 @@ const AccountList: React.FC = () => {
                   {/* Nếu chuyển từ customer sang consultant thì hiện form tư vấn viên */}
                   {selectedAccount && selectedAccount.role === 'customer' && updateForm.role === 'consultant' && (
                     <div className="border-t pt-4 mt-4">
-                      <h3 className="text-base font-semibold mb-2 text-indigo-600">Thông tin tư vấn viên</h3>
+                      <h3 className="text-base font-semibold mb-2 text-sky-600">Thông tin tư vấn viên</h3>
                       <div className="mb-3">
                         <label className="block text-sm font-medium text-gray-700">Giới thiệu</label>
                         <textarea
                           name="introduction"
                           value={consultantForm.introduction}
                           onChange={handleConsultantFormChange}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                           rows={2}
                         />
                         {consultantFormErrors.introduction && (
@@ -1095,7 +1136,7 @@ const AccountList: React.FC = () => {
                           name="contact"
                           value={consultantForm.contact}
                           onChange={handleConsultantFormChange}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                         />
                         {consultantFormErrors.contact && (
                           <p className="mt-1 text-sm text-red-600">{consultantFormErrors.contact}</p>
@@ -1108,7 +1149,7 @@ const AccountList: React.FC = () => {
                           name="startDateofWork"
                           value={consultantForm.startDateofWork}
                           onChange={handleConsultantFormChange}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                         />
                         {consultantFormErrors.startDateofWork && (
                           <p className="mt-1 text-sm text-red-600">{consultantFormErrors.startDateofWork}</p>
@@ -1127,7 +1168,7 @@ const AccountList: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+                    className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700"
                   >
                     Cập nhật
                   </button>
@@ -1225,7 +1266,7 @@ const AccountList: React.FC = () => {
 
             {loadingDetail ? (
               <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1352,7 +1393,7 @@ const AccountList: React.FC = () => {
                   name="fullName"
                   value={createForm.fullName}
                   onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 />
               </div>
@@ -1365,7 +1406,7 @@ const AccountList: React.FC = () => {
                   name="username"
                   value={createForm.username}
                   onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 />
                 {formErrors.username && (
@@ -1381,7 +1422,7 @@ const AccountList: React.FC = () => {
                   name="email"
                   value={createForm.email}
                   onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 />
                 {formErrors.email && (
@@ -1397,7 +1438,7 @@ const AccountList: React.FC = () => {
                   name="password"
                   value={createForm.password}
                   onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 />
                 {formErrors.password && (
@@ -1413,7 +1454,7 @@ const AccountList: React.FC = () => {
                   name="confirmPassword"
                   value={createForm.confirmPassword}
                   onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 />
                 {formErrors.confirmPassword && (
@@ -1429,7 +1470,7 @@ const AccountList: React.FC = () => {
                   name="phoneNumber"
                   value={createForm.phoneNumber}
                   onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 />
               </div>
@@ -1441,12 +1482,12 @@ const AccountList: React.FC = () => {
                   name="gender"
                   value={createForm.gender}
                   onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 >
                   <option value="">Chọn giới tính</option>
-                  <option value="nam">Nam</option>
-                  <option value="nữ">Nữ</option>
+                  <option value="male">Nam</option>
+                  <option value="female">Nữ</option>
                 </select>
               </div>
 
@@ -1457,7 +1498,7 @@ const AccountList: React.FC = () => {
                   name="role"
                   value={createForm.role}
                   onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 >
                   {AVAILABLE_ROLES.map(role => (
@@ -1479,7 +1520,7 @@ const AccountList: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
+                  className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-sky-300"
                 >
                   {isSubmitting ? 'Đang tạo...' : 'Tạo tài khoản'}
                 </button>
@@ -1488,6 +1529,19 @@ const AccountList: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Nút thêm tài khoản mới */}
+      <div className="fixed bottom-8 right-8">
+        <button
+          onClick={handleOpenCreateModal}
+          className="bg-sky-600 hover:bg-sky-700 text-white p-4 rounded-full shadow-lg flex items-center justify-center"
+          aria-label="Thêm tài khoản mới"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 };
