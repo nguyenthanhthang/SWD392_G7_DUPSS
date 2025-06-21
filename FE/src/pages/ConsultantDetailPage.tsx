@@ -359,7 +359,7 @@ function ConsultantDetailPage() {
                             type="button"
                             disabled={!isAvailable}
                           >
-                            {isBooked ? 'Đã đặt' : isAvailable ? 'Có sẵn' : ''}
+                            {isBooked ? 'Đã đặt' : isAvailable ? 'Có sẵn' : 'Không có lịch'}
                           </button>
                         );
                       })}
