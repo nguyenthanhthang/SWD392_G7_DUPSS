@@ -2,9 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
-import { useAuth } from '../../contexts/AuthContext';
 import ConsultantScheduleModal from '../../components/admin/ConsultantScheduleModal';
-
 
 // Interface cho dữ liệu tư vấn viên
 interface IConsultant {
@@ -30,7 +28,7 @@ interface IConsultant {
 // Interface cho dữ liệu chứng chỉ
 interface ICertificate {
   _id: string;
-  consultant_id: any;
+  consultant_id: string | { _id: string };
   title: string;
   type: string;
   issuedBy: number;
@@ -38,17 +36,6 @@ interface ICertificate {
   expireDate?: string;
   description?: string;
   fileUrl: string;
-}
-
-interface IUser {
-  _id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-}
-
-interface IConsultantWithUser extends IConsultant {
-  userInfo?: IUser;
 }
 
 interface TooltipProps {
@@ -95,9 +82,7 @@ const Consultant: React.FC = () => {
   const [consultants, setConsultants] = useState<IConsultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedConsultant, setSelectedConsultant] = useState<IConsultant | null>(null);
   const [formData, setFormData] = useState<IFormData>({
     accountId: '',
@@ -160,7 +145,6 @@ const Consultant: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/consultants');
-      console.log('API Response:', response.data);
       setConsultants(response.data);
       setError(null);
     } catch (err) {
@@ -182,65 +166,6 @@ const Consultant: React.FC = () => {
       ...prev,
       [name]: name === 'experience' ? Number(value) : value
     }));
-  };
-
-  const handleOpenCreateModal = () => {
-    setFormData({
-      accountId: '',
-      fullName: '',
-      email: '',
-      phone: '',
-      introduction: '',
-      contact: '',
-      experience: 0,
-      status: 'active'
-    });
-    setIsCreateModalOpen(true);
-  };
-
-  const handleCloseCreateModal = () => {
-    setIsCreateModalOpen(false);
-    setFormData({
-      accountId: '',
-      fullName: '',
-      email: '',
-      phone: '',
-      introduction: '',
-      contact: '',
-      experience: 0,
-      status: 'active'
-    });
-  };
-
-  const handleCreateConsultant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.accountId || !formData.introduction) {
-      toast.error('Vui lòng điền đầy đủ thông tin!');
-      return;
-    }
-
-    try {
-      // Tạo consultant mới chỉ với thông tin consultant
-      const consultantData = {
-        accountId: formData.accountId,
-        introduction: formData.introduction,
-        contact: formData.contact,
-        experience: formData.experience,
-        status: formData.status
-      };
-      
-      console.log('Creating consultant with data:', consultantData);
-      const response = await api.post('/consultants', consultantData);
-      console.log('Create response:', response.data);
-      
-      setConsultants(prev => [...prev, response.data]);
-      handleCloseCreateModal();
-      toast.success('Tạo tư vấn viên thành công!');
-    } catch (error) {
-      console.error('Error creating consultant:', error);
-      toast.error('Có lỗi xảy ra khi tạo tư vấn viên!');
-    }
   };
 
   const handleOpenUpdateModal = (consultant: IConsultant) => {
@@ -286,9 +211,7 @@ const Consultant: React.FC = () => {
         status: formData.status
       };
       
-      console.log('Consultant data to update:', consultantData);
       const response = await api.put(`/consultants/${selectedConsultant._id}`, consultantData);
-      console.log('Update response:', response.data);
       
       setConsultants(prev =>
         prev.map(consultant =>
@@ -303,16 +226,6 @@ const Consultant: React.FC = () => {
     }
   };
 
-  const handleOpenDeleteModal = (consultant: IConsultant) => {
-    setSelectedConsultant(consultant);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setSelectedConsultant(null);
-  };
-
   const handleDeleteConsultant = async () => {
     if (!selectedConsultant) return;
 
@@ -321,28 +234,9 @@ const Consultant: React.FC = () => {
       setConsultants(prev =>
         prev.filter(consultant => consultant._id !== selectedConsultant._id)
       );
-      handleCloseDeleteModal();
       toast.success('Xóa tư vấn viên thành công!');
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra khi xóa tư vấn viên!');
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return 'Chưa có ngày';
-      }
-      return date.toLocaleString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return 'Chưa có ngày';
     }
   };
 
@@ -443,7 +337,7 @@ const Consultant: React.FC = () => {
       const response = await api.get(`/certificates/consultant/${consultantId}`);
       setCertificates(response.data);
       setCertificateError(null);
-    } catch (err) {
+    } catch {
       // Nếu không có chứng chỉ, hiển thị danh sách trống thay vì thông báo lỗi
       setCertificates([]);
       setCertificateError(null);
@@ -553,8 +447,9 @@ const Consultant: React.FC = () => {
       
       handleCloseCreateCertificateModal();
       toast.success('Tạo chứng chỉ thành công!');
-    } catch (error: any) {
-      toast.error(`Có lỗi xảy ra khi tạo chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
+    } catch (error) {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(`Có lỗi xảy ra khi tạo chứng chỉ: ${apiError.response?.data?.message || 'Lỗi không xác định'}`);
     }
   };
 
@@ -569,9 +464,7 @@ const Consultant: React.FC = () => {
     };
     
     setCertificateFormData({
-      consultant_id: typeof certificate.consultant_id === 'object' && certificate.consultant_id._id 
-        ? certificate.consultant_id._id 
-        : certificate.consultant_id,
+      consultant_id: (typeof certificate.consultant_id === 'object' ? certificate.consultant_id._id : certificate.consultant_id) || '',
       title: certificate.title,
       type: certificate.type,
       issuedBy: certificate.issuedBy,
@@ -612,8 +505,9 @@ const Consultant: React.FC = () => {
       
       handleCloseUpdateCertificateModal();
       toast.success('Cập nhật chứng chỉ thành công!');
-    } catch (error: any) {
-      toast.error(`Có lỗi xảy ra khi cập nhật chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
+    } catch (error) {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(`Có lỗi xảy ra khi cập nhật chứng chỉ: ${apiError.response?.data?.message || 'Lỗi không xác định'}`);
     }
   };
 
@@ -642,8 +536,9 @@ const Consultant: React.FC = () => {
       
       handleCloseDeleteCertificateModal();
       toast.success('Xóa chứng chỉ thành công!');
-    } catch (error: any) {
-      toast.error(`Có lỗi xảy ra khi xóa chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
+    } catch (error) {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(`Có lỗi xảy ra khi xóa chứng chỉ: ${apiError.response?.data?.message || 'Lỗi không xác định'}`);
     }
   };
 
@@ -772,6 +667,20 @@ const Consultant: React.FC = () => {
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                    
+                    <Tooltip text="Xóa">
+                      <button
+                        onClick={() => {
+                          setSelectedConsultant(consultant);
+                          (document.getElementById('delete-modal') as HTMLDialogElement)?.showModal();
+                        }}
+                        className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
                     </Tooltip>
@@ -923,43 +832,27 @@ const Consultant: React.FC = () => {
       )}
 
       {/* Modal Xác nhận xóa */}
-      {isDeleteModalOpen && selectedConsultant && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Xác nhận xóa</h2>
-              <button
-                onClick={handleCloseDeleteModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <div className="mb-6">
-              <p>Bạn có chắc chắn muốn xóa tư vấn viên "{selectedConsultant.accountId.fullName}"?</p>
-              <p className="text-sm text-gray-500 mt-2">Hành động này không thể hoàn tác.</p>
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleCloseDeleteModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleDeleteConsultant}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
+      <dialog id="delete-modal" className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Xác nhận xóa</h3>
+          <p className="py-4">Bạn có chắc chắn muốn xóa tư vấn viên "{selectedConsultant?.accountId.fullName}"? Hành động này không thể hoàn tác.</p>
+          <div className="modal-action">
+            <form method="dialog" className='space-x-2'>
+              <button className="btn">Hủy</button>
+              <button 
+                className="btn btn-error"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDeleteConsultant();
+                  (document.getElementById('delete-modal') as HTMLDialogElement)?.close();
+                }}
               >
                 Xóa
               </button>
-            </div>
+            </form>
           </div>
         </div>
-      )}
+      </dialog>
 
 
 
