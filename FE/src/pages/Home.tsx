@@ -62,17 +62,17 @@ const getTimeAgo = (updatedAt: string): string => {
   const updated = new Date(updatedAt);
   const diffInMinutes = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60));
   
-  if (diffInMinutes < 1) return "Just now";
-  if (diffInMinutes === 1) return "1 min";
-  if (diffInMinutes < 60) return `${diffInMinutes} mins`;
+  if (diffInMinutes < 1) return "Vừa xong";
+  if (diffInMinutes === 1) return "1 phút";
+  if (diffInMinutes < 60) return `${diffInMinutes} phút`;
   
   const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours === 1) return "1 hour";
-  if (diffInHours < 24) return `${diffInHours} hours`;
+  if (diffInHours === 1) return "1 giờ";
+  if (diffInHours < 24) return `${diffInHours} giờ`;
   
   const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays === 1) return "1 day";
-  return `${diffInDays} days`;
+  if (diffInDays === 1) return "1 ngày";
+  return `${diffInDays} ngày`;
 };
 
 export default function Home() {
@@ -151,7 +151,7 @@ export default function Home() {
             <div className="mx-auto sm:mx-0 mt-8">
               <div className="py-3 text-center lg:text-start">
                 <button className="text-blue-600 bg-blue-100 hover:shadow-xl text-sm md:text-lg font-bold px-6 py-1 rounded-3xl tracking-wider hover:text-white hover:bg-blue-700">
-                  DRUG USE PREVENTION
+                  PHÒNG CHỐNG MA TÚY
                 </button>
               </div>
               <div className="py-3 text-center lg:text-start">
@@ -161,7 +161,7 @@ export default function Home() {
                     fontFamily: "'Fira Sans', 'Poppins', 'Nunito', sans-serif",
                   }}
                 >
-                  Together is <br /> strength, <br /> trust is light
+                  Đoàn kết là <br /> sức mạnh, <br /> tin tưởng là ánh sáng
                 </h1>
               </div>
               <div className="my-7 text-center lg:text-start">
@@ -169,7 +169,7 @@ export default function Home() {
                   className="text-sm md:text-xl font-semibold hover:shadow-xl bg-blue-600 text-white py-3 px-6 md:py-5 md:px-14 rounded-full hover:bg-blue-700"
                   onClick={() => navigate("/quizz")}
                 >
-                  Take Quiz
+                  Làm trắc nghiệm
                 </button>
               </div>
             </div>
@@ -187,10 +187,10 @@ export default function Home() {
         <div id="aboutus-section">
           <div className="mx-auto max-w-7xl px-4 py-24 my-32 lg:px-10 bg-gray-100 rounded-3xl relative">
             <h3 className="text-center text-blue-600 text-lg tracking-widest">
-              ABOUT US
+              GIỚI THIỆU
             </h3>
             <h4 className="text-center text-4xl lg:text-6xl font-bold">
-              Know more about us.
+              Tìm hiểu thêm về chúng tôi.
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 my-16 gap-x-16 lg:gap-x-32">
               {aboutData.map((item: { heading: string; imgSrc: string; paragraph: string; link: string }, i: number) => (
@@ -333,10 +333,10 @@ export default function Home() {
           <div className="mx-auto w-full sm:py-4 px-0 lg:px-0">
             <div className="text-center">
               <h3 className="text-blue-600 text-lg font-normal tracking-widest">
-                ARTICLES
+                BÀI VIẾT
               </h3>
               <h3 className="text-4xl sm:text-6xl font-bold">
-                Our latest post.
+                Bài viết mới nhất.
               </h3>
             </div>
             <div className="relative w-full flex items-center mt-12">
@@ -370,7 +370,7 @@ export default function Home() {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                             <span className="bg-[#31889b]/80 backdrop-blur-md text-white px-6 py-3 rounded-full text-sm font-medium">
-                              {getTimeAgo(blog.updatedAt)} ago
+                              {getTimeAgo(blog.updatedAt)} trước
                             </span>
                           </div>
                         </div>

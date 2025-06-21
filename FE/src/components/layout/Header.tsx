@@ -1,7 +1,7 @@
 // src/components/layout/Header.tsx
 
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import logo from "/avarta.png";
 
@@ -9,6 +9,7 @@ function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -35,6 +36,18 @@ function Header() {
   const avatarUrl =
     user?.photoUrl ||
     `https://i.pravatar.cc/150?img=${user?.username?.length || 3}`;
+    
+  // Hàm kiểm tra đường dẫn hiện tại để xác định mục đang được chọn
+  const isActive = (path: string) => {
+    if (path === '/' && location.pathname === '/') {
+      return true;
+    }
+    return path !== '/' && location.pathname.startsWith(path);
+  };
+  
+  // Style cho mục đang được chọn
+  const activeStyle = "text-gray-900 font-semibold";
+  const defaultStyle = "text-gray-600 hover:text-gray-900";
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm w-full">
@@ -54,29 +67,29 @@ function Header() {
           </div>
 
           <nav className="hidden md:flex items-center space-x-8 text-lg font-medium">
-            <Link to="/" className="text-gray-600 hover:text-gray-900">
-              Home
+            <Link to="/" className={isActive('/') ? activeStyle : defaultStyle}>
+              Trang chủ
             </Link>
-            <Link to="/quizz" className="text-gray-600 hover:text-gray-900">
-              Quiz
+            <Link to="/quizz" className={isActive('/quizz') ? activeStyle : defaultStyle}>
+              Trắc nghiệm
             </Link>
             <Link
               to="/consulting"
-              className="text-gray-600 hover:text-gray-900"
+              className={isActive('/consulting') ? activeStyle : defaultStyle}
             >
-              Consulting
+              Tư vấn
             </Link>
-            <Link to="/service" className="text-gray-600 hover:text-gray-900">
-              Service
+            <Link to="/service" className={isActive('/service') ? activeStyle : defaultStyle}>
+              Dịch vụ
             </Link>
-            <Link to="/events" className="text-gray-600 hover:text-gray-900">
-              Events
+            <Link to="/events" className={isActive('/events') ? activeStyle : defaultStyle}>
+              Sự kiện
             </Link>
-            <Link to="/blogs" className="text-gray-600 hover:text-gray-900">
-              Blogs
+            <Link to="/blogs" className={isActive('/blogs') ? activeStyle : defaultStyle}>
+              Blog
             </Link>
-            <Link to="/about-us" className="text-gray-600 hover:text-gray-900">
-              About Us
+            <Link to="/about-us" className={isActive('/about-us') ? activeStyle : defaultStyle}>
+              Giới thiệu
             </Link>
           </nav>
 
@@ -116,7 +129,7 @@ function Header() {
                           navigate("/admin/dashboard");
                         }}
                       >
-                        Dashboard
+                        Bảng điều khiển
                       </button>
                       <div className="border-t border-gray-100"></div>
                     </>
@@ -128,13 +141,13 @@ function Header() {
                       navigate("/profile");
                     }}
                   >
-                    View Profile
+                    Hồ sơ cá nhân
                   </button>
                   <button
                     className="w-full text-left px-5 py-3 hover:bg-gray-100 text-gray-800 text-base rounded-b-xl"
                     onClick={handleLogout}
                   >
-                    Log out
+                    Đăng xuất
                   </button>
                 </div>
               )}
@@ -144,7 +157,7 @@ function Header() {
               to="/login"
               className="px-8 py-3 rounded-full border-2 border-black text-xl font-medium text-black bg-white hover:bg-gray-100 transition"
             >
-              Sign In
+              Đăng nhập
             </Link>
           )}
         </div>
