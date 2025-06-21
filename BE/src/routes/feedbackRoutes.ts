@@ -1,9 +1,31 @@
 import express from "express";
-import { createFeedback, getFeedbackByAccountId, getFeedbackByAppointmentId, getFeedbackById, getFeedbackByServiceId } from "../controllers/feedbackController";
+import { 
+  createFeedback, 
+  getFeedbackById, 
+  getAllFeedbacks,
+  getFeedbacksByServiceId,
+  getFeedbacksByAccountId,
+  updateFeedbackStatus
+} from "../controllers/feedbackController";
+
 const router = express.Router();
+
+// Tạo feedback mới
 router.post("/", createFeedback);
-router.get("/account/:accountId", getFeedbackByAccountId);
-router.get("/appointment/:appointmentId", getFeedbackByAppointmentId);
-router.get("/service/:serviceId", getFeedbackByServiceId);
+
+// Lấy tất cả feedback
+router.get("/", getAllFeedbacks);
+
+// Lấy feedback theo ID
 router.get("/:id", getFeedbackById);
+
+// Cập nhật trạng thái feedback (approved/rejected)
+router.put("/:id/status", updateFeedbackStatus);
+
+// Lấy feedback theo service
+router.get("/service/:serviceId", getFeedbacksByServiceId);
+
+// Lấy feedback theo account
+router.get("/account/:accountId", getFeedbacksByAccountId);
+
 export default router;

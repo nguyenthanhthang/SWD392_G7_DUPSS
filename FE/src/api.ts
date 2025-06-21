@@ -554,4 +554,39 @@ export const getFeedbackByIdApi = async (id: string) => {
   return res.data;
 };
 
+// Service Rating APIs
+export const getServiceRatingApi = async (serviceId: string) => {
+  const res = await api.get(`/services/${serviceId}/rating`);
+  return res.data;
+};
+
+export const updateServiceRatingApi = async (serviceId: string) => {
+  const res = await api.post(`/services/${serviceId}/update-rating`);
+  return res.data;
+};
+
+// Feedback với Rating APIs
+export const createFeedbackWithRatingApi = async (data: {
+  account_id: string;
+  appointment_id: string;
+  service_id: string;
+  rating: number; // số từ 1-5
+  comment: string;
+}) => {
+  const res = await api.post('/feedbacks', data);
+  // Sau khi tạo feedback, cập nhật lại rating cho service
+  await updateServiceRatingApi(data.service_id);
+  return res.data;
+};
+
+export const getAllFeedbacksApi = async () => {
+  const res = await api.get('/feedbacks');
+  return res.data;
+};
+
+export const updateFeedbackStatusApi = async (id: string, status: 'approved' | 'rejected') => {
+  const res = await api.put(`/feedbacks/${id}/status`, { status });
+  return res.data;
+};
+
 export default api;
