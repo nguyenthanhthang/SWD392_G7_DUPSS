@@ -82,7 +82,9 @@ const Consultant: React.FC = () => {
   const [consultants, setConsultants] = useState<IConsultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedConsultant, setSelectedConsultant] = useState<IConsultant | null>(null);
   const [formData, setFormData] = useState<IFormData>({
     accountId: '',
@@ -293,10 +295,21 @@ const Consultant: React.FC = () => {
       setConsultants(prev =>
         prev.filter(consultant => consultant._id !== selectedConsultant._id)
       );
+      handleCloseDeleteModal();
       toast.success('Xóa tư vấn viên thành công!');
     } catch {
       toast.error('Có lỗi xảy ra khi xóa tư vấn viên!');
     }
+  };
+
+  const handleOpenDeleteModal = (consultant: IConsultant) => {
+    setSelectedConsultant(consultant);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedConsultant(null);
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -734,7 +747,7 @@ const Consultant: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedConsultant(consultant);
-                          (document.getElementById('delete-modal') as HTMLDialogElement)?.showModal();
+                          handleOpenDeleteModal(consultant);
                         }}
                         className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
                       >
@@ -921,12 +934,10 @@ const Consultant: React.FC = () => {
               >
                 Xóa
               </button>
-            </form>
+            </div>
           </div>
         </div>
-      </dialog>
-
-
+      )}
 
       {isDetailModalOpen && selectedConsultant && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
