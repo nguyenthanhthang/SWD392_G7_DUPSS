@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
+import axios from 'axios';
 
 // Interface cho dữ liệu dịch vụ
 interface IService {
@@ -70,6 +71,51 @@ const Service: React.FC = () => {
     fetchServices();
   }, []);
 
+  // Handle form input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'price' ? Number(value) : value
+    }));
+  };
+
+  // Validation riêng khi blur hoặc submit
+  const validateField = (name: string, value: string | number) => {
+    if (name === 'name' && typeof value === 'string') {
+      if (!value.trim()) {
+        setErrors(prev => ({ ...prev, name: 'Vui lòng nhập tên dịch vụ!' }));
+        return false;
+      } else {
+        setErrors(prev => ({ ...prev, name: '' }));
+        return true;
+      }
+    }
+    
+    if (name === 'description' && typeof value === 'string') {
+      if (!value.trim()) {
+        setErrors(prev => ({ ...prev, description: 'Vui lòng nhập mô tả dịch vụ!' }));
+        return false;
+      } else {
+        setErrors(prev => ({ ...prev, description: '' }));
+        return true;
+      }
+    }
+    
+    if (name === 'price') {
+      setErrors(prev => ({ ...prev, price: '' }));
+      return true;
+    }
+
+    return true;
+  };
+
+  // Handle field blur - validation khi người dùng rời khỏi trường
+  const handleFieldBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    validateField(name, value);
+  };
+
   // Hàm xử lý upload ảnh
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -97,10 +143,13 @@ const Service: React.FC = () => {
 
       // Log trước khi upload
       console.log('Đang upload ảnh...');
+      console.log('File:', file.name, file.type, file.size);
 
-      const response = await api.post('/uploads/upload', formData, {
+      // Sử dụng API riêng cho upload
+      const response = await axios.post('http://localhost:5000/api/uploads/upload', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
@@ -122,7 +171,7 @@ const Service: React.FC = () => {
       }
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Có lỗi xảy ra khi tải ảnh lên');
+      toast.error('Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.');
     } finally {
       setUploading(false);
     }
@@ -173,37 +222,6 @@ const Service: React.FC = () => {
     });
   };
 
-  // Handle form input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'price' ? Number(value) : value
-    }));
-    
-    // Validation khi người dùng đang nhập
-    if (name === 'name' && typeof value === 'string') {
-      if (!value.trim()) {
-        setErrors(prev => ({ ...prev, name: 'Vui lòng nhập tên dịch vụ!' }));
-      } else {
-        setErrors(prev => ({ ...prev, name: '' }));
-      }
-    }
-    
-    if (name === 'description' && typeof value === 'string') {
-      if (!value.trim()) {
-        setErrors(prev => ({ ...prev, description: 'Vui lòng nhập mô tả dịch vụ!' }));
-      } else {
-        setErrors(prev => ({ ...prev, description: '' }));
-      }
-    }
-    
-    if (name === 'price') {
-      // Đã bỏ validation giá dịch vụ
-      setErrors(prev => ({ ...prev, price: '' }));
-    }
-  };
-
   // Open create modal
   const handleOpenCreateModal = () => {
     setFormData({
@@ -212,6 +230,14 @@ const Service: React.FC = () => {
       price: 0,
       image: '',
       status: 'active'
+    });
+    // Reset errors khi mở modal tạo mới
+    setErrors({
+      name: '',
+      description: '',
+      price: '',
+      image: '',
+      backend: ''
     });
     setIsCreateModalOpen(true);
   };
@@ -233,34 +259,20 @@ const Service: React.FC = () => {
     e.preventDefault();
     console.log('Bắt đầu xử lý tạo dịch vụ');
     
-    // Kiểm tra lỗi hiện tại
-    const newErrors = { ...errors };
+    // Kiểm tra lỗi các trường khi submit
     let hasError = false;
     
-    // Kiểm tra các trường chưa được validate trong quá trình nhập
-    if (!formData.name.trim()) {
-      newErrors.name = 'Vui lòng nhập tên dịch vụ!';
-      hasError = true;
-    }
-    
-    if (!formData.description.trim()) {
-      newErrors.description = 'Vui lòng nhập mô tả dịch vụ!';
-      hasError = true;
-    }
-    
-    // Đã bỏ validation giá dịch vụ
+    // Kiểm tra tất cả các trường
+    if (!validateField('name', formData.name)) hasError = true;
+    if (!validateField('description', formData.description)) hasError = true;
     
     if (!formData.image) {
-      newErrors.image = 'Vui lòng tải lên hình ảnh cho dịch vụ!';
+      setErrors(prev => ({ ...prev, image: 'Vui lòng tải lên hình ảnh cho dịch vụ!' }));
       hasError = true;
     }
     
-    // Kiểm tra xem có lỗi nào không
-    hasError = Object.values(newErrors).some(error => error !== '');
-    
-    setErrors(newErrors);
     console.log('Form data:', formData);
-    console.log('Validation errors:', newErrors);
+    console.log('Validation errors:', errors);
     
     if (hasError) {
       console.log('Có lỗi validation, không submit');
@@ -312,6 +324,14 @@ const Service: React.FC = () => {
       image: service.image,
       status: service.status
     });
+    // Reset errors khi mở modal cập nhật
+    setErrors({
+      name: '',
+      description: '',
+      price: '',
+      image: '',
+      backend: ''
+    });
     setIsUpdateModalOpen(true);
   };
 
@@ -326,6 +346,14 @@ const Service: React.FC = () => {
       image: '',
       status: 'active'
     });
+    // Reset errors khi đóng modal cập nhật
+    setErrors({
+      name: '',
+      description: '',
+      price: '',
+      image: '',
+      backend: ''
+    });
   };
 
   // Handle update service
@@ -333,11 +361,80 @@ const Service: React.FC = () => {
     e.preventDefault();
     if (!selectedService) return;
 
+    // Kiểm tra lỗi các trường khi submit
+    let hasError = false;
+    const newErrors = { ...errors };
+    
+    // Kiểm tra tất cả các trường - chỉ validate những trường bắt buộc
+    if (!formData.name.trim()) {
+      newErrors.name = 'Vui lòng nhập tên dịch vụ!';
+      hasError = true;
+    } else {
+      newErrors.name = '';
+    }
+    
+    if (!formData.description.trim()) {
+      newErrors.description = 'Vui lòng nhập mô tả dịch vụ!';
+      hasError = true;
+    } else {
+      newErrors.description = '';
+    }
+    
+    if (!formData.image) {
+      newErrors.image = 'Vui lòng tải lên hình ảnh cho dịch vụ!';
+      hasError = true;
+    } else {
+      newErrors.image = '';
+    }
+    
+    setErrors(newErrors);
+    console.log('Update form data:', formData);
+    console.log('Validation errors:', newErrors);
+    
+    if (hasError) {
+      console.log('Có lỗi validation, không submit');
+      toast.error('Vui lòng điền đầy đủ thông tin trước khi lưu thay đổi');
+      return;
+    }
+
     try {
       await api.put(`/services/${selectedService._id}`, formData);
-      toast.success('Dịch vụ đã được cập nhật thành công!');
+      
+      // Reset errors ngay sau khi API thành công
+      setErrors({
+        name: '',
+        description: '',
+        price: '',
+        image: '',
+        backend: ''
+      });
+
+      // Fetch dữ liệu mới và đóng modal
       fetchServices();
       handleCloseUpdateModal();
+      
+      // Sử dụng set timeout để đảm bảo thông báo hiển thị sau khi modal đóng
+      setTimeout(() => {
+        // Hiển thị thông báo thành công nổi bật và rõ ràng
+        toast.success('🎉 Dịch vụ đã được cập nhật thành công!', {
+          position: "top-center",
+          autoClose: 5000, // Tăng thời gian hiển thị lên 5 giây
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          style: {
+            background: "#10b981",
+            color: "white",
+            fontSize: "16px",
+            fontWeight: "bold",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+            border: "1px solid #047857",
+            padding: "16px"
+          }
+        });
+      }, 300);
     } catch (err) {
       console.error('Lỗi khi cập nhật dịch vụ:', err);
       toast.error('Có lỗi xảy ra khi cập nhật dịch vụ');
@@ -365,16 +462,17 @@ const Service: React.FC = () => {
   return (
     <div className="p-6 bg-white rounded-lg mt-4">
       <ToastContainer
-        position="top-right"
-        autoClose={3000}
+        position="top-center"
+        autoClose={5000}
         hideProgressBar={false}
-        newestOnTop
-        closeOnClick
+        newestOnTop={true}
+        closeOnClick={true}
         rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
+        pauseOnFocusLoss={false}
+        draggable={true}
+        pauseOnHover={true}
         theme="colored"
+        limit={3}
       />
 
       {/* Input file ẩn */}
@@ -535,7 +633,7 @@ const Service: React.FC = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    onBlur={handleInputChange}
+                    onBlur={handleFieldBlur}
                     placeholder="Nhập tên dịch vụ"
                     className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                   />
@@ -550,7 +648,7 @@ const Service: React.FC = () => {
                     name="price"
                     value={formData.price}
                     onChange={handleInputChange}
-                    onBlur={handleInputChange}
+                    onBlur={handleFieldBlur}
                     step="1000"
                     placeholder="Nhập giá dịch vụ"
                     className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
@@ -566,7 +664,7 @@ const Service: React.FC = () => {
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  onBlur={handleInputChange}
+                  onBlur={handleFieldBlur}
                   rows={3}
                   placeholder="Nhập mô tả chi tiết về dịch vụ"
                   className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
@@ -662,15 +760,39 @@ const Service: React.FC = () => {
             <div className="p-6 space-y-5 overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tên dịch vụ</label>
-                <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                <input 
+                  type="text" 
+                  name="name" 
+                  value={formData.name} 
+                  onChange={handleInputChange}
+                  onBlur={handleFieldBlur}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} 
+                />
+                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
-                <textarea name="description" value={formData.description} onChange={handleInputChange} rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></textarea>
+                <textarea 
+                  name="description" 
+                  value={formData.description} 
+                  onChange={handleInputChange}
+                  onBlur={handleFieldBlur} 
+                  rows={4} 
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                ></textarea>
+                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Giá (VND)</label>
-                <input type="number" name="price" value={formData.price} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                <input 
+                  type="number" 
+                  name="price" 
+                  value={formData.price} 
+                  onChange={handleInputChange} 
+                  onBlur={handleFieldBlur}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                />
+                {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh dịch vụ</label>
@@ -681,10 +803,16 @@ const Service: React.FC = () => {
                     {uploading ? 'Đang tải...' : 'Chọn ảnh'}
                   </button>
                 </div>
+                {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-                <select name="status" value={formData.status} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <select 
+                  name="status" 
+                  value={formData.status} 
+                  onChange={handleInputChange} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
                 </select>

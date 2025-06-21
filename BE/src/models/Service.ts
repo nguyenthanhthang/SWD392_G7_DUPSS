@@ -8,6 +8,7 @@ export interface IService extends Document {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  rating: number;
 }
 
 const ServiceSchema: Schema = new Schema({
