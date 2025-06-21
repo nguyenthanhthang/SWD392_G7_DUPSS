@@ -19,6 +19,7 @@ const ServiceSchema: Schema = new Schema({
     status:{type:String,required:true,enum:["active","inactive","deleted"],default:"active"},
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
+    rating: { type: Number, default: 0 }
 });
 
 const Service = mongoose.model<IService>("Service", ServiceSchema);

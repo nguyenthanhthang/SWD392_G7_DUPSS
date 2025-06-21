@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import Service from "../models/Service";
+import Feedback from "../models/Feedback";
+import mongoose from "mongoose";
 
 export const createService = async(req:Request,res:Response)=>{
     try {
@@ -89,3 +91,100 @@ export const getServiceByStatus = async(req:Request,res:Response)=>{
         res.status(500).json({message:"Lỗi khi lấy dịch vụ theo trạng thái",error});
     }
 }
+
+export const getServiceRating = async(req: Request, res: Response) => {
+    try {
+        const serviceId = req.params.id;
+        
+        // Kiểm tra ID hợp lệ
+        if (!mongoose.Types.ObjectId.isValid(serviceId)) {
+            return res.status(400).json({ message: "ID dịch vụ không hợp lệ" });
+        }
+        
+        // Kiểm tra dịch vụ tồn tại
+        const service = await Service.findById(serviceId);
+        if (!service) {
+            return res.status(404).json({ message: "Dịch vụ không tồn tại" });
+        }
+        
+        // Tính trung bình rating từ tất cả feedback của dịch vụ này
+        const feedbacks = await Feedback.find({ 
+            service_id: serviceId,
+            status: "approved" // Chỉ tính các feedback đã được phê duyệt
+        });
+        
+        if (feedbacks.length === 0) {
+            return res.status(200).json({ 
+                serviceId, 
+                averageRating: 0, 
+                feedbackCount: 0,
+                message: "Chưa có đánh giá nào cho dịch vụ này" 
+            });
+        }
+        
+        // Tính trung bình cộng
+        const totalRating = feedbacks.reduce((sum, feedback) => sum + feedback.rating, 0);
+        const averageRating = totalRating / feedbacks.length;
+        
+        // Làm tròn đến 1 chữ số thập phân
+        const roundedRating = Math.round(averageRating * 10) / 10;
+        
+        res.status(200).json({ 
+            serviceId, 
+            averageRating: roundedRating, 
+            feedbackCount: feedbacks.length,
+            message: "Lấy thông tin đánh giá thành công" 
+        });
+    } catch (error) {
+        console.error("Lỗi khi lấy thông tin rating:", error);
+        res.status(500).json({ message: "Lỗi khi lấy thông tin rating", error });
+    }
+};
+
+export const updateServiceRating = async(req: Request, res: Response) => {
+    try {
+        const serviceId = req.params.id;
+        
+        // Kiểm tra ID hợp lệ
+        if (!mongoose.Types.ObjectId.isValid(serviceId)) {
+            return res.status(400).json({ message: "ID dịch vụ không hợp lệ" });
+        }
+        
+        // Kiểm tra dịch vụ tồn tại
+        const service = await Service.findById(serviceId);
+        if (!service) {
+            return res.status(404).json({ message: "Dịch vụ không tồn tại" });
+        }
+        
+        // Tính trung bình rating từ tất cả feedback của dịch vụ này
+        const feedbacks = await Feedback.find({ 
+            service_id: serviceId,
+            status: "approved" // Chỉ tính các feedback đã được phê duyệt
+        });
+        
+        // Nếu không có feedback nào, set rating về 0
+        if (feedbacks.length === 0) {
+            service.rating = 0;
+        } else {
+            // Tính trung bình cộng
+            const totalRating = feedbacks.reduce((sum, feedback) => sum + feedback.rating, 0);
+            const averageRating = totalRating / feedbacks.length;
+            
+            // Làm tròn đến 1 chữ số thập phân
+            service.rating = Math.round(averageRating * 10) / 10;
+        }
+        
+        // Lưu service với rating mới
+        await service.save();
+        
+        res.status(200).json({ 
+            serviceId, 
+            averageRating: service.rating, 
+            feedbackCount: feedbacks.length,
+            message: "Cập nhật rating thành công" 
+        });
+    } catch (error) {
+        console.error("Lỗi khi cập nhật rating:", error);
+        res.status(500).json({ message: "Lỗi khi cập nhật rating", error });
+    }
+};

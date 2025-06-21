@@ -2,9 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
-import { useAuth } from '../../contexts/AuthContext';
 import ConsultantScheduleModal from '../../components/admin/ConsultantScheduleModal';
-
 
 // Interface cho dữ liệu tư vấn viên
 interface IConsultant {
@@ -38,17 +36,6 @@ interface ICertificate {
   expireDate?: string;
   description?: string;
   fileUrl: string;
-}
-
-interface IUser {
-  _id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-}
-
-interface IConsultantWithUser extends IConsultant {
-  userInfo?: IUser;
 }
 
 interface TooltipProps {
@@ -95,9 +82,7 @@ const Consultant: React.FC = () => {
   const [consultants, setConsultants] = useState<IConsultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedConsultant, setSelectedConsultant] = useState<IConsultant | null>(null);
   const [formData, setFormData] = useState<IFormData>({
     accountId: '',
@@ -160,7 +145,6 @@ const Consultant: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/consultants');
-      console.log('API Response:', response.data);
       setConsultants(response.data);
       setError(null);
     } catch (err) {
@@ -286,9 +270,7 @@ const Consultant: React.FC = () => {
         status: formData.status
       };
       
-      console.log('Consultant data to update:', consultantData);
       const response = await api.put(`/consultants/${selectedConsultant._id}`, consultantData);
-      console.log('Update response:', response.data);
       
       setConsultants(prev =>
         prev.map(consultant =>
@@ -303,16 +285,6 @@ const Consultant: React.FC = () => {
     }
   };
 
-  const handleOpenDeleteModal = (consultant: IConsultant) => {
-    setSelectedConsultant(consultant);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setSelectedConsultant(null);
-  };
-
   const handleDeleteConsultant = async () => {
     if (!selectedConsultant) return;
 
@@ -321,28 +293,9 @@ const Consultant: React.FC = () => {
       setConsultants(prev =>
         prev.filter(consultant => consultant._id !== selectedConsultant._id)
       );
-      handleCloseDeleteModal();
       toast.success('Xóa tư vấn viên thành công!');
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra khi xóa tư vấn viên!');
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return 'Chưa có ngày';
-      }
-      return date.toLocaleString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return 'Chưa có ngày';
     }
   };
 
@@ -443,7 +396,7 @@ const Consultant: React.FC = () => {
       const response = await api.get(`/certificates/consultant/${consultantId}`);
       setCertificates(response.data);
       setCertificateError(null);
-    } catch (err) {
+    } catch {
       // Nếu không có chứng chỉ, hiển thị danh sách trống thay vì thông báo lỗi
       setCertificates([]);
       setCertificateError(null);
@@ -553,8 +506,9 @@ const Consultant: React.FC = () => {
       
       handleCloseCreateCertificateModal();
       toast.success('Tạo chứng chỉ thành công!');
-    } catch (error: any) {
-      toast.error(`Có lỗi xảy ra khi tạo chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
+    } catch (error) {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(`Có lỗi xảy ra khi tạo chứng chỉ: ${apiError.response?.data?.message || 'Lỗi không xác định'}`);
     }
   };
 
@@ -569,9 +523,7 @@ const Consultant: React.FC = () => {
     };
     
     setCertificateFormData({
-      consultant_id: typeof certificate.consultant_id === 'object' && certificate.consultant_id._id 
-        ? certificate.consultant_id._id 
-        : certificate.consultant_id,
+      consultant_id: (typeof certificate.consultant_id === 'object' ? certificate.consultant_id._id : certificate.consultant_id) || '',
       title: certificate.title,
       type: certificate.type,
       issuedBy: certificate.issuedBy,
@@ -612,8 +564,9 @@ const Consultant: React.FC = () => {
       
       handleCloseUpdateCertificateModal();
       toast.success('Cập nhật chứng chỉ thành công!');
-    } catch (error: any) {
-      toast.error(`Có lỗi xảy ra khi cập nhật chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
+    } catch (error) {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(`Có lỗi xảy ra khi cập nhật chứng chỉ: ${apiError.response?.data?.message || 'Lỗi không xác định'}`);
     }
   };
 
@@ -642,8 +595,9 @@ const Consultant: React.FC = () => {
       
       handleCloseDeleteCertificateModal();
       toast.success('Xóa chứng chỉ thành công!');
-    } catch (error: any) {
-      toast.error(`Có lỗi xảy ra khi xóa chứng chỉ: ${error.response?.data?.message || 'Lỗi không xác định'}`);
+    } catch (error) {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(`Có lỗi xảy ra khi xóa chứng chỉ: ${apiError.response?.data?.message || 'Lỗi không xác định'}`);
     }
   };
 
@@ -772,6 +726,20 @@ const Consultant: React.FC = () => {
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                    
+                    <Tooltip text="Xóa">
+                      <button
+                        onClick={() => {
+                          setSelectedConsultant(consultant);
+                          (document.getElementById('delete-modal') as HTMLDialogElement)?.showModal();
+                        }}
+                        className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
                     </Tooltip>
@@ -953,10 +921,10 @@ const Consultant: React.FC = () => {
               >
                 Xóa
               </button>
-            </div>
+            </form>
           </div>
         </div>
-      )}
+      </dialog>
 
 
 
