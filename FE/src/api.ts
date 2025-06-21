@@ -522,4 +522,36 @@ export const getServiceByIdApi = async (id: string) => {
   return res.data;
 };
 
+// Feedback APIs
+export const createFeedbackApi = async (data: {
+  account_id: string;
+  appointment_id: string;
+  service_id: string;
+  rating: number;
+  comment: string;
+}) => {
+  const res = await api.post("/feedback", data);
+  return res.data;
+};
+
+export const getFeedbackByAccountIdApi = async (accountId: string) => {
+  const res = await api.get(`/feedback/account/${accountId}`);
+  return res.data;
+};
+
+export const getFeedbackByAppointmentIdApi = async (appointmentId: string) => {
+  const res = await api.get(`/feedback/appointment/${appointmentId}`);
+  return res.data;
+};
+
+export const getFeedbackByServiceIdApi = async (serviceId: string) => {
+  const res = await api.get(`/feedback/service/${serviceId}`);
+  return res.data;
+};
+
+export const getFeedbackByIdApi = async (id: string) => {
+  const res = await api.get(`/feedback/${id}`);
+  return res.data;
+};
+
 export default api;
