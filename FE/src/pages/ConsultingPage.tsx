@@ -20,7 +20,7 @@ interface Consultant {
   introduction: string;
   contactLink: string;
   licenseNumber: string;
-  startDate: string;
+  startDateofWork: string;
   googleMeetLink: string;
   accountId: User;  // This comes from the populated field
 }
@@ -129,49 +129,57 @@ function ConsultingPage() {
           Chuyên gia tiêu biểu
         </motion.h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {featuredConsultants.map((consultant, idx) => (
-            consultant.accountId ? (
-              <motion.div
-                key={consultant._id}
-                initial={{ opacity: 0, y: 60 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
-                className="bg-white rounded-3xl border border-[#DBE8FA] shadow p-9 flex flex-col h-full items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
-              >
-                <div className="flex flex-col flex-grow items-center w-full">
-                  <img 
-                    src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'} 
-                    alt={consultant.accountId.fullName || 'Chuyên gia'} 
-                    className="w-24 h-24 rounded-full object-cover border-4 border-[#DBE8FA] shadow mb-6" 
-                  />
-                  <h3 className="text-2xl font-bold text-[#283593] mb-1 text-center">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
-                  <div className="flex items-center gap-2 text-[15px] font-medium text-[#5C6BC0] mb-2 text-center">
-                    <FaUserTie className="inline-block text-[#5C6BC0] text-base" />
-                    <span>Chuyên gia tư vấn</span>
-                  </div>
-                  <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
-                  <div className="mt-auto w-full flex items-center gap-2 text-gray-400 text-xs text-center justify-center">
-                    <FaEnvelope className="inline-block text-gray-400 text-sm" />
-                    <span>Liên hệ: {consultant.accountId.email || 'Không có email'}</span>
-                  </div>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="mt-6 px-8 py-3 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
-                  onClick={() => navigate(`/consultant/${consultant._id}`)}
+          {featuredConsultants.map((consultant, idx) => {
+            const startYear = consultant.startDateofWork ? new Date(consultant.startDateofWork).getFullYear() : null;
+            const currentYear = new Date().getFullYear();
+            const experience = startYear && !isNaN(startYear) ? currentYear - startYear : null;
+            return (
+              consultant.accountId ? (
+                <motion.div
+                  key={consultant._id}
+                  initial={{ opacity: 0, y: 60 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
+                  className="bg-white rounded-3xl border border-[#DBE8FA] shadow p-9 flex flex-col h-full items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
                 >
-                  <FaCalendarAlt className="inline-block text-white text-lg mb-0.5" />
-                  Đặt lịch
-                </motion.button>
-              </motion.div>
-            ) : (
-              <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-xl p-8 flex flex-col items-center h-full">
-                <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
-              </div>
+                  <div className="flex flex-col flex-grow items-center w-full">
+                    <img 
+                      src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'} 
+                      alt={consultant.accountId.fullName || 'Chuyên gia'} 
+                      className="w-24 h-24 rounded-full object-cover border-4 border-[#DBE8FA] shadow mb-6" 
+                    />
+                    <h3 className="text-2xl font-bold text-[#283593] mb-1 text-center">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
+                    <div className="flex items-center gap-2 text-[15px] font-medium text-[#5C6BC0] mb-2 text-center">
+                      <FaUserTie className="inline-block text-[#5C6BC0] text-base" />
+                      <span>Chuyên gia tư vấn</span>
+                    </div>
+                    <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
+                    <div className="text-sm text-gray-600 mt-2 text-center">
+                      Số năm làm việc: {experience !== null && experience >= 0 ? `${experience} năm` : 'Chưa cập nhật'}
+                    </div>
+                    <div className="mt-auto w-full flex items-center gap-2 text-gray-400 text-xs text-center justify-center">
+                      <FaEnvelope className="inline-block text-gray-400 text-sm" />
+                      <span>Liên hệ: {consultant.accountId.email || 'Không có email'}</span>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="mt-6 px-8 py-3 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
+                    onClick={() => navigate(`/consultant/${consultant._id}`)}
+                  >
+                    <FaCalendarAlt className="inline-block text-white text-lg mb-0.5" />
+                    Đặt lịch
+                  </motion.button>
+                </motion.div>
+              ) : (
+                <div key={consultant._id} className="bg-red-100 rounded-3xl shadow-xl p-8 flex flex-col items-center h-full">
+                  <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
+                </div>
+              )
             )
-          ))}
+          })}
         </div>
       </div>
       {/* Danh sách consultant */}
@@ -202,49 +210,57 @@ function ConsultingPage() {
           {filteredConsultants.length === 0 ? (
             <div className="col-span-4 text-center text-gray-500 py-12">Không tìm thấy chuyên gia.</div>
           ) : (
-            filteredConsultants.map((consultant, idx) => (
-              consultant.accountId ? (
-                <motion.div
-                  key={consultant._id}
-                  initial={{ opacity: 0, y: 60 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
-                  className="bg-white rounded-2xl border border-[#DBE8FA] shadow p-7 flex flex-col h-full items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
-                > 
-                  <div className="flex flex-col flex-grow items-center w-full">
-                    <img
-                      src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'}
-                      alt={consultant.accountId.fullName || 'Chuyên gia'}
-                      className="w-20 h-20 rounded-full object-cover border-4 border-[#DBE8FA] shadow mb-4"
-                    />
-                    <h3 className="text-lg font-bold text-[#283593] mb-1 text-center">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
-                    <div className="flex items-center gap-2 text-[14px] font-medium text-[#5C6BC0] mb-2 text-center">
-                      <FaUserTie className="inline-block text-[#5C6BC0] text-base" />
-                      <span>Chuyên gia tư vấn</span>
+            filteredConsultants.map((consultant, idx) => {
+              const startYear = consultant.startDateofWork ? new Date(consultant.startDateofWork).getFullYear() : null;
+              const currentYear = new Date().getFullYear();
+              const experience = startYear && !isNaN(startYear) ? currentYear - startYear : null;
+              return (
+                consultant.accountId ? (
+                  <motion.div
+                    key={consultant._id}
+                    initial={{ opacity: 0, y: 60 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
+                    className="bg-white rounded-2xl border border-[#DBE8FA] shadow p-7 flex flex-col h-full items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
+                  > 
+                    <div className="flex flex-col flex-grow items-center w-full">
+                      <img
+                        src={consultant.accountId.photoUrl || 'https://via.placeholder.com/150'}
+                        alt={consultant.accountId.fullName || 'Chuyên gia'}
+                        className="w-20 h-20 rounded-full object-cover border-4 border-[#DBE8FA] shadow mb-4"
+                      />
+                      <h3 className="text-lg font-bold text-[#283593] mb-1 text-center">{consultant.accountId.fullName || 'Chuyên gia'}</h3>
+                      <div className="flex items-center gap-2 text-[14px] font-medium text-[#5C6BC0] mb-2 text-center">
+                        <FaUserTie className="inline-block text-[#5C6BC0] text-base" />
+                        <span>Chuyên gia tư vấn</span>
+                      </div>
+                      <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
+                      <div className="text-sm text-gray-600 mt-2 text-center">
+                        Số năm làm việc: {experience !== null && experience >= 0 ? `${experience} năm` : 'Chưa cập nhật'}
+                      </div>
+                      <div className="mt-auto w-full flex items-center gap-2 text-gray-400 text-xs text-center justify-center">
+                        <FaEnvelope className="inline-block text-gray-400 text-sm" />
+                        <span>{consultant.accountId.email || 'Không có email'}</span>
+                      </div>
                     </div>
-                    <div className="text-gray-500 text-center mb-2 line-clamp-2 leading-relaxed">{consultant.introduction}</div>
-                    <div className="mt-auto w-full flex items-center gap-2 text-gray-400 text-xs text-center justify-center">
-                      <FaEnvelope className="inline-block text-gray-400 text-sm" />
-                      <span>{consultant.accountId.email || 'Không có email'}</span>
-                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="mt-6 px-7 py-2.5 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
+                      onClick={() => navigate(`/consultant/${consultant._id}`)}
+                    >
+                      <FaCalendarAlt className="inline-block text-white text-lg mb-0.5" />
+                      Đặt lịch
+                    </motion.button>
+                  </motion.div>
+                ) : (
+                  <div key={consultant._id} className="bg-red-100 rounded-2xl shadow p-6 flex flex-col items-center h-full">
+                    <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="mt-6 px-7 py-2.5 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
-                    onClick={() => navigate(`/consultant/${consultant._id}`)}
-                  >
-                    <FaCalendarAlt className="inline-block text-white text-lg mb-0.5" />
-                    Đặt lịch
-                  </motion.button>
-                </motion.div>
-              ) : (
-                <div key={consultant._id} className="bg-red-100 rounded-2xl shadow p-6 flex flex-col items-center h-full">
-                  <div className="text-red-600 font-bold">Thiếu thông tin tài khoản cho chuyên gia này</div>
-                </div>
+                )
               )
-            ))
+            })
           )}
         </div>
         {/* Pagination */}

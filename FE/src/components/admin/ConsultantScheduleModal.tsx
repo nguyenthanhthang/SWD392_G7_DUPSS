@@ -8,7 +8,7 @@ import axios from 'axios';
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const timeSlots = [
   '08:00', '09:00', '10:00', '11:00',
-  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+  '13:00', '14:00', '15:00', '16:00',
 ];
 
 interface SlotTime {
@@ -17,6 +17,25 @@ interface SlotTime {
   start_time: string;
   end_time: string;
   status: string;
+}
+
+interface AppointmentDetail {
+  user_id?: {
+    fullName?: string;
+    username?: string;
+    email?: string;
+  };
+  service_id?: {
+    name?: string;
+    title?: string;
+  };
+  slotTime_id?: {
+    start_time?: string;
+    end_time?: string;
+  };
+  status?: string;
+  reason?: string;
+  dateBooking?: string;
 }
 
 interface ConsultantScheduleModalProps {
@@ -34,7 +53,9 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
   const [status, setStatus] = useState('available');
   const [isSaving, setIsSaving] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState<{[key: string]: boolean}>({}); // key: `${day}-${slot}`
-  const [appointmentDetail, setAppointmentDetail] = useState<Record<string, unknown> | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectMode, setSelectMode] = useState<'select' | 'deselect' | null>(null);
+  const [appointmentDetail, setAppointmentDetail] = useState<AppointmentDetail | null>(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
 
   const today = new Date();
@@ -66,10 +87,42 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
     return isWithinInterval(d, { start: weekStart, end: weekEnd });
   });
 
-  // Chọn/bỏ chọn slot lẻ
-  const toggleSlot = (day: string, slot: string) => {
+  const handleMouseDown = (day: string, slot: string) => {
     const key = `${day}-${slot}`;
-    setSelectedSlots(prev => ({ ...prev, [key]: !prev[key] }));
+    const isSelected = !!selectedSlots[key];
+    
+    setIsSelecting(true);
+    setSelectMode(isSelected ? 'deselect' : 'select');
+    
+    setSelectedSlots(prev => {
+      const newSelected = { ...prev };
+      if (isSelected) {
+        delete newSelected[key];
+      } else {
+        newSelected[key] = true;
+      }
+      return newSelected;
+    });
+  };
+
+  const handleMouseEnter = (day: string, slot: string) => {
+    if (!isSelecting) return;
+    
+    const key = `${day}-${slot}`;
+    setSelectedSlots(prev => {
+        const newSelected = { ...prev };
+        if (selectMode === 'select') {
+            newSelected[key] = true;
+        } else if (selectMode === 'deselect') {
+            delete newSelected[key];
+        }
+        return newSelected;
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsSelecting(false);
+    setSelectMode(null);
   };
 
   // Chọn/bỏ chọn cả ngày
@@ -85,42 +138,61 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
   // Lưu tất cả các slot đã chọn để tạo mới
   const handleSaveAllSelectedSlots = async () => {
     setIsSaving(true);
+    const newSlots: { start_time: string; end_time: string }[] = [];
     try {
       for (const day of weekDays) {
         for (const slot of timeSlots) {
           const key = `${day}-${slot}`;
           if (selectedSlots[key]) {
-            // Kiểm tra slot đã tồn tại chưa
             const slotHour = parseInt(slot.split(':')[0], 10);
             const dayIdx = weekDays.indexOf(day);
             const start = addDays(weekStart, dayIdx);
             start.setHours(slotHour, 0, 0, 0);
             const end = addDays(weekStart, dayIdx);
             end.setHours(slotHour + 1, 0, 0, 0);
-            const existingSlot = slotTimes.filter(st => {
-              let dayOfWeek, hour;
+            
+            // Sửa lại logic kiểm tra slot đã tồn tại, so sánh cả ngày/tháng/năm
+            const existingSlot = slotTimes.some(st => {
               try {
-                dayOfWeek = format(parseISO(st.start_time), 'EEE');
-                hour = format(parseISO(st.start_time), 'HH:00');
+                const stDate = parseISO(st.start_time);
+                return stDate.getFullYear() === start.getFullYear() &&
+                       stDate.getMonth() === start.getMonth() &&
+                       stDate.getDate() === start.getDate() &&
+                       stDate.getHours() === start.getHours();
               } catch {
+                // Fallback nếu parseISO lỗi
                 const d = new Date(st.start_time);
-                dayOfWeek = format(d, 'EEE');
-                hour = format(d, 'HH:00');
+                 return d.getFullYear() === start.getFullYear() &&
+                       d.getMonth() === start.getMonth() &&
+                       d.getDate() === start.getDate() &&
+                       d.getHours() === start.getHours();
               }
-              return dayOfWeek === day && hour === slot;
             });
-            if (!existingSlot.length) {
-              await createSlotTimeApi({
-                consultant_id: consultantId,
-                slots: [{ start_time: start.toISOString(), end_time: end.toISOString() }]
+
+            if (!existingSlot) {
+              newSlots.push({
+                start_time: start.toISOString(),
+                end_time: end.toISOString()
               });
             }
           }
         }
       }
+
+      if (newSlots.length > 0) {
+        const slotData = {
+          consultant_id: consultantId,
+          slots: newSlots
+        };
+        console.log('Đang gửi dữ liệu đăng ký các slot:', slotData);
+        await createSlotTimeApi(slotData);
+        toast.success(`Đã tạo thành công ${newSlots.length} lịch làm việc mới!`);
+      } else {
+        toast.info('Tất cả các vị trí được chọn đã tồn tại hoặc không có gì để lưu.');
+      }
+      
       setSelectedSlots({});
       await fetchSlotTimes();
-      toast.success('Đã lưu tất cả slot đã chọn!');
     } catch (err: unknown) {
       console.error('Lỗi khi lưu lịch:', err);
       toast.error('Có lỗi khi lưu lịch!');
@@ -294,7 +366,7 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
             <p>{error}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
             <div className="grid grid-cols-8 gap-1">
               <div></div>
               {weekDays.map(day => (
@@ -333,7 +405,7 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
                   const key = `${day}-${slot}`;
                   const isSelected = selectedSlots[key];
                   return (
-                    <button
+                    <div
                       key={day + slot}
                       className={`h-10 w-full flex items-center justify-center rounded-lg transition-all duration-200 text-xs border ${
                         isBooked 
@@ -344,8 +416,14 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
                               ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-100'
                               : 'bg-white hover:bg-blue-50 border-gray-100'
                       }`}
-                      onClick={() => isBooked ? handleBookedSlotClick(slotObj._id) : toggleSlot(day, slot)}
-                      type="button"
+                      onMouseDown={() => {
+                        if (isBooked) {
+                          handleBookedSlotClick(slotObj._id);
+                        } else {
+                          handleMouseDown(day, slot);
+                        }
+                      }}
+                      onMouseEnter={() => !isBooked && handleMouseEnter(day, slot)}
                     >
                       {isBooked ? (
                         <span className="flex items-center gap-1">
@@ -371,7 +449,7 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
                       ) : (
                         <span className="text-gray-400">Trống</span>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -432,13 +510,13 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
                 &times;
               </button>
               <h3 className="text-lg font-bold mb-4 text-blue-700">Chi tiết cuộc hẹn</h3>
-              <div className="mb-2"><b>Khách hàng:</b> {String(((appointmentDetail?.user_id as Record<string, string>)?.fullName || (appointmentDetail?.user_id as Record<string, string>)?.username || (appointmentDetail?.user_id as Record<string, string>)?.email || 'Ẩn danh'))}</div>
-              <div className="mb-2"><b>Dịch vụ:</b> {String(((appointmentDetail?.service_id as Record<string, string>)?.name || (appointmentDetail?.service_id as Record<string, string>)?.title || '--'))}</div>
+              <div className="mb-2"><b>Khách hàng:</b> {appointmentDetail?.user_id?.fullName || appointmentDetail?.user_id?.username || appointmentDetail?.user_id?.email || 'Ẩn danh'}</div>
+              <div className="mb-2"><b>Dịch vụ:</b> {appointmentDetail?.service_id?.name || appointmentDetail?.service_id?.title || '--'}</div>
               
               <div className="mb-2">
                 <b>Thời gian:</b>{' '}
-                {((appointmentDetail?.slotTime_id as Record<string, string>)?.start_time && (appointmentDetail?.slotTime_id as Record<string, string>)?.end_time)
-                  ? `${new Date((appointmentDetail?.slotTime_id as Record<string, string>).start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date((appointmentDetail?.slotTime_id as Record<string, string>).end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ${new Date((appointmentDetail?.slotTime_id as Record<string, string>).start_time).toLocaleDateString()}`
+                {(appointmentDetail?.slotTime_id?.start_time && appointmentDetail?.slotTime_id?.end_time)
+                  ? `${new Date(appointmentDetail.slotTime_id.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(appointmentDetail.slotTime_id.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ${new Date(appointmentDetail.slotTime_id.start_time).toLocaleDateString()}`
                   : '--'}
               </div>
               <div className="mb-2"><b>Trạng thái:</b> {appointmentDetail?.status || '--'}</div>
@@ -447,7 +525,7 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({ consu
               <div className="mb-2">
                 <b>Được đặt vào ngày :</b>{' '}
   {appointmentDetail?.dateBooking
-    ? new Date(appointmentDetail.dateBooking as string).toLocaleDateString()
+    ? new Date(appointmentDetail.dateBooking).toLocaleDateString()
     : '--'}
 </div>
             </div>
