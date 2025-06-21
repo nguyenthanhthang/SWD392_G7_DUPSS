@@ -723,15 +723,6 @@ const AccountList: React.FC = () => {
       />
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold text-indigo-400">Quản lý tài khoản</h1>
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Thêm tài khoản
-        </button>
       </div>
 
       {/* Phần tìm kiếm và lọc */}
