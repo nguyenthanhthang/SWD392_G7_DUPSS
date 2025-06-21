@@ -684,15 +684,6 @@ const Consultant: React.FC = () => {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-indigo-500">Quản lý tư vấn viên</h1>
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center shadow-md transition-all duration-200"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Thêm tư vấn viên
-        </button>
       </div>
 
             <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">

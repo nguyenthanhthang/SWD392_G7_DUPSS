@@ -1,56 +1,187 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, Activity, FileText, ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getAccountByIdApi } from '../../api';
+import { getAccountByIdApi, getAppointmentByConsultantIdApi, getConsultantByAccountIdApi, getSlotTimeByConsultantIdApi } from '../../api';
+
+interface ApiAppointment {
+  _id: string;
+  slotTime_id: string;
+  user_id: {
+    _id: string;
+    fullName: string;
+    photoUrl?: string;
+  };
+  service_id: {
+    name: string;
+  } | null;
+  dateBooking: string;
+  status: 'scheduled' | 'completed' | 'cancelled' | 'noshow';
+}
+
+interface SlotTime {
+  _id: string;
+  consultant_id: string;
+  start_time: string;
+  end_time: string;
+  status: "available" | "booked" | "cancelled" | "deleted";
+}
+
+interface TodayAppointment {
+  id: string;
+  time: string;
+  patientName: string;
+  patientAvatar: string;
+  serviceType: string;
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled' | 'noshow';
+}
 
 const ConsultantDashboard = () => {
-  // Dữ liệu mẫu cho lịch hẹn hôm nay
-  const [todayAppointments, setTodayAppointments] = useState([
-    {
-      id: 1,
-      time: "09:00 - 10:00",
-      patientName: "Nguyễn Văn A",
-      patientAvatar: "https://randomuser.me/api/portraits/men/32.jpg",
-      serviceType: "Tư vấn tâm lý cá nhân",
-      status: "upcoming" // upcoming, ongoing, completed
-    },
-    {
-      id: 2,
-      time: "11:30 - 12:30",
-      patientName: "Trần Thị B",
-      patientAvatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      serviceType: "Tư vấn gia đình",
-      status: "upcoming"
-    },
-    {
-      id: 3,
-      time: "14:00 - 15:00",
-      patientName: "Lê Văn C",
-      patientAvatar: "https://randomuser.me/api/portraits/men/67.jpg",
-      serviceType: "Tư vấn học đường",
-      status: "upcoming"
-    }
-  ]);
+  const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
+  const [slotTimes, setSlotTimes] = useState<SlotTime[]>([]);
+  const [todayAppointments, setTodayAppointments] = useState<TodayAppointment[]>([]);
+  const [stats, setStats] = useState({
+    todayAppointments: 0,
+    totalPatients: 0,
+    weeklyAppointments: 0,
+    completedSessions: 0
+  });
+  const [nextWeekSchedule, setNextWeekSchedule] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
 
   // Dữ liệu mẫu cho thống kê
-  const stats = {
-    todayAppointments: todayAppointments.length,
-    totalPatients: 28,
-    weeklyAppointments: 12,
-    completedSessions: 45
-  };
+  const [user, setUser] = useState<{ photoUrl?: string, _id?: string } | null>(null);
 
-  // Lấy avatar user
-  const [user, setUser] = useState<{ photoUrl?: string } | null>(null);
   useEffect(() => {
-    const userId = localStorage.getItem('userId');
-    if (userId) {
-      getAccountByIdApi(userId).then(setUser).catch(() => setUser(null));
-    }
+    const fetchConsultantData = async () => {
+      setLoading(true);
+      const accountId = localStorage.getItem('userId');
+      if (accountId) {
+        try {
+          const account = await getAccountByIdApi(accountId);
+          setUser(account);
+
+          const consultantRes = await getConsultantByAccountIdApi(accountId);
+          if (consultantRes?._id) {
+            const appointmentData = await getAppointmentByConsultantIdApi(consultantRes._id);
+            setAppointments(appointmentData);
+            const slotTimeData = await getSlotTimeByConsultantIdApi(consultantRes._id);
+            setSlotTimes(slotTimeData);
+          }
+        } catch (error) {
+          console.error("Failed to fetch consultant data:", error);
+          setAppointments([]); // Reset on error
+          setSlotTimes([]);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    fetchConsultantData();
   }, []);
 
+  useEffect(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const todays = appointments.filter(app => {
+      const appDate = new Date(app.dateBooking);
+      return appDate >= todayStart && appDate <= todayEnd;
+    });
+
+    const formattedTodayAppointments = todays.map(app => {
+      const startTime = new Date(app.dateBooking);
+      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour later
+
+      return {
+        id: app._id,
+        time: `${startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
+        patientName: app.user_id.fullName,
+        patientAvatar: app.user_id.photoUrl || `https://ui-avatars.com/api/?name=${app.user_id.fullName}`,
+        serviceType: app.service_id ? app.service_id.name : 'Dịch vụ không xác định',
+        status: (app.status === 'scheduled' ? 'upcoming' : app.status) as TodayAppointment['status'],
+      };
+    });
+    setTodayAppointments(formattedTodayAppointments);
+
+    // Calculate stats
+    const todayCount = todays.length;
+
+    const dayOfWeek = now.getDay();
+    const firstDayOfWeek = new Date(now);
+    firstDayOfWeek.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    firstDayOfWeek.setHours(0, 0, 0, 0);
+
+    const lastDayOfWeek = new Date(firstDayOfWeek);
+    lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+    lastDayOfWeek.setHours(23, 59, 59, 999);
+
+    const weeklySlotCount = slotTimes.filter(slot => {
+      const slotDate = new Date(slot.start_time);
+      return slotDate >= firstDayOfWeek && slotDate <= lastDayOfWeek;
+    }).length;
+
+    const patientIds = new Set(appointments.map(app => app.user_id._id));
+    const totalPatientsCount = patientIds.size;
+
+    const completedCount = appointments.filter(app => app.status === 'completed').length;
+
+    setStats({
+      todayAppointments: todayCount,
+      totalPatients: totalPatientsCount,
+      weeklyAppointments: weeklySlotCount,
+      completedSessions: completedCount,
+    });
+
+    // Calculate next week's schedule
+    const today = new Date();
+    const currentDay = today.getDay(); // 0=Sun, 1=Mon...
+    const daysToAddForNextMonday = currentDay === 0 ? 1 : 8 - currentDay;
+    const nextMonday = new Date(today.getTime());
+    nextMonday.setDate(today.getDate() + daysToAddForNextMonday);
+    nextMonday.setHours(0, 0, 0, 0);
+
+    const nextSunday = new Date(nextMonday.getTime());
+    nextSunday.setDate(nextMonday.getDate() + 6);
+    nextSunday.setHours(23, 59, 59, 999);
+
+    const nextWeekAppointments = appointments.filter(app => {
+      const appDate = new Date(app.dateBooking);
+      return appDate >= nextMonday && appDate <= nextSunday;
+    });
+
+    const weekDays = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+    const initialCounts: Record<string, number> = {
+      "Thứ Hai": 0,
+      "Thứ Ba": 0,
+      "Thứ Tư": 0,
+      "Thứ Năm": 0,
+      "Thứ Sáu": 0,
+      "Thứ Bảy": 0,
+      "Chủ Nhật": 0,
+    };
+
+    const nextWeekCounts = nextWeekAppointments.reduce((acc, app) => {
+      const dayName = weekDays[new Date(app.dateBooking).getDay()];
+      if (dayName in acc) {
+        acc[dayName]++;
+      }
+      return acc;
+    }, initialCounts);
+
+    setNextWeekSchedule(nextWeekCounts);
+
+  }, [appointments, slotTimes]);
+
+  useEffect(() => {
+    console.log('Dữ liệu thẻ thống kê:', stats);
+  }, [stats]);
+
   // Hàm xử lý bắt đầu buổi tư vấn
-  const handleStartSession = (appointmentId: number) => {
+  const handleStartSession = (appointmentId: string) => {
     // Trong thực tế, đây sẽ là API call để cập nhật trạng thái buổi tư vấn
     setTodayAppointments(prev => 
       prev.map(app => 
@@ -87,6 +218,16 @@ const ConsultantDashboard = () => {
         return 'Bắt đầu buổi tư vấn';
     }
   };
+
+  const weekDayOrder = ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-xl font-semibold text-[#283593]">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -139,7 +280,7 @@ const ConsultantDashboard = () => {
           <div className="bg-white rounded-2xl p-6 shadow border border-[#DBE8FA]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Lịch hẹn tuần này</p>
+                <p className="text-gray-500 text-sm">Lịch làm tuần này</p>
                 <h3 className="text-2xl font-bold text-[#283593]">{stats.weeklyAppointments}</h3>
               </div>
               <div className="bg-[#DBE8FA] p-3 rounded-lg">
@@ -192,15 +333,15 @@ const ConsultantDashboard = () => {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             <img 
                               src={appointment.patientAvatar} 
                               alt={appointment.patientName} 
-                              className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                              className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
                             />
-                            <div>
+                            <div className="min-w-0">
                               <p className="font-medium text-[#283593]">{appointment.patientName}</p>
-                              <p className="text-sm text-gray-500">{appointment.serviceType}</p>
+                              <p className="text-sm text-gray-500 truncate">{appointment.serviceType}</p>
                             </div>
                           </div>
 
@@ -265,19 +406,6 @@ const ConsultantDashboard = () => {
                 </Link>
 
                 <Link 
-                  to="/consultants/patients"
-                  className="flex items-center p-4 bg-[#DBE8FA] rounded-lg hover:bg-[#E3EAFD] transition"
-                >
-                  <div className="bg-white p-3 rounded-lg mr-4 border border-[#DBE8FA]">
-                    <Users className="w-6 h-6 text-[#283593]" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-[#283593]">Quản lý bệnh nhân</h3>
-                    <p className="text-sm text-gray-500">Xem danh sách và hồ sơ bệnh nhân</p>
-                  </div>
-                </Link>
-
-                <Link 
                   to="/consultants/reports"
                   className="flex items-center p-4 bg-[#DBE8FA] rounded-lg hover:bg-[#E3EAFD] transition"
                 >
@@ -295,26 +423,12 @@ const ConsultantDashboard = () => {
               <div className="border-t border-gray-200 px-6 py-4">
                 <h3 className="text-base font-medium text-gray-800 mb-3">Lịch tuần tới</h3>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Thứ Hai</span>
-                    <span className="font-medium text-gray-900">3 lịch hẹn</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Thứ Ba</span>
-                    <span className="font-medium text-gray-900">2 lịch hẹn</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Thứ Tư</span>
-                    <span className="font-medium text-gray-900">4 lịch hẹn</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Thứ Năm</span>
-                    <span className="font-medium text-gray-900">1 lịch hẹn</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Thứ Sáu</span>
-                    <span className="font-medium text-gray-900">2 lịch hẹn</span>
-                  </div>
+                  {weekDayOrder.map(day => (
+                    <div key={day} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">{day}</span>
+                      <span className="font-medium text-gray-900">{nextWeekSchedule[day] || 0} lịch hẹn</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
