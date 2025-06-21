@@ -16,41 +16,6 @@ export const getAllBlogs = async (req: Request, res: Response) => {
     const query = isAdmin ? {} : { published: 'published' };
     const blogs = await Blog.find(query).sort({ createdAt: -1 });
     
-    // Thêm một số blog mẫu nếu không có blog nào và là admin
-    if (blogs.length === 0 && isAdmin) {
-      const sampleBlogs = [
-        {
-          title: 'Hiểu về Sức Khỏe Tâm Thần',
-          content: '<p>Sức khỏe tâm thần là một phần quan trọng của cuộc sống. Bài viết này giúp bạn hiểu rõ hơn về chủ đề này.</p>',
-          author: 'Admin',
-          published: 'published',
-          topics: ['sức khỏe', 'tâm lý']
-        },
-        {
-          title: 'Phương pháp điều trị hiện đại',
-          content: '<p>Các phương pháp điều trị tâm lý hiện đại đang được áp dụng rộng rãi với hiệu quả cao.</p>',
-          author: 'Admin',
-          published: 'published',
-          topics: ['điều trị', 'phương pháp']
-        },
-        {
-          title: 'Làm thế nào để vượt qua căng thẳng',
-          content: '<p>Căng thẳng là một phần tất yếu của cuộc sống hiện đại. Bài viết này cung cấp các kỹ thuật để đối phó với căng thẳng.</p>',
-          author: 'Admin',
-          published: 'published',
-          topics: ['stress', 'tâm lý']
-        }
-      ];
-
-      for (const blogData of sampleBlogs) {
-        const blog = new Blog(blogData);
-        await blog.save();
-      }
-
-      const newBlogs = await Blog.find(query).sort({ createdAt: -1 });
-      return res.json(newBlogs);
-    }
-
     res.json(blogs);
   } catch (error) {
     console.error('Error in getAllBlogs:', error);

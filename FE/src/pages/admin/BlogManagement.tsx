@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { getAllBlogsApi, createBlogApi, updateBlogApi } from '../../api';
+import { createBlogApi, updateBlogApi } from '../../api';
+import { getAllBlogsApi } from '../../api/index';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import Editor from '../../components/Editor';
@@ -65,8 +66,11 @@ const BlogManagement: React.FC = () => {
     setLoading(true);
     try {
       const data = await getAllBlogsApi(true);
+      console.log('Blogs fetched from API:', data);
+      console.log('Total blogs count:', data.length);
       setBlogs(data);
     } catch (error) {
+      console.error('Error fetching blogs:', error);
       message.error('Không thể lấy danh sách blogs');
     } finally {
       setLoading(false);

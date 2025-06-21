@@ -34,7 +34,7 @@ function Header() {
 
   const avatarUrl =
     user?.photoUrl ||
-    "https://ui-avatars.com/api/?name=User&background=eee&color=555";
+    `https://i.pravatar.cc/150?img=${user?.username?.length || 3}`;
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm w-full">
@@ -83,19 +83,16 @@ function Header() {
           {user ? (
             <div className="relative" ref={dropdownRef}>
               <button
-                className="flex items-center gap-2 px-3 py-2 rounded-full border-2 border-gray-200 bg-white hover:bg-gray-100 transition focus:outline-none"
+                className="flex items-center gap-1 p-2.5 rounded-full bg-white hover:bg-gray-50 transition focus:outline-none"
                 onClick={() => setShowDropdown((v) => !v)}
               >
                 <img
                   src={avatarUrl}
                   alt="avatar"
-                  className="w-10 h-10 rounded-full object-cover border border-gray-300"
+                  className="w-11 h-11 rounded-full object-cover"
                 />
-                <span className="hidden md:inline font-medium text-gray-800 text-lg">
-                  {user.username || user.fullName || "User"}
-                </span>
                 <svg
-                  className="w-5 h-5 ml-1 text-gray-500"
+                  className="w-4 h-4 text-gray-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -125,7 +122,7 @@ function Header() {
                     </>
                   )}
                   <button
-                    className="w-full text-left px-5 py-3 hover:bg-gray-100 text-gray-800 text-base rounded-b-xl"
+                    className="w-full text-left px-5 py-3 hover:bg-gray-100 text-gray-800 text-base"
                     onClick={() => {
                       setShowDropdown(false);
                       navigate("/profile");

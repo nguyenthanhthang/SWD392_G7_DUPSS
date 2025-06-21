@@ -23,15 +23,32 @@ export const createAppointment = async (req: Request, res: Response) => {
 
 export const getAllAppointments = async (req: Request, res: Response) => {
     try {
-        const appointments = await Appointment.find().populate("user_id").populate("consultant_id").populate("service_id");
+        const appointments = await Appointment.find()
+            .populate("user_id")
+            .populate({
+                path: "consultant_id",
+                populate: {
+                    path: "accountId"
+                }
+            })
+            .populate("service_id");
         res.status(200).json(appointments);
     } catch (err: any) {
         res.status(500).json({ message: err.message });
     }
 }
+
 export const getAppointmentById = async (req: Request, res: Response) => {
     try {
-        const appointment = await Appointment.findById(req.params.id).populate("user_id").populate("consultant_id").populate("service_id");
+        const appointment = await Appointment.findById(req.params.id)
+            .populate("user_id")
+            .populate({
+                path: "consultant_id",
+                populate: {
+                    path: "accountId"
+                }
+            })
+            .populate("service_id");
         res.status(200).json(appointment);
     } catch (err: any) {
         res.status(500).json({ message: err.message });
@@ -49,7 +66,15 @@ export const updateStatusAppointment = async (req: Request, res: Response) => {
 
 export const getAppointmentByUserId = async (req: Request, res: Response) => {
     try {
-        const appointment = await Appointment.find({ user_id: req.params.id }).populate("user_id").populate("consultant_id").populate("service_id");
+        const appointment = await Appointment.find({ user_id: req.params.id })
+            .populate("user_id")
+            .populate({
+                path: "consultant_id",
+                populate: {
+                    path: "accountId"
+                }
+            })
+            .populate("service_id");
         res.status(200).json(appointment);
     } catch (err: any) {
         res.status(500).json({ message: err.message });
@@ -58,15 +83,33 @@ export const getAppointmentByUserId = async (req: Request, res: Response) => {
 
 export const getAppointmentByConsultantId = async (req: Request, res: Response) => {
     try {
-        const appointment = await Appointment.find({ consultant_id: req.params.id }).populate("user_id").populate("consultant_id").populate("service_id");
+        const appointment = await Appointment.find({ consultant_id: req.params.id })
+            .populate("user_id")
+            .populate({
+                path: "consultant_id",
+                populate: {
+                    path: "accountId"
+                }
+            })
+            .populate("service_id");
         res.status(200).json(appointment);
     } catch (err: any) {
         res.status(500).json({ message: err.message });
     }
 }
+
 export const getAppointmentBySlotTimeId = async (req: Request, res: Response) => {
     try {
-        const appointment = await Appointment.find({ slotTime_id: req.params.id }).populate("slotTime_id").populate("user_id").populate("consultant_id").populate("service_id");
+        const appointment = await Appointment.find({ slotTime_id: req.params.id })
+            .populate("slotTime_id")
+            .populate("user_id")
+            .populate({
+                path: "consultant_id",
+                populate: {
+                    path: "accountId"
+                }
+            })
+            .populate("service_id");
         res.status(200).json(appointment);
     } catch (err: any) {
         res.status(500).json({ message: err.message });

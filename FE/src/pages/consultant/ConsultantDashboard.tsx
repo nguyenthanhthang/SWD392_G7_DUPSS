@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, Activity, FileText, ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getAccountByIdApi } from '../../api';
 
 const ConsultantDashboard = () => {
   // Dữ liệu mẫu cho lịch hẹn hôm nay
@@ -38,6 +39,15 @@ const ConsultantDashboard = () => {
     weeklyAppointments: 12,
     completedSessions: 45
   };
+
+  // Lấy avatar user
+  const [user, setUser] = useState<{ photoUrl?: string } | null>(null);
+  useEffect(() => {
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      getAccountByIdApi(userId).then(setUser).catch(() => setUser(null));
+    }
+  }, []);
 
   // Hàm xử lý bắt đầu buổi tư vấn
   const handleStartSession = (appointmentId: number) => {
@@ -81,6 +91,19 @@ const ConsultantDashboard = () => {
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Sidebar/Menu dọc trái (nếu có) */}
+        <div className="fixed left-0 top-0 h-full flex flex-col items-center py-6 px-2 bg-gradient-to-b from-[#e3eafd] to-[#dbe8fa] z-20">
+          {/* Các nút menu ở đây ... */}
+          {/* Avatar ở cuối menu */}
+          <div className="mt-auto mb-2">
+            <img
+              src={user?.photoUrl || 'https://i.pravatar.cc/150?img=3'}
+              alt="avatar"
+              className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+            />
+          </div>
+        </div>
+
         {/* Greeting Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#283593]">Xin chào, Bác sĩ!</h1>

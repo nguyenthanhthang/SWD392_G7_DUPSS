@@ -16,6 +16,7 @@ export interface IAccount extends Document {
   phoneNumber?: string;
   createdAt: Date;
   updatedAt: Date;
+  yearOfBirth?: number;
 }
 
 // Schema Mongoose
@@ -37,6 +38,7 @@ const accountSchema = new Schema<IAccount>(
     verificationToken: { type: String },
     verificationTokenExpiresAt: { type: Date },
     phoneNumber: { type: String },
+    yearOfBirth: { type: Number },
   },
   { timestamps: true }
 );

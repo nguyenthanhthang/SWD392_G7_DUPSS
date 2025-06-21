@@ -153,7 +153,7 @@ export const updateStatusSlotTimeApi = async (id: string, status: string) => {
 export const deleteSlotTimeApi = async (id: string) => {
   const res = await api.delete(`/slot-times/${id}`);
   return res.data;
-};
+}; 
 
 // Event APIs
 export const getAllEventsApi = async (status?: string) => {
@@ -263,7 +263,11 @@ export const createAppointmentApi = async (data: {
 // Cập nhật thông tin account
 export const updateAccountApi = async (
   id: string,
-  data: Partial<{ fullName: string; phoneNumber: string }>
+  data: Partial<{ 
+    fullName: string; 
+    phoneNumber: string;
+    photoUrl: string;
+  }>
 ) => {
   const res = await api.put(`/accounts/${id}`, data);
   return res.data;
@@ -305,12 +309,12 @@ export const getBlogByIdApi = async (id: string) => {
   try {
     const res = await api.get('/blogs/' + id);
     return res.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Xử lý các loại lỗi cụ thể
-    if (error.response) {
+    if (axios.isAxiosError(error) && error.response) {
       // Server trả về response với status code nằm ngoài range 2xx
       throw new Error(error.response.data.message || 'Không thể tải bài viết');
-    } else if (error.request) {
+    } else if (axios.isAxiosError(error) && error.request) {
       // Request được gửi nhưng không nhận được response
       throw new Error('Không thể kết nối đến server');
     } else {
@@ -379,6 +383,12 @@ export const getBlogsByAuthorApi = async (author: string) => {
 
 export const getBlogsByUserIdApi = async (userId: string) => {
   const res = await api.get(`/blogs/user/${userId}`);
+  return res.data;
+};
+
+// Lấy consultant bằng accountId
+export const getConsultantByAccountIdApi = async (accountId: string) => {
+  const res = await api.get(`/consultants/account/${accountId}`);
   return res.data;
 };
 
@@ -460,6 +470,32 @@ export const getAvailableConsultantsByDayApi = async (date: string) => {
   return res.data;
 };
 
+// ===== CERTIFICATE APIs =====
+export const getCertificatesByConsultantIdApi = async (consultantId: string) => {
+  const res = await api.get(`/certificates/consultant/${consultantId}`);
+  return res.data;
+};
+
+export const createCertificateApi = async (data: { title: string, type: string, issuedBy: number, issueDate: string, expireDate?: string, description?: string, fileUrl: string, consultant_id: string }) => {
+  const res = await api.post('/certificates', data);
+  return res.data;
+};
+
+export const updateCertificateApi = async (id: string, data: Partial<{ title: string, type: string, issuedBy: number, issueDate: string, expireDate?: string, description?: string, fileUrl: string }>) => {
+  const res = await api.put(`/certificates/${id}`, data);
+  return res.data;
+};
+
+export const deleteCertificateApi = async (id: string) => {
+  const res = await api.delete(`/certificates/${id}`);
+  return res.data;
+};
+
+export const getCertificateByIdApi = async (id: string) => {
+  const res = await api.get(`/certificates/${id}`);
+  return res.data;
+};
+
 // Comment APIs
 export const getCommentsApi = async (blogId: string) => {
   const res = await api.get(`/blogs/${blogId}/comments`);
@@ -473,6 +509,16 @@ export const addCommentApi = async (blogId: string, data: { userId: string; user
 
 export const deleteCommentApi = async (blogId: string, commentId: string, userId: string) => {
   const res = await api.delete(`/blogs/${blogId}/comments/${commentId}`, { data: { userId } });
+  return res.data;
+};
+
+export const getAppointmentByConsultantIdApi = async (consultantId: string) => {
+  const res = await api.get(`/appointments/consultant/${consultantId}`);
+  return res.data;
+};
+
+export const getServiceByIdApi = async (id: string) => {
+  const res = await api.get(`/services/${id}`);
   return res.data;
 };
 
