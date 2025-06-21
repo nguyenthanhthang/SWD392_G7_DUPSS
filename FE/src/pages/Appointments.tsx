@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Search, Eye, X, CheckCircle, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, Search, Eye, X, CheckCircle, ChevronRight, Star, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAppointmentByUserIdApi } from '../api';
+import { getAppointmentByUserIdApi, getFeedbackByAppointmentIdApi, getFeedbackByServiceIdApi } from '../api';
 import { formatInTimeZone } from 'date-fns-tz';
+import FeedbackForm from '../components/FeedbackForm';
+import FeedbackDisplay from '../components/FeedbackDisplay';
 
 const AppointmentsPage = () => {
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ const AppointmentsPage = () => {
       };
       introduction?: string;
     };
-    service_id?: { name?: string; price?: number };
+    service_id?: { _id?: string; name?: string; price?: number };
     slotTime_id?: { start_time?: string; end_time?: string };
     dateBooking?: string;
     type?: string;
@@ -25,7 +27,20 @@ const AppointmentsPage = () => {
     status?: string;
     reason?: string;
     note?: string;
+    hasFeedback?: boolean;
   }
+
+  interface Feedback {
+    _id: string;
+    rating: number;
+    comment: string;
+    feedback_date: string;
+    account_id: {
+      fullName?: string;
+      username?: string;
+    };
+  }
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDate, setFilterDate] = useState('all');
@@ -33,6 +48,9 @@ const AppointmentsPage = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -50,8 +68,7 @@ const AppointmentsPage = () => {
           console.log('First appointment consultant_id:', data[0].consultant_id);
         }
         setAppointments(data || []);
-      } catch (error) {
-        console.error('Error fetching appointments:', error);
+      } catch {
         setAppointments([]);
       }
       setLoading(false);
@@ -59,14 +76,62 @@ const AppointmentsPage = () => {
     fetchAppointments();
   }, []);
 
+  const fetchFeedbacks = async (appointmentId: string, serviceId: string) => {
+    setLoadingFeedbacks(true);
+    try {
+      // Thử lấy feedback theo appointment trước, nếu không có thì lấy theo service
+      const appointmentFeedbacks = await getFeedbackByAppointmentIdApi(appointmentId);
+      if (appointmentFeedbacks && appointmentFeedbacks.length > 0) {
+        setFeedbacks(appointmentFeedbacks);
+      } else {
+        const serviceFeedbacks = await getFeedbackByServiceIdApi(serviceId);
+        setFeedbacks(serviceFeedbacks || []);
+      }
+    } catch {
+      setFeedbacks([]);
+    }
+    setLoadingFeedbacks(false);
+  };
+
+  const handleAppointmentClick = async (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setShowDetailModal(true);
+    
+    // Load feedbacks nếu là lịch hẹn đã hoàn thành
+    if (appointment.status === 'completed' && appointment.service_id?._id) {
+      await fetchFeedbacks(appointment._id, appointment.service_id._id);
+    }
+  };
+
+  const handleFeedbackSuccess = async () => {
+    if (selectedAppointment) {
+      const updatedAppointment = { ...selectedAppointment, hasFeedback: true };
+
+      // Cập nhật trạng thái cho cả danh sách và lịch hẹn đang được chọn trong modal
+      setAppointments(prev => 
+        prev.map(app => 
+          app._id === selectedAppointment._id 
+            ? updatedAppointment 
+            : app
+        )
+      );
+      setSelectedAppointment(updatedAppointment);
+
+      // Tải lại danh sách feedback trong modal để hiển thị đánh giá mới
+      if (selectedAppointment.service_id?._id) {
+        await fetchFeedbacks(selectedAppointment._id, selectedAppointment.service_id._id);
+      }
+    }
+  };
+
   const filteredAppointments = appointments.filter((apt: Appointment) => {
     const matchesStatus = filterStatus === 'all' || apt.status === filterStatus;
     const consultantName = apt.consultant_id?.accountId?.fullName || 
                           (typeof apt.consultant_id === 'object' && 'fullName' in apt.consultant_id 
-                            ? (apt.consultant_id as any).fullName 
+                            ? (apt.consultant_id as { fullName?: string }).fullName 
                             : '');
     const serviceName = apt.service_id?.name || '';
-    const matchesSearch = consultantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (consultantName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          serviceName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
@@ -245,44 +310,69 @@ const AppointmentsPage = () => {
           <div className="text-gray-500 italic">Không tìm thấy lịch hẹn nào.</div>
         ) : (
           <div className="space-y-3">
-            {filteredAppointments.map(appointment => (
-              <div 
-                key={appointment._id} 
-                className={`bg-gradient-to-r ${getCardGradient(appointment.status)} transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm cursor-pointer border border-sky-100`}
-                onClick={() => { setSelectedAppointment(appointment); setShowDetailModal(true); }}
-              >
-                <div>
-                  <div className="font-medium text-base text-gray-800">
-                    {appointment.service_id?.name || 'Dịch vụ không xác định'}
+            {filteredAppointments.map(appointment => {
+              const isCompleted = appointment.status === 'completed';
+              const hasFeedback = appointment.hasFeedback;
+              const completionDate = appointment.dateBooking ? new Date(appointment.dateBooking) : new Date();
+              const feedbackDeadline = new Date(completionDate);
+              feedbackDeadline.setDate(completionDate.getDate() + 7);
+              const isWithin7Days = new Date() < feedbackDeadline;
+              const canReview = isCompleted && !hasFeedback && isWithin7Days;
+
+              return (
+                <div
+                  key={appointment._id}
+                  className={`bg-gradient-to-r ${getCardGradient(appointment.status)} transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm border border-sky-100`}
+                >
+                  <div className="flex-grow cursor-pointer" onClick={() => handleAppointmentClick(appointment)}>
+                    <div className="font-medium text-base text-gray-800">
+                      {appointment.service_id?.name || 'Dịch vụ không xác định'}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      Chuyên gia: {
+                        appointment.consultant_id?.accountId?.fullName ||
+                        (typeof appointment.consultant_id === 'object' && 'fullName' in appointment.consultant_id
+                          ? (appointment.consultant_id as { fullName?: string }).fullName 
+                          : 'Không xác định')
+                      }
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-sky-500" />
+                      {formatDate(appointment.dateBooking)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-sky-500" />
+                      {formatTime(appointment.dateBooking)}
+                    </div>
+                    <div className={`text-xs ${getStatusInfo(appointment.status).color} font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${getStatusInfo(appointment.status).bg} ${getStatusInfo(appointment.status).border}`}>
+                      {getStatusInfo(appointment.status).text}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    Chuyên gia: {
-                      appointment.consultant_id?.accountId?.fullName || 
-                      (typeof appointment.consultant_id === 'object' && 'fullName' in appointment.consultant_id 
-                        ? (appointment.consultant_id as any).fullName 
-                        : 'Không xác định')
-                    }
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-sky-500" />
-                    {formatDate(appointment.dateBooking)}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-sky-500" />
-                    {formatTime(appointment.dateBooking)}
-                  </div>
-                  <div className={`text-xs ${getStatusInfo(appointment.status).color} font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${getStatusInfo(appointment.status).bg} ${getStatusInfo(appointment.status).border}`}>
-                    {getStatusInfo(appointment.status).text}
+
+                  <div className="flex flex-col items-end justify-center gap-2 flex-shrink-0">
+                    <div className="text-lg font-semibold text-sky-700">
+                      {appointment.service_id?.price?.toLocaleString('vi-VN')}đ
+                    </div>
+                    
+                    {canReview && (
+                      <button
+                        onClick={() => { setShowFeedbackForm(true); setSelectedAppointment(appointment); }}
+                        className="px-3 py-1 bg-sky-500 text-white rounded-md text-sm font-medium hover:bg-sky-600 transition-colors flex items-center gap-1"
+                      >
+                        <Star className="w-3.5 h-3.5" />
+                        Đánh giá
+                      </button>
+                    )}
+
+                    {isCompleted && hasFeedback && (
+                      <div className="px-3 py-1 bg-gray-100 text-gray-500 rounded-md text-sm font-medium">
+                        Đã đánh giá
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center">
-                  <div className="text-lg font-semibold text-sky-700">
-                    {appointment.service_id?.price?.toLocaleString('vi-VN')}đ
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-sky-400 ml-2" />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -309,14 +399,13 @@ const AppointmentsPage = () => {
               <div>
                 <div className="text-sm text-gray-500 mb-1">Chuyên gia</div>
                 <div className="flex items-center gap-3">
-                  {(() => { console.log('Selected appointment:', selectedAppointment); return null; })()}
                   {selectedAppointment.consultant_id ? (
                     <>
                       <img 
                         src={
                           selectedAppointment.consultant_id.accountId?.photoUrl || 
                           (typeof selectedAppointment.consultant_id === 'object' && 'photoUrl' in selectedAppointment.consultant_id 
-                            ? (selectedAppointment.consultant_id as any).photoUrl 
+                            ? (selectedAppointment.consultant_id as { photoUrl?: string }).photoUrl 
                             : "/avarta.png")
                         } 
                         alt="avatar" 
@@ -376,6 +465,46 @@ const AppointmentsPage = () => {
                   <div className="bg-sky-50 p-3 rounded-lg text-gray-700">{selectedAppointment.note}</div>
                 </div>
               )}
+
+              {/* Feedback Section cho lịch hẹn đã hoàn thành */}
+              {selectedAppointment.status === 'completed' && (
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <MessageCircle className="w-5 h-5 text-sky-600" />
+                      Đánh giá dịch vụ
+                    </h4>
+                    {(() => {
+                        const isCompleted = selectedAppointment.status === 'completed';
+                        const hasFeedback = selectedAppointment.hasFeedback;
+                        const completionDate = selectedAppointment.dateBooking ? new Date(selectedAppointment.dateBooking) : new Date();
+                        const feedbackDeadline = new Date(completionDate);
+                        feedbackDeadline.setDate(completionDate.getDate() + 7);
+                        const isWithin7Days = new Date() < feedbackDeadline;
+                        const canReview = isCompleted && !hasFeedback && isWithin7Days;
+
+                        if (canReview) {
+                          return (
+                            <button
+                              onClick={() => setShowFeedbackForm(true)}
+                              className="px-3 py-1.5 bg-gradient-to-r from-sky-500 to-blue-500 text-white rounded-lg text-sm font-medium hover:from-sky-600 hover:to-blue-600 transition-colors flex items-center gap-1"
+                            >
+                              <Star className="w-4 h-4" />
+                              Đánh giá
+                            </button>
+                          );
+                        }
+                        return null;
+                    })()}
+                  </div>
+                  
+                  {loadingFeedbacks ? (
+                    <div className="text-center py-4 text-gray-500">Đang tải đánh giá...</div>
+                  ) : (
+                    <FeedbackDisplay feedbacks={feedbacks} />
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="mt-6 flex justify-end">
@@ -388,6 +517,24 @@ const AppointmentsPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Feedback Form */}
+      {showFeedbackForm && selectedAppointment && (
+        <FeedbackForm
+          appointmentId={selectedAppointment._id}
+          serviceId={selectedAppointment.service_id?._id || ''}
+          accountId={localStorage.getItem('userId') || ''}
+          serviceName={selectedAppointment.service_id?.name || 'Dịch vụ không xác định'}
+          consultantName={
+            selectedAppointment.consultant_id?.accountId?.fullName ||
+            (typeof selectedAppointment.consultant_id === 'object' && 'fullName' in selectedAppointment.consultant_id
+              ? (selectedAppointment.consultant_id as { fullName?: string }).fullName || ''
+              : 'Chuyên gia không xác định')
+          }
+          onClose={() => setShowFeedbackForm(false)}
+          onSuccess={handleFeedbackSuccess}
+        />
       )}
     </div>
   );

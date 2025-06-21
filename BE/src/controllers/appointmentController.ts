@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Appointment from "../models/Appointment";
 import SlotTime from "../models/SlotTime";
+import Feedback from "../models/Feedback";
 
 export const createAppointment = async (req: Request, res: Response) => {
     try {
@@ -66,7 +67,7 @@ export const updateStatusAppointment = async (req: Request, res: Response) => {
 
 export const getAppointmentByUserId = async (req: Request, res: Response) => {
     try {
-        const appointment = await Appointment.find({ user_id: req.params.id })
+        const appointments = await Appointment.find({ user_id: req.params.id })
             .populate("user_id")
             .populate({
                 path: "consultant_id",
@@ -74,8 +75,19 @@ export const getAppointmentByUserId = async (req: Request, res: Response) => {
                     path: "accountId"
                 }
             })
-            .populate("service_id");
-        res.status(200).json(appointment);
+            .populate("service_id")
+            .lean();
+
+        const appointmentIds = appointments.map(a => a._id);
+        const feedbacks = await Feedback.find({ appointment_id: { $in: appointmentIds } });
+        const feedbackAppointmentIds = new Set(feedbacks.map(f => f.appointment_id.toString()));
+
+        const appointmentsWithFeedback = appointments.map(appointment => ({
+            ...appointment,
+            hasFeedback: feedbackAppointmentIds.has(appointment._id.toString())
+        }));
+
+        res.status(200).json(appointmentsWithFeedback);
     } catch (err: any) {
         res.status(500).json({ message: err.message });
     }
