@@ -10,6 +10,8 @@ interface User {
   photoUrl?: string;
   isVerified: boolean;
   isDisabled: boolean;
+  phoneNumber?: string;
+  gender?: string;
 }
 
 interface AuthContextType {

@@ -12,6 +12,7 @@ import eventRoutes from "./routes/eventRoutes";
 import appointmentRoutes from "./routes/appointmentRoutes";
 import blogRoutes from "./routes/blogRoutes";
 import quizRoutes from "./routes/quizRoutes";
+import feedbackRoutes from "./routes/feedbackRoutes";
 const uploadRouter = require("./routes/upload");
 
 // Load biến môi trường
@@ -46,6 +47,7 @@ app.use("/api/uploads", uploadRouter);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/quizzes", quizRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Route kiểm tra
 app.get("/", (_req, res) => {

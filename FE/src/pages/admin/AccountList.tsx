@@ -441,7 +441,6 @@ const AccountList: React.FC = () => {
       setAccounts(accounts.map(acc => acc._id === selectedAccount._id ? response.data : acc));
       toast.success('Nâng cấp tài khoản lên tư vấn viên thành công!');
       handleCloseUpdateModal();
-      setIsConsultantModalOpen(false);
     } catch (error: any) {
       if (error.response?.data?.message) {
         setConsultantFormErrors({ submit: error.response.data.message });
@@ -455,7 +454,6 @@ const AccountList: React.FC = () => {
 
   // Hàm đóng modal consultant
   const handleCloseConsultantModal = () => {
-    setIsConsultantModalOpen(false);
     setConsultantForm({
       introduction: '',
       contact: '',
@@ -667,6 +665,11 @@ const AccountList: React.FC = () => {
 
   // Hàm lọc tài khoản
   const filteredAccounts = accounts.filter(account => {
+    // Ẩn tài khoản admin khỏi danh sách
+    if (account.role === 'admin') {
+      return false;
+    }
+    
     const matchesSearch = searchTerm === '' || 
       (account.username?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
       (account.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
@@ -768,7 +771,6 @@ const AccountList: React.FC = () => {
               className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
               <option value="">Tất cả vai trò</option>
-              <option value="admin">Admin</option>
               <option value="consultant">Tư vấn viên</option>
               <option value="customer">Khách hàng</option>
             </select>
@@ -816,7 +818,7 @@ const AccountList: React.FC = () => {
           )}
           {roleFilter && (
             <span className="bg-gray-100 px-2 py-1 rounded-full">
-              Vai trò: {roleFilter === 'admin' ? 'Admin' : roleFilter === 'consultant' ? 'Tư vấn viên' : 'Khách hàng'}
+              Vai trò: {roleFilter === 'consultant' ? 'Tư vấn viên' : 'Khách hàng'}
             </span>
           )}
           {statusFilter && (
