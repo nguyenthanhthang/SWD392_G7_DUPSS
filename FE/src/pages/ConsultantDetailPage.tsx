@@ -28,10 +28,9 @@ interface Consultant {
   introduction: string;
   contactLink: string;
   licenseNumber: string;
-  startDate: string;
+  startDateofWork: string;
   googleMeetLink: string;
   accountId: User;
-  experience?: number;
 }
 
 interface Service {
@@ -242,7 +241,14 @@ function ConsultantDetailPage() {
             <div className="flex flex-col gap-1 text-gray-500 text-sm w-full items-center mb-4">
               <span>Email: {consultant.accountId?.email || 'Không có email'}</span>
               <span>SĐT: {consultant.accountId?.phoneNumber || 'Không có số điện thoại'}</span>
-              <span>Kinh nghiệm: {typeof consultant.experience === 'number' ? consultant.experience + ' năm' : 'Chưa cập nhật'}</span>
+              <span>Số năm làm việc tại HopeHub: {(() => {
+                  if (!consultant.startDateofWork) return 'Chưa cập nhật';
+                  const startYear = new Date(consultant.startDateofWork).getFullYear();
+                  if (isNaN(startYear)) return 'Chưa cập nhật';
+                  const currentYear = new Date().getFullYear();
+                  const years = currentYear - startYear;
+                  return years >= 0 ? `${years} năm` : 'Chưa cập nhật';
+              })()}</span>
             </div>
             {/* Certificates */}
             <div className="w-full mt-2">
@@ -352,14 +358,14 @@ function ConsultantDetailPage() {
                             className={`h-14 w-full flex items-center justify-center border-t border-l border-gray-200 transition-all focus:outline-none
                               ${isBooked ? 'bg-red-200 text-red-700 cursor-not-allowed' :
                                 isAvailable ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer' :
-                                'bg-gray-100 text-gray-400 cursor-not-allowed'}
+                                'bg-gray-50 cursor-not-allowed'}
                             `}
                             style={{ borderRadius: 0 }}
                             onClick={() => isAvailable && handleOpenModal(day, slot)}
                             type="button"
                             disabled={!isAvailable}
                           >
-                            {isBooked ? 'Đã đặt' : isAvailable ? 'Có sẵn' : 'Không có lịch'}
+                            {isBooked ? 'Đã đặt' : isAvailable ? 'Có sẵn' : ''}
                           </button>
                         );
                       })}
