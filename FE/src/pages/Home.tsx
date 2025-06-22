@@ -24,7 +24,7 @@ const aboutData = [
     link: "Xem thêm",
   },
   {
-    heading: "Chuyên viên tư vấn.",
+    heading: "Tư vấn viên.",
     imgSrc: "https://themewagon.github.io/Desgy//images/aboutus/imgTwo.svg",
     paragraph:
       "Chúng tôi đã hỗ trợ hàng ngàn cá nhân và gia đình vượt qua nguy cơ nghiện, xây dựng cộng đồng an toàn hơn.",

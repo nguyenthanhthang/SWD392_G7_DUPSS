@@ -3,7 +3,6 @@ import {
   Routes,
   Route,
   Navigate,
-  useNavigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
@@ -30,56 +29,50 @@ import ConsultantLayout from "./components/layout/ConsultantLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import ConsultantDashboard from "./pages/consultant/ConsultantDashboard";
 import ScheduleManagement from "./pages/consultant/ScheduleManagement";
-import PatientManagement from "./pages/consultant/PatientManagement";
 import ReportsAndUpdates from "./pages/consultant/Reports&Updates";
 import ConsultantProfile from "./pages/consultant/ConsultantProfile";
-import { useEffect } from "react";
+import ReportsDetails from "./pages/consultant/ReportsDetails";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return user ? <>{children}</> : <Navigate to="/login" />;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate("/login", { replace: true });
-      } else if (user.role !== "admin") {
-        navigate("/", { replace: true });
-      }
-    }
-  }, [user, loading, navigate]);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  return user?.role === "admin" ? <>{children}</> : null;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return user.role === "admin" ? <>{children}</> : <Navigate to="/" replace />;
 }
 
 function ConsultantRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate("/login", { replace: true });
-      } else if (user.role !== "consultant") {
-        navigate("/", { replace: true });
-      }
-    }
-  }, [user, loading, navigate]);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  return user?.role === "consultant" ? <>{children}</> : null;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return user.role === "consultant" ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/" replace />
+  );
 }
 
 function AppContent() {
@@ -169,8 +162,8 @@ function AppContent() {
                   <Route path="dashboard" element={<ConsultantDashboard />} />
                   <Route path="events" element={<EventManagement />} />
                   <Route path="schedule" element={<ScheduleManagement />} />
-                  <Route path="patient" element={<PatientManagement />} />
                   <Route path="reports" element={<ReportsAndUpdates />} />
+                  <Route path="reports/:patientId" element={<ReportsDetails />} />
                   <Route path="consultant-profile" element={<ConsultantProfile />} />
                 </Routes>
               </ConsultantLayout>

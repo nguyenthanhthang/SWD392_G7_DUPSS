@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, Activity, FileText, ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getAccountByIdApi, getAppointmentByConsultantIdApi, getConsultantByAccountIdApi, getSlotTimeByConsultantIdApi } from '../../api';
 
 interface ApiAppointment {
@@ -29,6 +29,7 @@ interface SlotTime {
 interface TodayAppointment {
   id: string;
   time: string;
+  patientId: string;
   patientName: string;
   patientAvatar: string;
   serviceType: string;
@@ -50,6 +51,7 @@ const ConsultantDashboard = () => {
 
   // Dữ liệu mẫu cho thống kê
   const [user, setUser] = useState<{ photoUrl?: string, _id?: string } | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchConsultantData = async () => {
@@ -98,6 +100,7 @@ const ConsultantDashboard = () => {
 
       return {
         id: app._id,
+        patientId: app.user_id._id,
         time: `${startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
         patientName: app.user_id.fullName,
         patientAvatar: app.user_id.photoUrl || `https://ui-avatars.com/api/?name=${app.user_id.fullName}`,
@@ -181,14 +184,8 @@ const ConsultantDashboard = () => {
   }, [stats]);
 
   // Hàm xử lý bắt đầu buổi tư vấn
-  const handleStartSession = (appointmentId: string) => {
-    // Trong thực tế, đây sẽ là API call để cập nhật trạng thái buổi tư vấn
-    setTodayAppointments(prev => 
-      prev.map(app => 
-        app.id === appointmentId ? {...app, status: "ongoing"} : app
-      )
-    );
-    // Sau đó có thể chuyển hướng đến trang tư vấn hoặc mở Google Meet
+  const handleStartSession = (patientId: string) => {
+    navigate(`/consultants/reports/${patientId}`);
   };
 
   // Hàm lấy màu dựa trên trạng thái
@@ -323,8 +320,9 @@ const ConsultantDashboard = () => {
                         key={appointment.id} 
                         className={`border rounded-lg p-4 ${getStatusColor(appointment.status)} shadow-sm`}
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="flex items-center gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
+                          {/* -- Section 1: Time -- */}
+                          <div className="flex items-center gap-4 w-full sm:w-40 flex-shrink-0">
                             <div className="bg-[#DBE8FA] rounded-full p-2">
                               <Clock className="w-5 h-5 text-[#283593]" />
                             </div>
@@ -333,6 +331,7 @@ const ConsultantDashboard = () => {
                             </div>
                           </div>
 
+                          {/* -- Section 2: Patient Info -- */}
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <img 
                               src={appointment.patientAvatar} 
@@ -340,22 +339,25 @@ const ConsultantDashboard = () => {
                               className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
                             />
                             <div className="min-w-0">
-                              <p className="font-medium text-[#283593]">{appointment.patientName}</p>
+                              <p className="font-medium text-[#283593] truncate">{appointment.patientName}</p>
                               <p className="text-sm text-gray-500 truncate">{appointment.serviceType}</p>
                             </div>
                           </div>
-
-                          <button
-                            onClick={() => handleStartSession(appointment.id)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                              appointment.status === 'ongoing' 
-                                ? 'bg-green-100 text-green-700 cursor-not-allowed' 
-                                : 'bg-[#283593] text-white hover:bg-[#3a4bb3]'
-                            }`}
-                            disabled={appointment.status === 'ongoing'}
-                          >
-                            {getButtonText(appointment.status)}
-                          </button>
+                          
+                          {/* -- Section 3: Action Button -- */}
+                          <div className="w-full sm:w-auto">
+                            <button
+                              onClick={() => handleStartSession(appointment.patientId)}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full sm:w-auto whitespace-nowrap ${
+                                appointment.status === 'ongoing' 
+                                  ? 'bg-green-100 text-green-700 cursor-not-allowed' 
+                                  : 'bg-[#283593] text-white hover:bg-[#3a4bb3]'
+                              }`}
+                              disabled={appointment.status === 'ongoing'}
+                            >
+                              {getButtonText(appointment.status)}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}

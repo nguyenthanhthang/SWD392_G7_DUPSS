@@ -11,7 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const timeSlots = [
   '08:00', '09:00', '10:00', '11:00',
-  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+  '13:00', '14:00', '15:00', '16:00',
 ];
 
 interface User {
@@ -86,6 +86,20 @@ function ConsultantDetailPage() {
   const today = new Date();
   const weekStart = startOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 }); // Thứ 2
   const weekEnd = endOfWeek(addDays(today, currentWeek * 7), { weekStartsOn: 1 }); // Chủ nhật
+
+  // Function to check if a slot is in the past
+  const isPastSlot = (day: string, time: string): boolean => {
+    const dayIndex = weekDays.indexOf(day);
+    if (dayIndex === -1) return false;
+
+    const slotDate = addDays(weekStart, dayIndex);
+    const [hour, minute] = time.split(':').map(Number);
+
+    const slotDateTime = new Date(slotDate);
+    slotDateTime.setHours(hour, minute, 0, 0);
+
+    return slotDateTime < new Date();
+  };
 
   // DEBUG: Log weekStart, weekEnd và từng slot để kiểm tra lệch múi giờ
   console.log('weekStart:', weekStart.toISOString(), 'local:', weekStart);
@@ -352,20 +366,23 @@ function ConsultantDetailPage() {
                         
                         const isBooked = slotObj?.status === 'booked';
                         const isAvailable = slotObj?.status === 'available';
+                        const isPast = isPastSlot(day, slot);
+
                         return (
                           <button
                             key={day + slot}
                             className={`h-14 w-full flex items-center justify-center border-t border-l border-gray-200 transition-all focus:outline-none
-                              ${isBooked ? 'bg-red-200 text-red-700 cursor-not-allowed' :
+                              ${isPast ? 'bg-gray-100 text-gray-500 cursor-not-allowed' :
+                                isBooked ? 'bg-red-200 text-red-700 cursor-not-allowed' :
                                 isAvailable ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer' :
                                 'bg-gray-50 cursor-not-allowed'}
                             `}
                             style={{ borderRadius: 0 }}
-                            onClick={() => isAvailable && handleOpenModal(day, slot)}
+                            onClick={() => isAvailable && !isPast && handleOpenModal(day, slot)}
                             type="button"
-                            disabled={!isAvailable}
+                            disabled={!isAvailable || isPast}
                           >
-                            {isBooked ? 'Đã đặt' : isAvailable ? 'Có sẵn' : ''}
+                            {isPast ? '' : isBooked ? 'Đã đặt' : isAvailable ? 'Có sẵn' : ''}
                           </button>
                         );
                       })}

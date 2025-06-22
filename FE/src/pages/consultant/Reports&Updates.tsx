@@ -376,11 +376,13 @@ const ReportsAndUpdates = () => {
                         className="w-12 h-12 rounded-full object-cover mr-4"
                       />
                       <div>
-                        <h3 className="text-lg font-medium text-gray-900">{report.patientName}</h3>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          <span>Buổi tư vấn: {report.appointmentDate}</span>
-                        </div>
+                        <Link 
+                          to={`/consultants/reports/${report.id}`} 
+                          className="font-medium text-blue-600 hover:text-blue-800"
+                        >
+                          {report.patientName}
+                        </Link>
+                        <div className="text-sm text-gray-500">Buổi tư vấn: {report.appointmentDate}</div>
                       </div>
                     </div>
                     
