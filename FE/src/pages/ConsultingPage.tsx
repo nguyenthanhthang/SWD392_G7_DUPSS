@@ -4,7 +4,8 @@ import Footer from '../components/layout/Footer';
 import { getAllConsultantsApi, getAllSlotTimeApi } from '../api';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FaUserTie, FaEnvelope, FaCalendarAlt, FaSearch } from 'react-icons/fa';
+import { FaUserTie, FaEnvelope, FaCalendarAlt, FaSearch, FaUserMd, FaRegCalendarAlt, FaMoneyBillWave } from 'react-icons/fa';
+import consultantImg from '../assets/images/consultant.png';
 
 interface User {
   _id: string;
@@ -117,6 +118,107 @@ function ConsultingPage() {
   return (
     <div className="relative min-h-screen bg-[#DBE8FA]">
       <Header />
+      
+      {/* Phần giới thiệu tư vấn viên - giống như phần dịch vụ */}
+      <div className="bg-white rounded-3xl shadow-lg mx-4 md:mx-auto max-w-7xl my-10">
+        <div className="p-8 md:p-12 flex flex-col md:flex-row gap-8 md:gap-12">
+          {/* Column 1: Text */}
+          <div className="w-full md:w-1/2">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
+              Đội ngũ chuyên gia tư vấn
+              <span className="block text-sky-500 mt-2">tâm lý chuyên nghiệp</span>
+            </h1>
+            
+            <p className="text-lg text-gray-700 my-6">
+              Chúng tôi quy tụ đội ngũ chuyên gia tư vấn tâm lý giàu kinh nghiệm 
+              và tận tâm, luôn sẵn sàng đồng hành và hỗ trợ bạn vượt qua các 
+              thách thức về sức khỏe tinh thần.
+            </p>
+            
+            <div className="space-y-5 mb-8">
+              <div className="flex items-start gap-4">
+                <div className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0">
+                  <FaUserMd className="text-sky-600 text-xl" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-800 text-lg">Chuyên môn cao</h3>
+                  <p className="text-gray-600">Các chuyên gia được đào tạo bài bản với nhiều năm kinh nghiệm</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0">
+                  <FaRegCalendarAlt className="text-sky-600 text-xl" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-800 text-lg">Tư vấn tận tâm</h3>
+                  <p className="text-gray-600">Lắng nghe và đồng hành cùng bạn trong toàn bộ quá trình</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0">
+                  <FaMoneyBillWave className="text-sky-600 text-xl" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-800 text-lg">Phương pháp hiệu quả</h3>
+                  <p className="text-gray-600">Áp dụng các kỹ thuật tư vấn tiên tiến và phù hợp cá nhân</p>
+                </div>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => window.scrollTo({top: 800, behavior: 'smooth'})}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-medium px-8 py-4 rounded-full transition-all shadow-md hover:shadow-lg text-lg w-auto"
+            >
+              Chọn cho bạn một tư vấn viên phù hợp ngay
+            </button>
+          </div>
+          
+          {/* Column 2: Image */}
+          <div className="w-full md:w-1/2 flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6 }}
+              className="relative w-full max-w-lg"
+            >
+              <img 
+                src={consultantImg} 
+                alt="Tư vấn tâm lý" 
+                className="w-full h-auto object-contain"
+              />
+              {/* Decorative elements */}
+              <motion.div 
+                animate={{ 
+                  opacity: [0.4, 0.6, 0.4],
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{ 
+                  repeat: Infinity,
+                  duration: 4,
+                  ease: "easeInOut"
+                }}
+                className="absolute -top-4 -right-4 w-24 h-24 bg-cyan-100 rounded-full opacity-30 blur-2xl"
+              />
+              <motion.div 
+                animate={{ 
+                  opacity: [0.4, 0.7, 0.4],
+                  scale: [1, 1.2, 1],
+                }}
+                transition={{ 
+                  repeat: Infinity,
+                  duration: 5,
+                  ease: "easeInOut",
+                  delay: 1
+                }}
+                className="absolute -bottom-4 -left-4 w-32 h-32 bg-blue-100 rounded-full opacity-30 blur-2xl"
+              />
+            </motion.div>
+          </div>
+        </div>
+      </div>
+      
       {/* Section tiêu biểu */}
       <div className="max-w-7xl mx-auto px-4 py-12 relative z-10">
         <motion.h2

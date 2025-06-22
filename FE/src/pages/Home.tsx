@@ -10,25 +10,25 @@ import { motion } from "framer-motion";
 // Dữ liệu cứng cho About Us
 const aboutData = [
   {
-    heading: "About us.",
+    heading: "Về chúng tôi.",
     imgSrc: "https://themewagon.github.io/Desgy//images/aboutus/imgOne.svg",
     paragraph:
       "Chúng tôi cung cấp giải pháp hỗ trợ phòng ngừa và tư vấn về nguy cơ nghiện ma túy, giúp cộng đồng sống khỏe mạnh hơn.",
-    link: "More",
+    link: "Xem thêm",
   },
   {
-    heading: "Services.",
+    heading: "Dịch vụ.",
     imgSrc: "https://themewagon.github.io/Desgy//images/aboutus/imgTwo.svg",
     paragraph:
       "Dịch vụ kiểm tra mức độ nghiện, tư vấn cá nhân hóa, kết nối chuyên gia và cung cấp tài liệu phòng ngừa.",
-    link: "More",
+    link: "Xem thêm",
   },
   {
-    heading: "Consultant.",
+    heading: "Chuyên viên tư vấn.",
     imgSrc: "https://themewagon.github.io/Desgy//images/aboutus/imgTwo.svg",
     paragraph:
       "Chúng tôi đã hỗ trợ hàng ngàn cá nhân và gia đình vượt qua nguy cơ nghiện, xây dựng cộng đồng an toàn hơn.",
-    link: "More",
+    link: "Xem thêm",
   },
 ];
 
@@ -218,9 +218,9 @@ export default function Home() {
                   <button
                     className="text-lg font-semibold group-hover:text-white text-blue-600 hover:underline"
                     onClick={() => {
-                      if (item.heading === "About us.") navigate("/about-us");
-                      else if (item.heading === "Services.") navigate("/service");
-                      else if (item.heading === "Consultant.") navigate("/consulting");
+                      if (item.heading === "Về chúng tôi.") navigate("/about-us");
+                      else if (item.heading === "Dịch vụ.") navigate("/service");
+                      else if (item.heading === "Chuyên viên tư vấn.") navigate("/consulting");
                     }}
                   >
                     {item.link}

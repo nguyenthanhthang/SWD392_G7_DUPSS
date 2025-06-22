@@ -24,34 +24,34 @@ function Footer() {
           <div>
             <div className="font-bold text-lg mb-4">Menu</div>
             <ul className="space-y-3 text-base">
-              <li><a href="#" className="hover:underline">Home</a></li>
-              <li><a href="#" className="hover:underline">Popular</a></li>
-              <li><a href="#" className="hover:underline">About</a></li>
-              <li><a href="#" className="hover:underline">Contact</a></li>
+              <li><a href="#" className="hover:underline">Trang chủ</a></li>
+              <li><a href="#" className="hover:underline">Phổ biến</a></li>
+              <li><a href="#" className="hover:underline">Giới thiệu</a></li>
+              <li><a href="#" className="hover:underline">Liên hệ</a></li>
             </ul>
           </div>
           <div>
-            <div className="font-bold text-lg mb-4">Category</div>
+            <div className="font-bold text-lg mb-4">Danh mục</div>
             <ul className="space-y-3 text-base">
-              <li><a href="#" className="hover:underline">Design</a></li>
-              <li><a href="#" className="hover:underline">Mockup</a></li>
-              <li><a href="#" className="hover:underline">View all</a></li>
-              <li><a href="#" className="hover:underline">Log In</a></li>
+              <li><a href="#" className="hover:underline">Thiết kế</a></li>
+              <li><a href="#" className="hover:underline">Bản mẫu</a></li>
+              <li><a href="#" className="hover:underline">Xem tất cả</a></li>
+              <li><a href="#" className="hover:underline">Đăng nhập</a></li>
             </ul>
           </div>
           <div>
-            <div className="font-bold text-lg mb-4">Pages</div>
+            <div className="font-bold text-lg mb-4">Trang</div>
             <ul className="space-y-3 text-base">
               <li><a href="#" className="hover:underline">404</a></li>
-              <li><a href="#" className="hover:underline">Instructions</a></li>
-              <li><a href="#" className="hover:underline">License</a></li>
+              <li><a href="#" className="hover:underline">Hướng dẫn</a></li>
+              <li><a href="#" className="hover:underline">Giấy phép</a></li>
             </ul>
           </div>
           <div>
-            <div className="font-bold text-lg mb-4">Others</div>
+            <div className="font-bold text-lg mb-4">Khác</div>
             <ul className="space-y-3 text-base">
-              <li><a href="#" className="hover:underline">Styleguide</a></li>
-              <li><a href="#" className="hover:underline">Changelog</a></li>
+              <li><a href="#" className="hover:underline">Hướng dẫn giao diện</a></li>
+              <li><a href="#" className="hover:underline">Nhật ký thay đổi</a></li>
             </ul>
           </div>
         </div>
@@ -59,12 +59,12 @@ function Footer() {
       {/* Copyright & links */}
       <div className="mt-16 border-t border-[#DBE8FA] pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-[#283593]">
         <div>
-          @2023 - All Rights Reserved by Adminmart.com. Distributed by ThemeWagon
+          @2023 - Đã đăng ký Bản quyền bởi Adminmart.com. Phân phối bởi ThemeWagon
         </div>
         <div className="flex gap-6 mt-4 md:mt-0">
-          <a href="#" className="hover:underline">Privacy policy</a>
+          <a href="#" className="hover:underline">Chính sách bảo mật</a>
           <span className="mx-1">|</span>
-          <a href="#" className="hover:underline">Terms & conditions</a>
+          <a href="#" className="hover:underline">Điều khoản & điều kiện</a>
         </div>
       </div>
       {/* SVG sóng nước hologram full width, không có voi */}
