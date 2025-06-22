@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { getAllConsultantsApi, getAllSlotTimeApi } from '../api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FaUserTie, FaEnvelope, FaCalendarAlt, FaSearch, FaUserMd, FaRegCalendarAlt, FaMoneyBillWave } from 'react-icons/fa';
 import consultantImg from '../assets/images/consultant.png';
@@ -46,6 +46,75 @@ function ConsultingPage() {
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Page transition variants
+  const pageVariants = {
+    initial: {
+      opacity: 0,
+    },
+    animate: {
+      opacity: 1,
+      transition: {
+        duration: 0.6,
+        staggerChildren: 0.2,
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        duration: 0.3,
+      },
+    },
+  };
+
+  // Section variants
+  const sectionVariants = {
+    initial: { 
+      opacity: 0, 
+      y: 40 
+    },
+    animate: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.7,
+        ease: "easeOut"
+      }
+    }
+  };
+
+  // List item variants
+  const itemVariants = {
+    initial: { 
+      opacity: 0, 
+      y: 20 
+    },
+    animate: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.5
+      }
+    }
+  };
+
+  // Feature icon variants
+  const featureIconVariants = {
+    initial: { scale: 0, opacity: 0 },
+    animate: { 
+      scale: 1, 
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 260,
+        damping: 20
+      }
+    },
+    hover: { 
+      scale: 1.1,
+      transition: { duration: 0.2 }
+    }
+  };
 
   useEffect(() => {
     const fetchConsultantsAndSlots = async () => {
@@ -116,71 +185,123 @@ function ConsultingPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#DBE8FA]">
+    <motion.div 
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+      className="relative min-h-screen bg-[#DBE8FA]"
+    >
       <Header />
       
       {/* Phần giới thiệu tư vấn viên - giống như phần dịch vụ */}
-      <div className="bg-white rounded-3xl shadow-lg mx-4 md:mx-auto max-w-7xl my-10">
+      <motion.div 
+        variants={sectionVariants}
+        className="bg-white rounded-3xl shadow-lg mx-4 md:mx-auto max-w-7xl my-10"
+      >
         <div className="p-8 md:p-12 flex flex-col md:flex-row gap-8 md:gap-12">
           {/* Column 1: Text */}
           <div className="w-full md:w-1/2">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-4xl md:text-5xl font-bold text-gray-800"
+            >
               <span className="whitespace-nowrap">Đội ngũ chuyên gia tư vấn</span>
               <span className="block text-sky-500 mt-2">tâm lý chuyên nghiệp</span>
-            </h1>
+            </motion.h1>
             
-            <p className="text-lg text-gray-700 my-6">
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="text-lg text-gray-700 my-6"
+            >
               Chúng tôi quy tụ đội ngũ chuyên gia tư vấn tâm lý giàu kinh nghiệm 
               và tận tâm, luôn sẵn sàng đồng hành và hỗ trợ bạn vượt qua các 
               thách thức về sức khỏe tinh thần.
-            </p>
+            </motion.p>
             
             <div className="space-y-5 mb-8">
-              <div className="flex items-start gap-4">
-                <div className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0">
+              <motion.div 
+                variants={itemVariants}
+                whileHover={{ x: 5 }}
+                className="flex items-start gap-4"
+              >
+                <motion.div 
+                  variants={featureIconVariants}
+                  whileHover="hover"
+                  className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0"
+                >
                   <FaUserMd className="text-sky-600 text-xl" />
-                </div>
+                </motion.div>
                 <div>
                   <h3 className="font-medium text-gray-800 text-lg">Chuyên môn cao</h3>
                   <p className="text-gray-600">Các chuyên gia được đào tạo bài bản với nhiều năm kinh nghiệm</p>
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="flex items-start gap-4">
-                <div className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0">
+              <motion.div 
+                variants={itemVariants}
+                whileHover={{ x: 5 }}
+                className="flex items-start gap-4"
+              >
+                <motion.div 
+                  variants={featureIconVariants}
+                  whileHover="hover"
+                  className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0"
+                >
                   <FaRegCalendarAlt className="text-sky-600 text-xl" />
-                </div>
+                </motion.div>
                 <div>
                   <h3 className="font-medium text-gray-800 text-lg">Tư vấn tận tâm</h3>
                   <p className="text-gray-600">Lắng nghe và đồng hành cùng bạn trong toàn bộ quá trình</p>
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="flex items-start gap-4">
-                <div className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0">
+              <motion.div 
+                variants={itemVariants}
+                whileHover={{ x: 5 }}
+                className="flex items-start gap-4"
+              >
+                <motion.div 
+                  variants={featureIconVariants}
+                  whileHover="hover"
+                  className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0"
+                >
                   <FaMoneyBillWave className="text-sky-600 text-xl" />
-                </div>
+                </motion.div>
                 <div>
                   <h3 className="font-medium text-gray-800 text-lg">Phương pháp hiệu quả</h3>
                   <p className="text-gray-600">Áp dụng các kỹ thuật tư vấn tiên tiến và phù hợp cá nhân</p>
                 </div>
-              </div>
+              </motion.div>
             </div>
             
-            <button 
+            <motion.button 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.4 }}
+              whileHover={{ scale: 1.05, backgroundColor: "#2563EB" }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => window.scrollTo({top: 800, behavior: 'smooth'})}
               className="bg-sky-600 hover:bg-sky-700 text-white font-medium px-8 py-4 rounded-full transition-all shadow-md hover:shadow-lg text-lg w-auto"
             >
               Chọn cho bạn một tư vấn viên phù hợp ngay
-            </button>
+            </motion.button>
           </div>
           
           {/* Column 2: Image */}
           <div className="w-full md:w-1/2 flex items-center justify-center">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6 }}
+              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ 
+                duration: 0.8,
+                type: "spring",
+                stiffness: 100
+              }}
               className="relative w-full max-w-lg"
             >
               <img 
@@ -217,10 +338,13 @@ function ConsultingPage() {
             </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
       
       {/* Section tiêu biểu */}
-      <div className="max-w-7xl mx-auto px-4 py-12 relative z-10">
+      <motion.div 
+        variants={sectionVariants}
+        className="max-w-7xl mx-auto px-4 py-12 relative z-10"
+      >
         <motion.h2
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -242,7 +366,12 @@ function ConsultingPage() {
                   initial={{ opacity: 0, y: 60 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.6, delay: idx * 0.08, ease: 'easeOut' }}
+                  transition={{ duration: 0.6, delay: idx * 0.15, ease: 'easeOut' }}
+                  whileHover={{ 
+                    scale: 1.03, 
+                    boxShadow: "0 15px 30px rgba(0, 0, 0, 0.1)",
+                    borderColor: "#3a4bb3"
+                  }}
                   className="bg-white rounded-3xl border border-[#DBE8FA] shadow p-9 flex flex-col h-full items-center transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-[#3a4bb3] cursor-pointer"
                 >
                   <div className="flex flex-col flex-grow items-center w-full">
@@ -283,7 +412,7 @@ function ConsultingPage() {
             )
           })}
         </div>
-      </div>
+      </motion.div>
       {/* Danh sách consultant */}
       <div className="max-w-7xl mx-auto px-4 pb-16 relative z-10">
         <motion.h2
@@ -381,7 +510,7 @@ function ConsultingPage() {
         )}
       </div>
       <Footer />
-    </div>
+    </motion.div>
   );
 }
 
