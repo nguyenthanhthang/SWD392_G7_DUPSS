@@ -40,10 +40,10 @@ interface Blog {
 }
 
 const menuTabs = [
-  { key: "profile", label: "User Profile" },
-  { key: "blogs", label: "Blogs" },
-  { key: "Appointments", label: "Appointments" },
-  { key: "payments", label: "Payments" },
+  { key: "profile", label: "Hồ sơ người dùng" },
+  { key: "blogs", label: "Bài viết" },
+  { key: "Appointments", label: "Lịch hẹn" },
+  { key: "payments", label: "Thanh toán" },
 ];
 
 export default function Profile() {
@@ -197,7 +197,7 @@ export default function Profile() {
     setPwdError('');
     setPwdLoading(true);
     try {
-      if (!user?.email) throw new Error('No user email');
+      if (!user?.email) throw new Error('Không tìm thấy email người dùng');
       await changePasswordApi(user.email, pwdNew, pwdConfirm);
       setShowPwdModal(false);
       setPwdStep('email');
@@ -292,7 +292,7 @@ export default function Profile() {
               className="inline-flex items-center text-blue-600 font-medium hover:underline bg-white rounded-lg px-3 py-1.5 shadow-sm border border-blue-100 mb-4"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-              Home Page
+              Trang chủ
             </Link>
             <nav className="flex flex-col gap-2">
               {menuTabs.map(m => (
@@ -343,7 +343,7 @@ export default function Profile() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Sign out
+                  Đăng xuất
                 </Link>
               </div>
             </nav>
@@ -353,8 +353,8 @@ export default function Profile() {
             <div className="max-w-4xl mx-auto">
               {tab === 'profile' && (
                 <div className="p-7">
-                  <h2 className="text-2xl font-bold mb-2 text-gray-800">User profile</h2>
-                  <p className="text-gray-500 mb-8">Manage your details, view your tier status and change your password.</p>
+                  <h2 className="text-2xl font-bold mb-2 text-gray-800">Hồ sơ người dùng</h2>
+                  <p className="text-gray-500 mb-8">Quản lý thông tin cá nhân, xem trạng thái và thay đổi mật khẩu.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Avatar + Name */}
@@ -393,7 +393,7 @@ export default function Profile() {
                               className="border border-gray-300 rounded px-2 py-1 text-sm w-32"
                               value={editData.phoneNumber || ''}
                               onChange={e => setEditData({ ...editData, phoneNumber: e.target.value })}
-                              placeholder="Phone number"
+                              placeholder="Số điện thoại"
                               onBlur={e => handleBlurField('phoneNumber', e.target.value)}
                             />
                             {fieldError.phoneNumber && <div className="text-red-500 text-xs mt-1">{fieldError.phoneNumber}</div>}
@@ -418,7 +418,7 @@ export default function Profile() {
                             </button>
                           </div>
                         ) : (
-                          <span>{user?.phoneNumber || 'No phone number'}</span>
+                          <span>{user?.phoneNumber || 'Chưa có số điện thoại'}</span>
                         )}
                       </div>
                       {!editPhoneOnly && (
@@ -434,7 +434,7 @@ export default function Profile() {
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
                               <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                             </svg>
-                            Edit Phone
+                            Sửa SĐT
                           </button>
                         </div>
                       )}
@@ -442,9 +442,9 @@ export default function Profile() {
                     
                     {/* General info */}
                     <div className="bg-white rounded-2xl border border-gray-100 p-8">
-                      <div className="font-semibold text-gray-700 mb-6">General information</div>
+                      <div className="font-semibold text-gray-700 mb-6">Thông tin chung</div>
                       <div>
-                        <label className="block text-gray-500 text-sm mb-2">Full name</label>
+                        <label className="block text-gray-500 text-sm mb-2">Họ và tên</label>
                         <input
                           disabled={!editMode || editPhoneOnly}
                           className={`w-full border border-gray-200 rounded-md px-4 py-2 text-gray-700 ${(!editMode || editPhoneOnly) ? 'bg-gray-50' : 'bg-white'}`}
@@ -464,11 +464,11 @@ export default function Profile() {
                           onClick={editMode ? handleUpdate : undefined}
                           disabled={!editMode}
                         >
-                          Update
+                          Cập nhật
                         </button>
                         {!editMode && (
                           <button onClick={() => { handleEdit(); setEditPhoneOnly(false); }} className="ml-4 text-blue-600 text-sm font-medium">
-                            Edit
+                            Chỉnh sửa
                           </button>
                         )}
                       </div>
@@ -477,14 +477,14 @@ export default function Profile() {
                   
                   {/* Security */}
                   <div className="mt-8">
-                    <div className="font-semibold text-gray-700 mb-6">Security</div>
+                    <div className="font-semibold text-gray-700 mb-6">Bảo mật</div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="bg-gray-50 rounded-md p-4">
                         <label className="block text-gray-500 text-sm mb-2">Email</label>
                         <div className="text-gray-700 font-medium">{user?.email || ''}</div>
                       </div>
                       <div className="bg-gray-50 rounded-md p-4">
-                        <label className="block text-gray-500 text-sm mb-2">Password</label>
+                        <label className="block text-gray-500 text-sm mb-2">Mật khẩu</label>
                         <div className="text-gray-700 font-medium">••••••</div>
                       </div>
                     </div>
@@ -493,7 +493,7 @@ export default function Profile() {
                         className="w-50 border border-blue-600 text-blue-600 px-6 py-2 rounded-lg font-medium bg-white transition-colors hover:bg-blue-50 hover:border-blue-700 hover:text-blue-800 focus:outline-none"
                         onClick={() => setShowPwdModal(true)}
                       >
-                        Change password
+                        Đổi mật khẩu
                       </button>
                     </div>
                   </div>

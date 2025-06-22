@@ -19,7 +19,7 @@ interface IConsultant {
   };
   introduction: string;
   contact: string;
-  experience: number;
+  startDateofWork: string;
   status: 'active' | 'inactive' | 'isDeleted';
   createdAt: string;
   updatedAt: string;
@@ -28,7 +28,7 @@ interface IConsultant {
 // Interface cho dữ liệu chứng chỉ
 interface ICertificate {
   _id: string;
-  consultant_id: string | { _id: string };
+  consultant_id: { _id: string };
   title: string;
   type: string;
   issuedBy: number;
@@ -50,7 +50,7 @@ interface IFormData {
   phone: string;
   introduction: string;
   contact: string;
-  experience: number;
+  startDateofWork: string;
   status: 'active' | 'inactive' | 'isDeleted';
 }
 
@@ -82,7 +82,9 @@ const Consultant: React.FC = () => {
   const [consultants, setConsultants] = useState<IConsultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedConsultant, setSelectedConsultant] = useState<IConsultant | null>(null);
   const [formData, setFormData] = useState<IFormData>({
     accountId: '',
@@ -91,7 +93,7 @@ const Consultant: React.FC = () => {
     phone: '',
     introduction: '',
     contact: '',
-    experience: 0,
+    startDateofWork: '',
     status: 'active'
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -164,8 +166,66 @@ const Consultant: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'experience' ? Number(value) : value
+      [name]: value
     }));
+  };
+
+  const handleOpenCreateModal = () => {
+    setFormData({
+      accountId: '',
+      fullName: '',
+      email: '',
+      phone: '',
+      introduction: '',
+      contact: '',
+      startDateofWork: '',
+      status: 'active'
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setFormData({
+      accountId: '',
+      fullName: '',
+      email: '',
+      phone: '',
+      introduction: '',
+      contact: '',
+      startDateofWork: '',
+      status: 'active'
+    });
+  };
+
+  const handleCreateConsultant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.accountId || !formData.introduction) {
+      toast.error('Vui lòng điền đầy đủ thông tin!');
+      return;
+    }
+
+    try {
+      const payload = {
+        accountId: formData.accountId,
+        introduction: formData.introduction,
+        contact: formData.contact,
+        startDateofWork: formData.startDateofWork,
+        status: formData.status,
+      };
+      
+      console.log('Creating consultant with data:', payload);
+      const response = await api.post('/consultants', payload);
+      console.log('Create response:', response.data);
+      
+      setConsultants(prev => [...prev, response.data]);
+      handleCloseCreateModal();
+      toast.success('Tạo tư vấn viên thành công!');
+    } catch (error) {
+      console.error('Error creating consultant:', error);
+      toast.error('Có lỗi xảy ra khi tạo tư vấn viên!');
+    }
   };
 
   const handleOpenUpdateModal = (consultant: IConsultant) => {
@@ -177,9 +237,10 @@ const Consultant: React.FC = () => {
       phone: consultant.accountId.phoneNumber,
       introduction: consultant.introduction,
       contact: consultant.contact,
-      experience: consultant.experience,
-      status: consultant.status
+      startDateofWork: consultant.startDateofWork,
+      status: consultant.status,
     });
+    setAvatarPreview(consultant.accountId.photoUrl || null);
     setIsUpdateModalOpen(true);
   };
 
@@ -193,7 +254,7 @@ const Consultant: React.FC = () => {
       phone: '',
       introduction: '',
       contact: '',
-      experience: 0,
+      startDateofWork: '',
       status: 'active'
     });
   };
@@ -207,7 +268,7 @@ const Consultant: React.FC = () => {
       const consultantData = {
         introduction: formData.introduction,
         contact: formData.contact,
-        experience: formData.experience,
+        startDateofWork: formData.startDateofWork,
         status: formData.status
       };
       
@@ -234,10 +295,21 @@ const Consultant: React.FC = () => {
       setConsultants(prev =>
         prev.filter(consultant => consultant._id !== selectedConsultant._id)
       );
+      handleCloseDeleteModal();
       toast.success('Xóa tư vấn viên thành công!');
     } catch {
       toast.error('Có lỗi xảy ra khi xóa tư vấn viên!');
     }
+  };
+
+  const handleOpenDeleteModal = (consultant: IConsultant) => {
+    setSelectedConsultant(consultant);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedConsultant(null);
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -546,7 +618,7 @@ const Consultant: React.FC = () => {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm">
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
         </div>
       </div>
     );
@@ -578,13 +650,86 @@ const Consultant: React.FC = () => {
       />
 
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-indigo-500">Quản lý tư vấn viên</h1>
+        <h1 className="text-2xl font-semibold text-gray-800">Quản lý tư vấn viên</h1>
+        <button
+          onClick={handleOpenCreateModal}
+          className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Thêm tư vấn viên
+        </button>
+      </div>
+
+      {/* Phần tìm kiếm và lọc */}
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-medium text-gray-700 mb-4">Tìm kiếm và Lọc</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Tìm kiếm */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
+            <div className="relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Tìm theo tên, email..."
+                className="focus:ring-sky-500 focus:border-sky-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                onChange={(e) => {
+                  // Thêm logic tìm kiếm ở đây
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Lọc theo trạng thái */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+            <select
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
+              onChange={(e) => {
+                // Thêm logic lọc theo trạng thái ở đây
+              }}
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+            </select>
+          </div>
+          
+          {/* Lọc theo ngày bắt đầu */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ngày bắt đầu</label>
+            <input
+              type="date"
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
+              onChange={(e) => {
+                // Thêm logic lọc theo ngày ở đây
+              }}
+            />
+          </div>
+        </div>
+        
+        <div className="mt-4 flex justify-end">
+          <button
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+          >
+            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Đặt lại bộ lọc
+          </button>
+        </div>
       </div>
 
             <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
         <table className="min-w-full bg-white">
           <thead>
-            <tr className="bg-gradient-to-r from-indigo-50 to-blue-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
+            <tr className="bg-gradient-to-r from-sky-50 to-cyan-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
               <th className="px-4 py-3 rounded-tl-lg">Họ và tên</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Trạng thái</th>
@@ -594,7 +739,7 @@ const Consultant: React.FC = () => {
           </thead>
           <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
             {paginatedConsultants.map(consultant => (
-              <tr key={consultant._id} className="hover:bg-indigo-50 transition-colors duration-150">
+              <tr key={consultant._id} className="hover:bg-sky-50 transition-colors duration-150">
                 <td className="px-4 py-3 font-medium flex items-center">
                   <img src={consultant.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-10 h-10 rounded-full object-cover mr-2 inline-block" />
                   {consultant.accountId.fullName}
@@ -616,7 +761,7 @@ const Consultant: React.FC = () => {
                                             <td className="px-4 py-3 text-center">
                   <button 
                     onClick={() => handleOpenScheduleModal(consultant)}
-                    className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs border border-blue-200 hover:bg-blue-100 transition-colors"
+                    className="px-3 py-1 bg-sky-50 text-sky-600 rounded-full text-xs border border-sky-200 hover:bg-sky-100 transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -629,7 +774,7 @@ const Consultant: React.FC = () => {
                     <Tooltip text="Xem chi tiết">
                       <button
                         onClick={() => { setSelectedConsultant(consultant); setIsDetailModalOpen(true); }}
-                        className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                        className="p-2 rounded-full bg-sky-100 text-sky-600 hover:bg-sky-200 transition-colors"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -652,21 +797,10 @@ const Consultant: React.FC = () => {
                     <Tooltip text="Quản lý chứng chỉ">
                       <button
                         onClick={() => handleOpenCertificateModal(consultant)}
-                        className="p-2 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors"
+                        className="p-2 rounded-full bg-sky-100 text-sky-600 hover:bg-sky-200 transition-colors"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                      </button>
-                    </Tooltip>
-
-                    <Tooltip text="Lịch làm việc">
-                      <button
-                        onClick={() => handleOpenScheduleModal(consultant)}
-                        className="p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </button>
                     </Tooltip>
@@ -675,7 +809,7 @@ const Consultant: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedConsultant(consultant);
-                          (document.getElementById('delete-modal') as HTMLDialogElement)?.showModal();
+                          handleOpenDeleteModal(consultant);
                         }}
                         className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
                       >
@@ -703,7 +837,7 @@ const Consultant: React.FC = () => {
         {Array.from({ length: totalPages }, (_, i) => (
           <button
             key={i}
-            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             onClick={() => setCurrentPage(i + 1)}
           >
             {i + 1}
@@ -718,111 +852,108 @@ const Consultant: React.FC = () => {
         </button>
       </div>
 
-      {/* Modal Cập nhật tư vấn viên */}
+      {/* Modal Cập nhật */}
       {isUpdateModalOpen && selectedConsultant && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Cập nhật thông tin tư vấn viên</h2>
-              <button
-                onClick={handleCloseUpdateModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl transform transition-all">
+            <div className="px-6 py-4 border-b">
+              <h3 className="text-xl font-semibold text-gray-800">Cập nhật thông tin tư vấn viên</h3>
             </div>
-
-            <form onSubmit={handleUpdateConsultant} className="space-y-4">
-              <div className="flex flex-col items-center mb-4">
-                <img src={avatarPreview || selectedConsultant?.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-24 h-24 rounded-full object-cover border-2 border-indigo-200 mb-2" />
-                <input type="file" accept="image/*" onChange={handleAvatarChange} className="mt-1 block w-full text-sm" disabled={isUploadingAvatar} />
-                {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
-              </div>
-
-              <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Thông tin tài khoản (chỉ đọc)</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-sm text-gray-500">Họ tên:</p>
-                    <p className="font-medium">{formData.fullName}</p>
+            
+            <form onSubmit={handleUpdateConsultant}>
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Cột trái: Avatar và thông tin tài khoản */}
+                  <div className="space-y-4">
+                    <div className="flex flex-col items-center">
+                      <img 
+                        src={avatarPreview || selectedConsultant.accountId.photoUrl || 'https://via.placeholder.com/150'} 
+                        alt="Avatar" 
+                        className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
+                      />
+                      <input 
+                        type="file" 
+                        id="avatar-upload-update" 
+                        className="hidden" 
+                        onChange={handleAvatarChange} 
+                        accept="image/*"
+                      />
+                      <label 
+                        htmlFor="avatar-upload-update" 
+                        className="mt-3 px-4 py-2 bg-sky-100 text-sky-700 text-sm font-medium rounded-lg cursor-pointer hover:bg-sky-200 transition"
+                      >
+                        {isUploadingAvatar ? 'Đang tải lên...' : 'Thay đổi ảnh đại diện'}
+                      </label>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <h4 className="font-semibold text-gray-700 mb-2">Thông tin tài khoản (chỉ đọc)</h4>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p><strong>Họ tên:</strong> {selectedConsultant.accountId.fullName}</p>
+                        <p><strong>Email:</strong> {selectedConsultant.accountId.email}</p>
+                        <p><strong>SĐT:</strong> {selectedConsultant.accountId.phoneNumber}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Email:</p>
-                    <p className="font-medium">{formData.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Số điện thoại:</p>
-                    <p className="font-medium">{formData.phone}</p>
+
+                  {/* Cột phải: Form thông tin */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Giới thiệu</label>
+                      <textarea
+                        name="introduction"
+                        value={formData.introduction}
+                        onChange={handleInputChange}
+                        rows={4}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                        placeholder="Nhập thông tin giới thiệu về tư vấn viên"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Thông tin liên hệ</label>
+                      <input
+                        type="text"
+                        name="contact"
+                        value={formData.contact}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                        placeholder="Thông tin liên hệ thêm (nếu có)"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu làm việc</label>
+                      <input
+                        type="date"
+                        name="startDateofWork"
+                        value={formData.startDateofWork ? new Date(formData.startDateofWork).toISOString().split('T')[0] : ''}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      >
+                        <option value="active">Hoạt động</option>
+                        <option value="inactive">Không hoạt động</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Giới thiệu</label>
-                <textarea
-                  name="introduction"
-                  value={formData.introduction}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Nhập thông tin giới thiệu về tư vấn viên"
-                />
-                <p className="mt-1 text-xs text-gray-500">Thông tin này sẽ hiển thị cho người dùng</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Thông tin liên hệ</label>
-                <input
-                  type="text"
-                  name="contact"
-                  value={formData.contact}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Thông tin liên hệ thêm (nếu có)"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Kinh nghiệm (năm)</label>
-                <input
-                  type="number"
-                  name="experience"
-                  value={formData.experience}
-                  onChange={handleInputChange}
-                  min="0"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option value="active">Hoạt động</option>
-                  <option value="inactive">Không hoạt động</option>
-                  <option value="isDeleted">Đã xóa</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCloseUpdateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-                >
+              <div className="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3">
+                <button type="button" onClick={handleCloseUpdateModal} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
                   Hủy
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
-                >
+                <button type="submit" className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700">
                   Cập nhật
                 </button>
               </div>
@@ -831,69 +962,79 @@ const Consultant: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Xác nhận xóa */}
-      <dialog id="delete-modal" className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Xác nhận xóa</h3>
-          <p className="py-4">Bạn có chắc chắn muốn xóa tư vấn viên "{selectedConsultant?.accountId.fullName}"? Hành động này không thể hoàn tác.</p>
-          <div className="modal-action">
-            <form method="dialog" className='space-x-2'>
-              <button className="btn">Hủy</button>
-              <button 
-                className="btn btn-error"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleDeleteConsultant();
-                  (document.getElementById('delete-modal') as HTMLDialogElement)?.close();
-                }}
+      {/* Modal Xóa */}
+      {isDeleteModalOpen && selectedConsultant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-semibold">Xác nhận xóa</h2>
+              <button
+                onClick={handleCloseDeleteModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <p>Bạn có chắc chắn muốn xóa tư vấn viên "{selectedConsultant.accountId.fullName}"?</p>
+              <p className="text-sm text-gray-500 mt-2">Hành động này không thể hoàn tác.</p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCloseDeleteModal}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteConsultant}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
               >
                 Xóa
               </button>
-            </form>
+            </div>
           </div>
         </div>
-      </dialog>
-
-
+      )}
 
       {isDetailModalOpen && selectedConsultant && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl relative">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative">
             <button
               onClick={() => setIsDetailModalOpen(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-blue-600 text-2xl"
-              title="Đóng"
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
             >
-              &times;
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex flex-col items-center mb-6">
-              <img
-                src={selectedConsultant.accountId.photoUrl || '/avarta.png'}
-                alt="avatar"
-                className="w-24 h-24 rounded-full object-cover border-4 border-blue-200 shadow mb-2"
-              />
-              <h2 className="text-xl font-bold text-blue-700 mb-1">{selectedConsultant.accountId.fullName}</h2>
-              <span className={`px-3 py-1 text-xs rounded-full font-semibold mt-1 ${
-                selectedConsultant.status === 'active'
-                  ? 'bg-green-100 text-green-800'
-                  : selectedConsultant.status === 'inactive'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {selectedConsultant.status === 'active' ? 'Hoạt động' : selectedConsultant.status === 'inactive' ? 'Không hoạt động' : 'Đã xóa'}
+            <div className="text-center">
+              <img src={selectedConsultant.accountId.photoUrl || '/avarta.png'} alt="avatar" className="w-24 h-24 rounded-full object-cover mx-auto mb-2 border-2 border-sky-200" />
+              <h3 className="text-xl font-bold text-gray-800">{selectedConsultant.accountId.fullName}</h3>
+              <span className={`mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${selectedConsultant.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {selectedConsultant.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
               </span>
             </div>
-            <div className="space-y-2 text-sm">
-              <div><span className="font-semibold text-gray-600">Email:</span> {selectedConsultant.accountId.email}</div>
-              <div><span className="font-semibold text-gray-600">Số điện thoại:</span> {selectedConsultant.accountId.phoneNumber}</div>
-              <div><span className="font-semibold text-gray-600">Giới thiệu:</span> {selectedConsultant.introduction || <span className="italic text-gray-400">Chưa cập nhật</span>}</div>
-              <div><span className="font-semibold text-gray-600">Liên hệ:</span> {selectedConsultant.contact || <span className="italic text-gray-400">Chưa cập nhật</span>}</div>
-              <div><span className="font-semibold text-gray-600">Kinh nghiệm:</span> {selectedConsultant.experience} năm</div>
+            <div className="mt-4 border-t pt-4 text-sm text-gray-700 space-y-2">
+              <p><strong>Email:</strong> {selectedConsultant.accountId.email}</p>
+              <p><strong>Số điện thoại:</strong> {selectedConsultant.accountId.phoneNumber}</p>
+              <p><strong>Giới thiệu:</strong> {selectedConsultant.introduction}</p>
+              <p><strong>Thông tin liên hệ:</strong> {selectedConsultant.contact}</p>
+              <p><strong>Số năm làm việc:</strong> {(() => {
+                  if (!selectedConsultant.startDateofWork) return 'Chưa cập nhật';
+                  const startYear = new Date(selectedConsultant.startDateofWork).getFullYear();
+                  if (isNaN(startYear)) return 'Chưa cập nhật';
+                  const currentYear = new Date().getFullYear();
+                  const years = currentYear - startYear;
+                  return years >= 0 ? `${years} năm` : 'Chưa cập nhật';
+              })()}</p>
             </div>
-            <div className="flex justify-end mt-8">
+            <div className="mt-6 text-right">
               <button
                 onClick={() => setIsDetailModalOpen(false)}
-                className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow"
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
               >
                 Đóng
               </button>
@@ -919,7 +1060,7 @@ const Consultant: React.FC = () => {
                 <img 
                   src={selectedConsultant.accountId.photoUrl || '/avarta.png'} 
                   alt={selectedConsultant.accountId.fullName} 
-                  className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-indigo-200"
+                  className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-sky-200"
                 />
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800">Quản lý chứng chỉ</h2>
@@ -939,7 +1080,7 @@ const Consultant: React.FC = () => {
             <div className="flex justify-end mb-6">
               <button
                 onClick={handleOpenCreateCertificateModal}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center shadow-md transition-all duration-200"
+                className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 flex items-center shadow-md transition-all duration-200"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -951,7 +1092,7 @@ const Consultant: React.FC = () => {
             {/* Hiển thị trạng thái loading */}
             {certificateLoading && (
               <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
               </div>
             )}
 
@@ -969,7 +1110,7 @@ const Consultant: React.FC = () => {
 
             {/* Hiển thị thông báo không có dữ liệu */}
             {!certificateLoading && !certificateError && certificates.length === 0 && (
-              <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded flex items-center">
+              <div className="bg-sky-50 border-l-4 border-sky-500 text-sky-700 p-4 mb-6 rounded flex items-center">
                 <svg className="h-6 w-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -982,7 +1123,7 @@ const Consultant: React.FC = () => {
               <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
                 <table className="min-w-full bg-white">
                   <thead>
-                    <tr className="bg-gradient-to-r from-indigo-50 to-blue-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
+                    <tr className="bg-gradient-to-r from-sky-50 to-cyan-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
                       <th className="px-4 py-3 rounded-tl-lg">Tiêu đề</th>
                       <th className="px-4 py-3">Loại</th>
                       <th className="px-4 py-3">Ngày cấp</th>
@@ -993,13 +1134,13 @@ const Consultant: React.FC = () => {
                   </thead>
                   <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
                     {certificates.map((certificate) => (
-                      <tr key={certificate._id} className="hover:bg-indigo-50 transition-colors duration-150">
+                      <tr key={certificate._id} className="hover:bg-sky-50 transition-colors duration-150">
                         <td className="px-4 py-3 font-medium">
                           <a 
                             href={certificate.fileUrl} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-indigo-600 hover:text-indigo-900 hover:underline flex items-center"
+                            className="text-sky-600 hover:text-sky-900 hover:underline flex items-center"
                           >
                             {certificate.title}
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1018,7 +1159,7 @@ const Consultant: React.FC = () => {
                                 href={certificate.fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 relative group"
+                                className="p-2 rounded-full bg-sky-100 text-sky-600 hover:bg-sky-200 relative group"
                                 onClick={(e) => {
                                   // Ngăn chặn mở link nếu người dùng chỉ muốn xem trước
                                   if (e.ctrlKey || e.metaKey) {
@@ -1048,12 +1189,12 @@ const Consultant: React.FC = () => {
                                     d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                                   />
                                 </svg>
-                                <div className="absolute hidden group-hover:block transition-opacity bg-white p-3 rounded-md shadow-lg -top-48 left-1/2 transform -translate-x-1/2 z-50 border border-indigo-100">
+                                <div className="absolute hidden group-hover:block transition-opacity bg-white p-3 rounded-md shadow-lg -top-48 left-1/2 transform -translate-x-1/2 z-50 border border-sky-100">
                                   <div className="text-center mb-1 text-xs text-gray-500">Xem trước chứng chỉ</div>
                                   <img 
                                     src={certificate.fileUrl} 
                                     alt="Xem trước chứng chỉ" 
-                                    className="h-40 w-auto max-w-[280px] object-contain border border-gray-200 rounded cursor-pointer hover:border-indigo-300"
+                                    className="h-40 w-auto max-w-[280px] object-contain border border-gray-200 rounded cursor-pointer hover:border-sky-300"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleOpenImagePreview(certificate.fileUrl);
@@ -1147,7 +1288,7 @@ const Consultant: React.FC = () => {
                   name="title"
                   value={certificateFormData.title}
                   onChange={handleCertificateInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                   placeholder="Nhập tiêu đề chứng chỉ"
                 />
@@ -1160,7 +1301,7 @@ const Consultant: React.FC = () => {
                   name="type"
                   value={certificateFormData.type}
                   onChange={handleCertificateInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                   placeholder="Ví dụ: Kỹ năng, Ngoại ngữ, Chuyên môn..."
                 />
@@ -1172,7 +1313,7 @@ const Consultant: React.FC = () => {
                   name="issuedBy"
                   value={certificateFormData.issuedBy}
                   onChange={handleCertificateInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 >
                   <option value="">-- Chọn đơn vị cấp --</option>
@@ -1192,7 +1333,7 @@ const Consultant: React.FC = () => {
                     name="issueDate"
                     value={certificateFormData.issueDate}
                     onChange={handleCertificateInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                     required
                   />
                 </div>
@@ -1204,7 +1345,7 @@ const Consultant: React.FC = () => {
                     name="expireDate"
                     value={certificateFormData.expireDate}
                     onChange={handleCertificateInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -1216,7 +1357,7 @@ const Consultant: React.FC = () => {
                   value={certificateFormData.description}
                   onChange={handleCertificateInputChange}
                   rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   placeholder="Mô tả chi tiết về chứng chỉ này"
                 />
               </div>
@@ -1231,7 +1372,7 @@ const Consultant: React.FC = () => {
                           href={certificateFormData.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-indigo-600 hover:text-indigo-900 flex items-center"
+                          className="text-sky-600 hover:text-sky-900 flex items-center"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1271,7 +1412,7 @@ const Consultant: React.FC = () => {
                     >
                       {uploading ? (
                         <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-sky-500" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
@@ -1301,7 +1442,7 @@ const Consultant: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md shadow-sm transition-colors"
                   disabled={uploading}
                 >
                   Tạo chứng chỉ
@@ -1336,7 +1477,7 @@ const Consultant: React.FC = () => {
                   name="title"
                   value={certificateFormData.title}
                   onChange={handleCertificateInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                   placeholder="Nhập tiêu đề chứng chỉ"
                 />
@@ -1349,7 +1490,7 @@ const Consultant: React.FC = () => {
                   name="type"
                   value={certificateFormData.type}
                   onChange={handleCertificateInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                   placeholder="Ví dụ: Kỹ năng, Ngoại ngữ, Chuyên môn..."
                 />
@@ -1361,7 +1502,7 @@ const Consultant: React.FC = () => {
                   name="issuedBy"
                   value={certificateFormData.issuedBy}
                   onChange={handleCertificateInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   required
                 >
                   <option value="">-- Chọn đơn vị cấp --</option>
@@ -1381,7 +1522,7 @@ const Consultant: React.FC = () => {
                     name="issueDate"
                     value={certificateFormData.issueDate}
                     onChange={handleCertificateInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                     required
                   />
                 </div>
@@ -1393,7 +1534,7 @@ const Consultant: React.FC = () => {
                     name="expireDate"
                     value={certificateFormData.expireDate}
                     onChange={handleCertificateInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -1405,7 +1546,7 @@ const Consultant: React.FC = () => {
                   value={certificateFormData.description}
                   onChange={handleCertificateInputChange}
                   rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                   placeholder="Mô tả chi tiết về chứng chỉ này"
                 />
               </div>
@@ -1420,7 +1561,7 @@ const Consultant: React.FC = () => {
                           href={certificateFormData.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-indigo-600 hover:text-indigo-900 flex items-center"
+                          className="text-sky-600 hover:text-sky-900 flex items-center"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1460,7 +1601,7 @@ const Consultant: React.FC = () => {
                     >
                       {uploading ? (
                         <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-sky-500" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
@@ -1490,7 +1631,7 @@ const Consultant: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md shadow-sm transition-colors"
                   disabled={uploading}
                 >
                   Cập nhật

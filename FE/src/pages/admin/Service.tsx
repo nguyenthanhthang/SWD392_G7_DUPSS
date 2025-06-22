@@ -4,6 +4,23 @@ import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
 import axios from 'axios';
 
+// Thêm CSS cho animation
+const fadeInDown = `
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-down {
+  animation: fadeInDown 0.3s ease-out forwards;
+}
+`;
+
 // Interface cho dữ liệu dịch vụ
 interface IService {
   _id: string;
@@ -43,6 +60,9 @@ const Service: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // State cho thông báo thành công
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   // Form states
   const [formData, setFormData] = useState({
     name: '',
@@ -55,8 +75,38 @@ const Service: React.FC = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 8;
-  const totalPages = Math.ceil(services.length / rowsPerPage);
-  const paginatedServices = services.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [priceRange, setPriceRange] = useState<{min: string, max: string}>({min: '', max: ''});
+  
+  // Filtered services
+  const filteredServices = services.filter(service => {
+    // Filter by search term
+    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          service.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filter by status
+    const matchesStatus = statusFilter === '' || service.status === statusFilter;
+    
+    // Filter by price range
+    const matchesMinPrice = priceRange.min === '' || service.price >= parseInt(priceRange.min);
+    const matchesMaxPrice = priceRange.max === '' || service.price <= parseInt(priceRange.max);
+    
+    return matchesSearch && matchesStatus && matchesMinPrice && matchesMaxPrice;
+  });
+  
+  const totalPages = Math.ceil(filteredServices.length / rowsPerPage);
+  const paginatedServices = filteredServices.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('');
+    setPriceRange({min: '', max: ''});
+    setCurrentPage(1);
+  };
 
   // Thêm state lưu lỗi cho từng trường
   const [errors, setErrors] = useState({
@@ -300,7 +350,29 @@ const Service: React.FC = () => {
       
       // Đóng modal và thông báo thành công
       handleCloseCreateModal();
-      toast.success('Tạo dịch vụ thành công!');
+      toast.success('✅ Dịch vụ đã được tạo thành công!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        style: {
+          backgroundColor: "#0ea5e9",
+          color: "white",
+          fontSize: "14px",
+          fontWeight: "bold",
+          border: "1px solid #0284c7",
+          borderRadius: "8px"
+        }
+      });
+      
+      // Hiển thị thông báo thành công
+      setSuccessMessage(`Dịch vụ "${response.data.name}" đã được tạo thành công!`);
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
       
       // Tải lại danh sách dịch vụ
       fetchServices();
@@ -416,24 +488,29 @@ const Service: React.FC = () => {
       // Sử dụng set timeout để đảm bảo thông báo hiển thị sau khi modal đóng
       setTimeout(() => {
         // Hiển thị thông báo thành công nổi bật và rõ ràng
-        toast.success('🎉 Dịch vụ đã được cập nhật thành công!', {
-          position: "top-center",
-          autoClose: 5000, // Tăng thời gian hiển thị lên 5 giây
+        toast.success('✅ Dịch vụ đã được cập nhật thành công!', {
+          position: "top-right",
+          autoClose: 3000,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
           progress: undefined,
           style: {
-            background: "#10b981",
+            backgroundColor: "#0ea5e9",
             color: "white",
-            fontSize: "16px",
+            fontSize: "14px",
             fontWeight: "bold",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-            border: "1px solid #047857",
-            padding: "16px"
+            border: "1px solid #0284c7",
+            borderRadius: "8px"
           }
         });
+        
+        // Hiển thị thông báo thành công
+        setSuccessMessage(`Dịch vụ "${formData.name}" đã được cập nhật thành công!`);
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 5000);
       }, 300);
     } catch (err) {
       console.error('Lỗi khi cập nhật dịch vụ:', err);
@@ -444,7 +521,7 @@ const Service: React.FC = () => {
   if (loading) {
     return (
       <div className="p-6 bg-white rounded-lg flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
       </div>
     );
   }
@@ -461,19 +538,48 @@ const Service: React.FC = () => {
 
   return (
     <div className="p-6 bg-white rounded-lg mt-4">
+      <style>{fadeInDown}</style>
       <ToastContainer
-        position="top-center"
-        autoClose={5000}
+        position="top-right"
+        autoClose={3000}
         hideProgressBar={false}
-        newestOnTop={true}
-        closeOnClick={true}
+        newestOnTop
+        closeOnClick
         rtl={false}
-        pauseOnFocusLoss={false}
-        draggable={true}
-        pauseOnHover={true}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
         theme="colored"
-        limit={3}
       />
+
+      {/* Thông báo thành công */}
+      {successMessage && (
+        <div className="mb-6 bg-sky-50 border-l-4 border-sky-500 p-4 relative animate-fade-in-down">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-sky-800">{successMessage}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  onClick={() => setSuccessMessage(null)}
+                  className="inline-flex rounded-md p-1.5 text-sky-500 hover:bg-sky-100 focus:outline-none"
+                >
+                  <span className="sr-only">Đóng</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Input file ẩn */}
       <input
@@ -486,10 +592,10 @@ const Service: React.FC = () => {
 
       {/* Tiêu đề và nút thêm mới */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-indigo-500">Quản lý dịch vụ</h1>
+        <h1 className="text-2xl font-semibold text-gray-800">Quản lý dịch vụ</h1>
         <button
           onClick={handleOpenCreateModal}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
+          className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 flex items-center"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -498,11 +604,109 @@ const Service: React.FC = () => {
         </button>
       </div>
 
+      {/* Phần tìm kiếm và lọc */}
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-medium text-gray-700 mb-4">Tìm kiếm và Lọc</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Tìm kiếm */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
+            <div className="relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Tìm theo tên, mô tả..."
+                className="focus:ring-sky-500 focus:border-sky-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+          
+          {/* Lọc theo trạng thái */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+            </select>
+          </div>
+          
+          {/* Lọc theo giá */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Khoảng giá (VNĐ)</label>
+            <div className="flex space-x-2">
+              <div className="flex-1">
+                <input
+                  type="number"
+                  value={priceRange.min}
+                  onChange={(e) => {
+                    setPriceRange(prev => ({...prev, min: e.target.value}));
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Giá tối thiểu"
+                  className="focus:ring-sky-500 focus:border-sky-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                />
+              </div>
+              <div className="flex-1">
+                <input
+                  type="number"
+                  value={priceRange.max}
+                  onChange={(e) => {
+                    setPriceRange(prev => ({...prev, max: e.target.value}));
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Giá tối đa"
+                  className="focus:ring-sky-500 focus:border-sky-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={handleResetFilters}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+          >
+            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Đặt lại bộ lọc
+          </button>
+        </div>
+        
+        {filteredServices.length > 0 ? (
+          <div className="mt-4 text-sm text-gray-600">
+            Hiển thị {paginatedServices.length} trên {filteredServices.length} dịch vụ
+          </div>
+        ) : (
+          <div className="mt-4 text-sm text-gray-600">
+            Không tìm thấy dịch vụ nào phù hợp với bộ lọc
+          </div>
+        )}
+      </div>
+
       {/* Bảng dịch vụ */}
       <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
         <table className="min-w-full bg-white">
           <thead>
-            <tr className="bg-purple-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
+            <tr className="bg-gradient-to-r from-sky-50 to-cyan-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
               <th className="px-4 py-3 rounded-tl-lg">Tên dịch vụ</th>
               <th className="px-4 py-3">Mô tả</th>
               <th className="px-4 py-3">Giá</th>
@@ -513,7 +717,7 @@ const Service: React.FC = () => {
           </thead>
           <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
             {paginatedServices.map((service) => (
-              <tr key={service._id} className="border-b border-gray-200 hover:bg-purple-50">
+              <tr key={service._id} className="border-b border-gray-200 hover:bg-sky-50 transition-colors duration-150">
                 <td className="px-4 py-3 font-medium">{service.name}</td>
                 <td className="px-4 py-3 max-w-xs truncate">{service.description}</td>
                 <td className="px-4 py-3">{formatCurrency(service.price)}</td>
@@ -542,7 +746,7 @@ const Service: React.FC = () => {
                     <Tooltip text="Cập nhật">
                       <button
                         onClick={() => handleOpenUpdateModal(service)}
-                        className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                        className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition-colors"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -580,7 +784,7 @@ const Service: React.FC = () => {
         {Array.from({ length: totalPages }, (_, i) => (
           <button
             key={i}
-            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             onClick={() => setCurrentPage(i + 1)}
           >
             {i + 1}
@@ -600,7 +804,7 @@ const Service: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-xl shadow-lg">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold text-indigo-700">Thêm dịch vụ mới</h2>
+              <h2 className="text-xl font-semibold text-sky-700">Thêm dịch vụ mới</h2>
               <button
                 type="button"
                 onClick={handleCloseCreateModal}
@@ -635,7 +839,7 @@ const Service: React.FC = () => {
                     onChange={handleInputChange}
                     onBlur={handleFieldBlur}
                     placeholder="Nhập tên dịch vụ"
-                    className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                    className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-sky-500 focus:border-sky-500 ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                   />
                   {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                 </div>
@@ -651,7 +855,7 @@ const Service: React.FC = () => {
                     onBlur={handleFieldBlur}
                     step="1000"
                     placeholder="Nhập giá dịch vụ"
-                    className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                    className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-sky-500 focus:border-sky-500 ${errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                   />
                   {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
                 </div>
@@ -667,7 +871,7 @@ const Service: React.FC = () => {
                   onBlur={handleFieldBlur}
                   rows={3}
                   placeholder="Nhập mô tả chi tiết về dịch vụ"
-                  className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-indigo-500 focus:border-indigo-500 ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                  className={`block w-full rounded-md py-2 px-3 text-sm border focus:ring-sky-500 focus:border-sky-500 ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                 />
                 {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
               </div>
@@ -678,7 +882,7 @@ const Service: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleSelectImage}
-                    className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors flex items-center text-sm"
+                    className="px-3 py-2 bg-sky-100 text-sky-700 rounded-md hover:bg-sky-200 transition-colors flex items-center text-sm"
                     disabled={uploading}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -714,7 +918,7 @@ const Service: React.FC = () => {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:ring-sky-500 focus:border-sky-500"
                 >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
@@ -732,7 +936,7 @@ const Service: React.FC = () => {
                 <button
                   type="submit"
                   className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
-                    uploading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+                    uploading ? 'bg-sky-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700'
                   }`}
                   disabled={uploading}
                 >
@@ -766,7 +970,7 @@ const Service: React.FC = () => {
                   value={formData.name} 
                   onChange={handleInputChange}
                   onBlur={handleFieldBlur}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} 
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-sky-500 focus:border-sky-500 ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} 
                 />
                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
               </div>
@@ -778,7 +982,7 @@ const Service: React.FC = () => {
                   onChange={handleInputChange}
                   onBlur={handleFieldBlur} 
                   rows={4} 
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-sky-500 focus:border-sky-500 ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                 ></textarea>
                 {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
               </div>
@@ -790,7 +994,7 @@ const Service: React.FC = () => {
                   value={formData.price} 
                   onChange={handleInputChange} 
                   onBlur={handleFieldBlur}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-sky-500 focus:border-sky-500 ${errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                 />
                 {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
               </div>
@@ -799,7 +1003,7 @@ const Service: React.FC = () => {
                 <div className="mt-2 flex items-center gap-4">
                   {formData.image && <img src={formData.image} alt="Preview" className="w-24 h-24 rounded-lg object-cover" />}
                   <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-                  <button type="button" onClick={handleSelectImage} disabled={uploading} className={`px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${uploading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} focus:outline-none`}>
+                  <button type="button" onClick={handleSelectImage} disabled={uploading} className={`px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${uploading ? 'bg-gray-400' : 'bg-sky-600 hover:bg-sky-700'} focus:outline-none`}>
                     {uploading ? 'Đang tải...' : 'Chọn ảnh'}
                   </button>
                 </div>
@@ -811,7 +1015,7 @@ const Service: React.FC = () => {
                   name="status" 
                   value={formData.status} 
                   onChange={handleInputChange} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500"
                 >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
@@ -821,7 +1025,7 @@ const Service: React.FC = () => {
             {/* Footer */}
             <div className="flex justify-end items-center p-6 border-t border-gray-200 space-x-3">
               <button type="button" onClick={handleCloseUpdateModal} className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">Hủy</button>
-              <button type="submit" className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Lưu thay đổi</button>
+              <button type="submit" className="px-5 py-2.5 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg">Lưu thay đổi</button>
             </div>
           </form>
         </div>

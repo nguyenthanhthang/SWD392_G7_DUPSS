@@ -9,7 +9,7 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold">Dự báo doanh thu</h2>
 
           <div className="relative">
-            <select className="bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+            <select className="bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded-lg focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-sm">
               <option>Tuần này</option>
               <option>Tháng này</option>
               <option>Năm nay</option>
@@ -38,11 +38,11 @@ const Dashboard = () => {
                     className="flex flex-col items-center justify-end"
                   >
                     <div
-                      className={`w-6 bg-indigo-500 rounded-t-md`}
+                      className={`w-6 bg-sky-500 rounded-t-md`}
                       style={{ height: `${height * 40}px` }}
                     ></div>
                     <div
-                      className={`w-6 bg-pink-400 rounded-b-md mt-0.5`}
+                      className={`w-6 bg-cyan-400 rounded-b-md mt-0.5`}
                       style={{ height: `${Math.random() * 2 * 30}px` }}
                     ></div>
                     <span className="text-xs text-gray-500 mt-2">
@@ -65,9 +65,9 @@ const Dashboard = () => {
         {/* New Customers */}
         <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
           <div className="flex space-x-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-teal-500"
+                className="w-6 h-6 text-sky-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -90,7 +90,7 @@ const Dashboard = () => {
             <p className="text-sm text-gray-500 mb-2">Mục tiêu mới</p>
             <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="bg-teal-500 h-full rounded-full"
+                className="bg-sky-500 h-full rounded-full"
                 style={{ width: "83%" }}
               ></div>
             </div>
@@ -103,9 +103,9 @@ const Dashboard = () => {
         {/* Total Income */}
         <div className="col-span-2 bg-white dark:bg-darkgray p-6 rounded-lg">
           <div className="flex space-x-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-pink-500"
+                className="w-6 h-6 text-cyan-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -138,7 +138,7 @@ const Dashboard = () => {
                 <path
                   d="M0,15 Q10,5 20,15 T40,15 T60,15 T80,5 T100,15"
                   fill="none"
-                  stroke="#EC4899"
+                  stroke="#0EA5E9"
                   strokeWidth="2"
                 />
               </svg>
@@ -157,7 +157,7 @@ const Dashboard = () => {
               <div className="w-10 text-right text-sm text-gray-500">09:46</div>
             </div>
             <div className="relative flex items-center">
-              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-indigo-500 z-10"></div>
+              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-sky-500 z-10"></div>
               <div className="flex-shrink-0 w-0.5 h-full bg-gray-200 absolute top-3 bottom-0 left-1.5 -z-10"></div>
             </div>
             <div className="ml-4">
@@ -173,7 +173,7 @@ const Dashboard = () => {
               <div className="w-10 text-right text-sm text-gray-500">08:12</div>
             </div>
             <div className="relative flex items-center">
-              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-indigo-500 z-10"></div>
+              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-sky-500 z-10"></div>
               <div className="flex-shrink-0 w-0.5 h-full bg-gray-200 absolute top-3 bottom-0 left-1.5 -z-10"></div>
             </div>
             <div className="ml-4">
@@ -189,7 +189,7 @@ const Dashboard = () => {
               <div className="w-10 text-right text-sm text-gray-500">07:25</div>
             </div>
             <div className="relative flex items-center">
-              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-indigo-500 z-10"></div>
+              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-sky-500 z-10"></div>
             </div>
             <div className="ml-4">
               <p className="text-sm">

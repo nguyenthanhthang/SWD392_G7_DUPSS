@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi } from '../api';
-import { ChevronLeft, ChevronRight, User, Sparkles, Calendar, Banknote } from 'lucide-react';
-import { addDays, startOfWeek, isSameWeek } from 'date-fns';
+import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi } from '../api';
+import { ChevronLeft, ChevronRight, User, Sparkles, Calendar, Banknote, Star, MessageCircle, ChevronDown } from 'lucide-react';
+import { addDays, startOfWeek, isSameWeek, format } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import Confetti from 'react-confetti';
 import { useAuth } from '../contexts/AuthContext';
@@ -88,6 +88,295 @@ interface Bill {
   gender?: string;
 }
 
+// Interface cho feedback và rating
+interface Feedback {
+  _id: string;
+  account_id: {
+    fullName?: string;
+    photoUrl?: string;
+  };
+  service_id: string;
+  rating: number;
+  comment: string;
+  feedback_date: string;
+  status: string;
+}
+
+// Component hiển thị đánh giá sao
+const RatingStars = ({ rating }: { rating: number }) => {
+  return (
+    <div className="flex items-center">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={`w-5 h-5 ${
+            star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
+          }`}
+        />
+      ))}
+    </div>
+  );
+};
+
+// Component đánh giá dịch vụ tách riêng
+const ServiceRatings = ({ services }: { services: Service[] }) => {
+  const [topRatedServices, setTopRatedServices] = useState<{service: Service, rating: number, count: number, feedbacks: Feedback[]}[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  
+  useEffect(() => {
+    const fetchTopRatedServices = async () => {
+      try {
+        setLoadingServices(true);
+        
+        // Lấy rating cho tất cả dịch vụ
+        const ratingPromises = services.map(async service => {
+          try {
+            const [ratingData, feedbacksData] = await Promise.all([
+              getServiceRatingApi(service._id),
+              getFeedbackByServiceIdApi(service._id)
+            ]);
+            
+            // Chỉ lấy feedback đã được phê duyệt
+            const approvedFeedbacks = feedbacksData.filter((feedback: Feedback) => feedback.status === 'approved');
+            
+            return {
+              service,
+              rating: ratingData.averageRating || 0,
+              count: ratingData.feedbackCount || 0,
+              feedbacks: approvedFeedbacks
+            };
+          } catch (error) {
+            console.error(`Error fetching data for service ${service._id}:`, error);
+            return {
+              service,
+              rating: 0,
+              count: 0,
+              feedbacks: []
+            };
+          }
+        });
+        
+        const servicesWithRatings = await Promise.all(ratingPromises);
+        
+        // Sắp xếp theo rating cao nhất
+        const sortedServices = servicesWithRatings
+          .sort((a, b) => {
+            // Sắp xếp theo rating trước
+            if (b.rating !== a.rating) {
+              return b.rating - a.rating;
+            }
+            // Nếu rating bằng nhau thì sắp xếp theo số lượng đánh giá
+            return b.count - a.count;
+          })
+          .slice(0, 3); // Lấy 3 dịch vụ cao nhất
+        
+        setTopRatedServices(sortedServices);
+      } catch (error) {
+        console.error("Error fetching top rated services:", error);
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+    
+    if (services.length > 0) {
+      fetchTopRatedServices();
+    }
+  }, [services]);
+  
+  // Component hiển thị một đánh giá dịch vụ
+  const ServiceRatingCard = ({ serviceData }: { serviceData: {service: Service, rating: number, count: number, feedbacks: Feedback[]} }) => {
+    const { service, rating, count, feedbacks } = serviceData;
+    const [showFullDescription, setShowFullDescription] = useState(false);
+    
+    return (
+      <div className="bg-white rounded-xl shadow-md border border-sky-100 hover:shadow-lg transition-all duration-300 hover:border-sky-200 overflow-hidden flex flex-col h-full">
+        {/* Phần hình ảnh dịch vụ */}
+        <div className="w-full h-48 overflow-hidden relative">
+          {service.image ? (
+            <img 
+              src={service.image} 
+              alt={service.name} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-sky-50 to-sky-100 flex items-center justify-center">
+              <Sparkles className="w-12 h-12 text-sky-400" />
+            </div>
+          )}
+          <div className="absolute top-0 right-0 bg-sky-500 text-white px-3 py-1 rounded-bl-lg font-medium shadow-md flex items-center gap-1">
+            <Star className="w-4 h-4 fill-white" />
+            <span>{rating.toFixed(1)}</span>
+          </div>
+        </div>
+        
+        {/* Phần nội dung */}
+        <div className="p-6 flex-grow flex flex-col">
+          <div className="mb-4">
+            <h4 className="font-semibold text-gray-800 text-lg mb-2" title={service.name}>
+              {service.name}
+            </h4>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-4 h-4 ${
+                      star <= rating ? 'text-sky-500 fill-sky-500' : 'text-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-gray-500">({count} đánh giá)</span>
+            </div>
+          </div>
+          
+          {/* Phần mô tả dịch vụ */}
+          {service.description && (
+            <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+              <p className={`text-sm text-gray-600 ${showFullDescription ? '' : 'line-clamp-3'}`}>
+                {service.description}
+              </p>
+              {service.description.length > 150 && (
+                <button 
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="text-xs text-sky-600 font-medium mt-1 hover:text-sky-800 flex items-center"
+                >
+                  {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
+                  <ChevronDown className={`w-3 h-3 ml-0.5 transition-transform ${showFullDescription ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </div>
+          )}
+          
+          <div className="flex-grow">
+            {feedbacks.length > 0 ? (
+              <div>
+                <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
+                  <MessageCircle className="w-4 h-4 text-sky-500" />
+                  Đánh giá gần đây
+                </h5>
+                <div className="space-y-4">
+                  {feedbacks.slice(0, 2).map((feedback) => (
+                    <div key={feedback._id} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                      <div className="flex items-center mb-2">
+                        <div className="w-8 h-8 rounded-full bg-sky-50 flex-shrink-0 overflow-hidden border border-sky-100">
+                          {feedback.account_id.photoUrl ? (
+                            <img 
+                              src={feedback.account_id.photoUrl} 
+                              alt={feedback.account_id.fullName || 'Người dùng'} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="w-4 h-4 text-sky-700 mx-auto mt-2" />
+                          )}
+                        </div>
+                        <div className="ml-2">
+                          <div className="font-medium text-xs text-gray-800">
+                            {feedback.account_id.fullName || 'Người dùng'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(feedback.feedback_date).toLocaleDateString('vi-VN')}
+                          </div>
+                        </div>
+                        <div className="ml-auto">
+                          <div className="flex items-center">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-3 h-3 ${
+                                  star <= feedback.rating ? 'text-sky-500 fill-sky-500' : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 text-xs mt-1 line-clamp-2">{feedback.comment}</p>
+                    </div>
+                  ))}
+                </div>
+                
+                {feedbacks.length > 2 && (
+                  <div className="text-center mt-4">
+                    <button className="px-4 py-1.5 text-sm text-sky-600 font-medium hover:text-sky-800 transition-colors flex items-center mx-auto border border-sky-200 rounded-lg hover:bg-sky-50">
+                      Xem thêm
+                      <ChevronDown className="w-3 h-3 ml-1" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center">
+                <MessageCircle className="w-8 h-8 text-gray-300 mb-2" />
+                <p className="text-gray-500 text-sm">Chưa có đánh giá</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="px-6 py-4 bg-gradient-to-r from-sky-50/80 to-blue-50/50 border-t border-sky-100">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              {service.duration || 'Thời gian: 60 phút'}
+            </div>
+            <div className="text-sky-600 font-semibold">
+              {service.price?.toLocaleString('vi-VN')}đ
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  if (loadingServices) {
+    return (
+      <motion.div
+        key="ratings-loading"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8, duration: 0.5 }}
+        className="max-w-7xl w-full mx-auto mt-8 bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-amber-100 shadow-[0_10px_40px_rgba(251,191,36,0.08)]"
+      >
+        <div className="flex items-center mb-8">
+          <Star className="w-6 h-6 text-yellow-500 fill-yellow-500 mr-2" />
+          <h3 className="text-xl font-bold text-gray-800">Dịch vụ được đánh giá cao</h3>
+        </div>
+        <div className="flex justify-center py-8">
+          <div className="w-10 h-10 border-t-2 border-b-2 border-amber-500 rounded-full animate-spin"></div>
+        </div>
+      </motion.div>
+    );
+  }
+  
+  if (topRatedServices.length === 0) {
+    return null;
+  }
+  
+  return (
+    <motion.div
+      key="ratings"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.8, duration: 0.5 }}
+      className="max-w-7xl w-full mx-auto mt-8 bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-amber-100 shadow-[0_10px_40px_rgba(251,191,36,0.08)]"
+    >
+      <div className="mb-8">
+        <div className="flex items-center">
+          <Star className="w-6 h-6 text-yellow-500 fill-yellow-500 mr-2" />
+          <h3 className="text-xl font-bold text-gray-800">Dịch vụ được đánh giá cao</h3>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {topRatedServices.map((serviceData) => (
+          <ServiceRatingCard key={serviceData.service._id} serviceData={serviceData} />
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
 interface Appointment {
   dateBooking: string;
 }
@@ -151,7 +440,6 @@ export default function ServicePage() {
           const appointments = await getAppointmentByUserIdApi(user._id);
           setUserAppointments(appointments);
         }
-
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -440,139 +728,144 @@ export default function ServicePage() {
   return (
     <div className="bg-gradient-to-b from-sky-50 to-[#f0f7fa] min-h-screen flex flex-col">
       <Header />
-      <div className="flex-1 w-full px-4 py-8 flex justify-center items-start">
+      <div className="flex-1 w-full px-4 py-8 flex flex-col justify-center items-center">
         <AnimatePresence mode="wait">
           {showIntro ? (
-            <motion.div 
-              key="intro"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20, transition: { duration: 0.3 } }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="max-w-7xl w-full mx-auto flex flex-col items-center justify-center min-h-[80vh]"
-            >
-              <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-cyan-100 shadow-[0_10px_40px_rgba(14,165,233,0.08)] w-full">
-                <div className="flex flex-col-reverse md:flex-row items-center gap-12">
-                  {/* Content - Left side */}
-                  <div className="w-full md:w-1/2 text-left space-y-8">
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2, duration: 0.5 }}
-                    >
-                      <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 leading-tight">
-                        Dịch vụ tư vấn tâm lý <br/>
-                        <span className="text-cyan-600">chuyên nghiệp</span>
-                      </h1>
-                      <p className="text-xl text-gray-600">
-                        Chúng tôi cung cấp dịch vụ tư vấn tâm lý chuyên nghiệp, giúp bạn giải quyết các vấn đề về tâm lý và cải thiện sức khỏe tinh thần.
-                      </p>
-                    </motion.div>
-
-                    <div className="space-y-6">
-                      <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3, duration: 0.5 }}
-                        className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
+            <>
+              <motion.div 
+                key="intro"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20, transition: { duration: 0.3 } }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="max-w-7xl w-full mx-auto flex flex-col items-center justify-center"
+              >
+                <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-cyan-100 shadow-[0_10px_40px_rgba(14,165,233,0.08)] w-full">
+                  <div className="flex flex-col-reverse md:flex-row items-center gap-12">
+                    {/* Content - Left side */}
+                    <div className="w-full md:w-1/2 text-left space-y-8">
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
                       >
-                        <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
-                          <User className="w-6 h-6 text-cyan-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-lg text-gray-800">Chuyên gia tận tâm</h3>
-                          <p className="text-gray-600">Đội ngũ chuyên gia giàu kinh nghiệm, tận tâm hỗ trợ</p>
-                        </div>
+                        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 leading-tight">
+                          Dịch vụ tư vấn tâm lý <br/>
+                          <span className="text-cyan-600">chuyên nghiệp</span>
+                        </h1>
+                        <p className="text-xl text-gray-600">
+                          Chúng tôi cung cấp dịch vụ tư vấn tâm lý chuyên nghiệp, giúp bạn giải quyết các vấn đề về tâm lý và cải thiện sức khỏe tinh thần.
+                        </p>
                       </motion.div>
 
-                      <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.4, duration: 0.5 }}
-                        className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
-                          <Calendar className="w-6 h-6 text-cyan-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-lg text-gray-800">Linh hoạt thời gian</h3>
-                          <p className="text-gray-600">Đặt lịch linh hoạt theo thời gian phù hợp với bạn</p>
-                        </div>
-                      </motion.div>
+                      <div className="space-y-6">
+                        <motion.div 
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3, duration: 0.5 }}
+                          className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                            <User className="w-6 h-6 text-cyan-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg text-gray-800">Chuyên gia tận tâm</h3>
+                            <p className="text-gray-600">Đội ngũ chuyên gia giàu kinh nghiệm, tận tâm hỗ trợ</p>
+                          </div>
+                        </motion.div>
 
-                      <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5, duration: 0.5 }}
-                        className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
+                        <motion.div 
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4, duration: 0.5 }}
+                          className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                            <Calendar className="w-6 h-6 text-cyan-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg text-gray-800">Linh hoạt thời gian</h3>
+                            <p className="text-gray-600">Đặt lịch linh hoạt theo thời gian phù hợp với bạn</p>
+                          </div>
+                        </motion.div>
+
+                        <motion.div 
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.5, duration: 0.5 }}
+                          className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                            <Banknote className="w-6 h-6 text-cyan-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg text-gray-800">Chi phí hợp lý</h3>
+                            <p className="text-gray-600">Nhiều gói dịch vụ với mức giá phù hợp nhu cầu</p>
+                          </div>
+                        </motion.div>
+                      </div>
+
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(14,165,233,0.4)" }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ delay: 0.6, duration: 0.3 }}
+                        onClick={() => setShowIntro(false)}
+                        className="mt-8 px-10 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-lg rounded-2xl font-semibold shadow-lg transition-all duration-300 w-full md:w-auto"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
-                          <Banknote className="w-6 h-6 text-cyan-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-lg text-gray-800">Chi phí hợp lý</h3>
-                          <p className="text-gray-600">Nhiều gói dịch vụ với mức giá phù hợp nhu cầu</p>
-                        </div>
-                      </motion.div>
+                        Bắt đầu tư vấn ngay
+                      </motion.button>
                     </div>
 
-                    <motion.button
+                    {/* Image - Right side */}
+                    <motion.div 
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(14,165,233,0.4)" }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ delay: 0.6, duration: 0.3 }}
-                      onClick={() => setShowIntro(false)}
-                      className="mt-8 px-10 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-lg rounded-2xl font-semibold shadow-lg transition-all duration-300 w-full md:w-auto"
+                      transition={{ duration: 0.6 }}
+                      className="w-full md:w-1/2 relative"
                     >
-                      Bắt đầu tư vấn ngay
-                    </motion.button>
+                      <div className="relative aspect-[4/3] w-full">
+                        <img 
+                          src={consultingImage} 
+                          alt="Tư vấn tâm lý" 
+                          className="w-full h-full object-cover rounded-3xl shadow-2xl"
+                        />
+                        {/* Decorative elements */}
+                        <motion.div 
+                          animate={{ 
+                            opacity: [0.4, 0.6, 0.4],
+                            scale: [1, 1.1, 1],
+                          }}
+                          transition={{ 
+                            repeat: Infinity,
+                            duration: 4,
+                            ease: "easeInOut"
+                          }}
+                          className="absolute -top-4 -right-4 w-24 h-24 bg-cyan-100 rounded-full opacity-50 blur-2xl"
+                        />
+                        <motion.div 
+                          animate={{ 
+                            opacity: [0.4, 0.7, 0.4],
+                            scale: [1, 1.2, 1],
+                          }}
+                          transition={{ 
+                            repeat: Infinity,
+                            duration: 5,
+                            ease: "easeInOut",
+                            delay: 1
+                          }}
+                          className="absolute -bottom-4 -left-4 w-32 h-32 bg-blue-100 rounded-full opacity-50 blur-2xl"
+                        />
+                      </div>
+                    </motion.div>
                   </div>
-
-                  {/* Image - Right side */}
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.6 }}
-                    className="w-full md:w-1/2 relative"
-                  >
-                    <div className="relative aspect-[4/3] w-full">
-                      <img 
-                        src={consultingImage} 
-                        alt="Tư vấn tâm lý" 
-                        className="w-full h-full object-cover rounded-3xl shadow-2xl"
-                      />
-                      {/* Decorative elements */}
-                      <motion.div 
-                        animate={{ 
-                          opacity: [0.4, 0.6, 0.4],
-                          scale: [1, 1.1, 1],
-                        }}
-                        transition={{ 
-                          repeat: Infinity,
-                          duration: 4,
-                          ease: "easeInOut"
-                        }}
-                        className="absolute -top-4 -right-4 w-24 h-24 bg-cyan-100 rounded-full opacity-50 blur-2xl"
-                      />
-                      <motion.div 
-                        animate={{ 
-                          opacity: [0.4, 0.7, 0.4],
-                          scale: [1, 1.2, 1],
-                        }}
-                        transition={{ 
-                          repeat: Infinity,
-                          duration: 5,
-                          ease: "easeInOut",
-                          delay: 1
-                        }}
-                        className="absolute -bottom-4 -left-4 w-32 h-32 bg-blue-100 rounded-full opacity-50 blur-2xl"
-                      />
-                    </div>
-                  </motion.div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+              
+              {/* Phần đánh giá dịch vụ - tách riêng và sử dụng component mới */}
+              {services.length > 0 && <ServiceRatings services={services} />}
+            </>
           ) : (
             <motion.div 
               key="booking"
@@ -1281,7 +1574,9 @@ export default function ServicePage() {
                           </div>
                           <div className="flex justify-between border-b border-emerald-100 pb-3">
                             <span className="text-gray-600">Thời gian:</span>
-                            <span className="font-medium text-gray-800">{bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time} - ${getEndTime(bill.slot.time)}` : '--'}</span>
+                            <span className="font-medium text-gray-800">
+                              {bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time} - ${getEndTime(bill.slot.time)}` : '--'}
+                            </span>
                           </div>
                           <div className="flex justify-between border-b border-emerald-100 pb-3">
                             <span className="text-gray-600">Khách hàng:</span>

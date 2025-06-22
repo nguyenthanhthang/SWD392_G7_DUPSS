@@ -154,7 +154,7 @@ export const PaymentsTable = () => {
           <div className="p-2 bg-green-100 rounded-lg mb-1 flex items-center justify-center">
             <CheckCircle className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-xs text-gray-600 mb-0.5">Completed</p>
+          <p className="text-xs text-gray-600 mb-0.5">Đã hoàn thành</p>
           <p className="text-xl font-bold text-gray-900">{stats.completed}</p>
         </button>
         <button
@@ -165,7 +165,7 @@ export const PaymentsTable = () => {
           <div className="p-2 bg-yellow-100 rounded-lg mb-1 flex items-center justify-center">
             <Clock className="w-5 h-5 text-yellow-600" />
           </div>
-          <p className="text-xs text-gray-600 mb-0.5">Pending</p>
+          <p className="text-xs text-gray-600 mb-0.5">Đang chờ</p>
           <p className="text-xl font-bold text-gray-900">{stats.pending}</p>
         </button>
         <button
@@ -176,7 +176,7 @@ export const PaymentsTable = () => {
           <div className="p-2 bg-red-100 rounded-lg mb-1 flex items-center justify-center">
             <XCircle className="w-5 h-5 text-red-600" />
           </div>
-          <p className="text-xs text-gray-600 mb-0.5">Failed</p>
+          <p className="text-xs text-gray-600 mb-0.5">Thất bại</p>
           <p className="text-xl font-bold text-gray-900">{stats.failed}</p>
         </button>
         <button
@@ -187,7 +187,7 @@ export const PaymentsTable = () => {
           <div className="p-2 bg-blue-100 rounded-lg mb-1 flex items-center justify-center">
             <RefreshCw className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-xs text-gray-600 mb-0.5">Refunded</p>
+          <p className="text-xs text-gray-600 mb-0.5">Đã hoàn tiền</p>
           <p className="text-xl font-bold text-gray-900">{stats.refunded}</p>
         </button>
       </div>
@@ -201,7 +201,7 @@ export const PaymentsTable = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search by description or payment ID..."
+                placeholder="Tìm theo mô tả hoặc mã thanh toán..."
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -215,11 +215,11 @@ export const PaymentsTable = () => {
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-            <option value="refunded">Refunded</option>
+            <option value="all">Tất cả trạng thái</option>
+            <option value="completed">Đã hoàn thành</option>
+            <option value="pending">Đang chờ</option>
+            <option value="failed">Thất bại</option>
+            <option value="refunded">Đã hoàn tiền</option>
           </select>
 
           {/* Method Filter */}
@@ -228,10 +228,10 @@ export const PaymentsTable = () => {
             value={filterMethod}
             onChange={(e) => setFilterMethod(e.target.value)}
           >
-            <option value="all">All Methods</option>
-            <option value="Credit Card">Credit Card</option>
+            <option value="all">Tất cả phương thức</option>
+            <option value="Credit Card">Thẻ tín dụng</option>
             <option value="PayPal">PayPal</option>
-            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Bank Transfer">Chuyển khoản</option>
           </select>
 
           {/* Period Filter */}
@@ -240,12 +240,12 @@ export const PaymentsTable = () => {
             value={filterPeriod}
             onChange={(e) => setFilterPeriod(e.target.value)}
           >
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="quarter">This Quarter</option>
-            <option value="year">This Year</option>
+            <option value="all">Tất cả thời gian</option>
+            <option value="today">Hôm nay</option>
+            <option value="week">Tuần này</option>
+            <option value="month">Tháng này</option>
+            <option value="quarter">Quý này</option>
+            <option value="year">Năm nay</option>
           </select>
         </div>
       </div>
@@ -255,10 +255,10 @@ export const PaymentsTable = () => {
         <div className="p-3 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">
-              Payment Transactions ({filteredPayments.length})
+              Lịch sử giao dịch ({filteredPayments.length})
             </h2>
             <div className="text-base font-semibold text-gray-900">
-              Total: ${totalAmount.toFixed(2)}
+              Tổng cộng: {totalAmount.toFixed(2)}đ
             </div>
           </div>
         </div>
@@ -267,12 +267,12 @@ export const PaymentsTable = () => {
           <table className="w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Payment</th>
-                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Date</th>
-                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Amount</th>
-                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Method</th>
-                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Actions</th>
+                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Thanh toán</th>
+                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Ngày</th>
+                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Số tiền</th>
+                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Phương thức</th>
+                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Trạng thái</th>
+                <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -290,7 +290,7 @@ export const PaymentsTable = () => {
                       <Calendar className="w-3 h-3 mr-1 text-gray-400" />
                       <div>
                         <div className="font-medium">
-                          {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(payment.date).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                         <div className="text-xs text-gray-500">{payment.time}</div>
                       </div>
@@ -298,14 +298,18 @@ export const PaymentsTable = () => {
                   </td>
                   <td className="py-2 px-2 align-top">
                     <div className="text-base font-semibold text-gray-900">
-                      ${payment.amount.toFixed(2)}
+                      {payment.amount.toFixed(2)}đ
                     </div>
                   </td>
                   <td className="py-2 px-2 align-top">
                     <div className="flex items-center">
                       <span className="text-lg mr-1">{getMethodIcon(payment.method)}</span>
                       <div>
-                        <div className="font-medium text-gray-900 truncate max-w-[80px]">{payment.method}</div>
+                        <div className="font-medium text-gray-900 truncate max-w-[80px]">
+                          {payment.method === 'Credit Card' ? 'Thẻ tín dụng' : 
+                           payment.method === 'Bank Transfer' ? 'Chuyển khoản' : 
+                           payment.method}
+                        </div>
                         <div className="text-xs text-gray-500 truncate max-w-[80px]">{payment.cardLast4}</div>
                       </div>
                     </div>
@@ -314,7 +318,13 @@ export const PaymentsTable = () => {
                     <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(payment.status)}`}
                       style={{minWidth: 70}}>
                       {getStatusIcon(payment.status)}
-                      <span className="ml-1.5 capitalize truncate">{payment.status}</span>
+                      <span className="ml-1.5 capitalize truncate">
+                        {payment.status === 'completed' ? 'Đã hoàn thành' :
+                         payment.status === 'pending' ? 'Đang chờ' :
+                         payment.status === 'failed' ? 'Thất bại' :
+                         payment.status === 'refunded' ? 'Đã hoàn tiền' : 
+                         payment.status}
+                      </span>
                     </div>
                   </td>
                   <td className="py-2 px-2 align-top">
@@ -332,7 +342,7 @@ export const PaymentsTable = () => {
                       )}
                       {payment.refundable && payment.status === 'completed' && (
                         <button className="px-2 py-1 text-xs bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
-                          Refund
+                          Hoàn tiền
                         </button>
                       )}
                     </div>
@@ -347,8 +357,8 @@ export const PaymentsTable = () => {
       {filteredPayments.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
           <CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No payments found</h3>
-          <p className="text-gray-600">Try adjusting your filters or search terms</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy giao dịch nào</h3>
+          <p className="text-gray-600">Hãy thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm</p>
         </div>
       )}
 
@@ -357,7 +367,7 @@ export const PaymentsTable = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold">Payment Details</h3>
+              <h3 className="text-xl font-semibold">Chi tiết thanh toán</h3>
               <button 
                 onClick={() => setSelectedPayment(null)}
                 className="p-2 hover:bg-gray-100 rounded-lg"
@@ -369,32 +379,38 @@ export const PaymentsTable = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Payment ID</label>
+                  <label className="text-sm font-medium text-gray-500">Mã thanh toán</label>
                   <p className="text-gray-900 font-mono">{selectedPayment?.id}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <label className="text-sm font-medium text-gray-500">Trạng thái</label>
                   <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border mt-1 ${getStatusColor(selectedPayment.status)}`}>
                     {getStatusIcon(selectedPayment.status)}
-                    <span className="ml-1 capitalize">{selectedPayment.status}</span>
+                    <span className="ml-1 capitalize">
+                      {selectedPayment.status === 'completed' ? 'Đã hoàn thành' :
+                       selectedPayment.status === 'pending' ? 'Đang chờ' :
+                       selectedPayment.status === 'failed' ? 'Thất bại' :
+                       selectedPayment.status === 'refunded' ? 'Đã hoàn tiền' : 
+                       selectedPayment.status}
+                    </span>
                   </div>
                 </div>
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-500">Description</label>
+                <label className="text-sm font-medium text-gray-500">Mô tả</label>
                 <p className="text-gray-900">{selectedPayment?.description}</p>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Amount</label>
-                  <p className="text-xl font-bold text-gray-900">${selectedPayment?.amount.toFixed(2)}</p>
+                  <label className="text-sm font-medium text-gray-500">Số tiền</label>
+                  <p className="text-xl font-bold text-gray-900">{selectedPayment?.amount.toFixed(2)}đ</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Date</label>
+                  <label className="text-sm font-medium text-gray-500">Ngày</label>
                   <p className="text-gray-900">
-                    {selectedPayment && new Date(selectedPayment.date).toLocaleDateString('en-US', { 
+                    {selectedPayment && new Date(selectedPayment.date).toLocaleDateString('vi-VN', { 
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long', 
@@ -407,12 +423,16 @@ export const PaymentsTable = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Payment Method</label>
-                  <p className="text-gray-900">{selectedPayment?.method}</p>
+                  <label className="text-sm font-medium text-gray-500">Phương thức thanh toán</label>
+                  <p className="text-gray-900">
+                    {selectedPayment?.method === 'Credit Card' ? 'Thẻ tín dụng' : 
+                     selectedPayment?.method === 'Bank Transfer' ? 'Chuyển khoản' : 
+                     selectedPayment?.method}
+                  </p>
                   <p className="text-sm text-gray-500">{selectedPayment?.cardLast4}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Transaction ID</label>
+                  <label className="text-sm font-medium text-gray-500">Mã giao dịch</label>
                   <p className="text-gray-900 font-mono text-sm">{selectedPayment?.transactionId}</p>
                 </div>
               </div>
@@ -420,12 +440,12 @@ export const PaymentsTable = () => {
               <div className="flex space-x-3 pt-4 border-t">
                 {selectedPayment?.invoice && (
                   <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                    Download Invoice
+                    Tải hóa đơn
                   </button>
                 )}
                 {selectedPayment?.refundable && selectedPayment?.status === 'completed' && (
                   <button className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                    Request Refund
+                    Yêu cầu hoàn tiền
                   </button>
                 )}
               </div>
