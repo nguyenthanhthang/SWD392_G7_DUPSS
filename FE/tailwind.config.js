@@ -36,6 +36,14 @@ module.exports = {
         lightprimary: '#EEF2FF', // indigo-50
         lighthover: '#F3F4F6', // gray-100
         darkmuted: '#374151', // gray-700
+        slot: {
+          'available-bg': '#ffffff',
+          'available-hover-bg': '#f3f4f6',
+          'unavailable-bg': '#ffe4e6',
+          'booked-bg': '#ffe4e6',
+          'past-bg': '#e5e7eb',
+          'available-ring': '#22c55e',
+        }
       },
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],
@@ -53,6 +61,20 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Manrope', 'sans-serif'],
+      },
+      keyframes: {
+        fadeIn: {
+          'from': { opacity: 0 },
+          'to': { opacity: 1 },
+        },
+        slideInRight: {
+          'from': { transform: 'translateX(100%)' },
+          'to': { transform: 'translateX(0)' },
+        },
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.5s ease-in-out',
+        slideInRight: 'slideInRight 0.3s ease-out',
       },
     },
   },

@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi } from '../api';
-import { ChevronLeft, ChevronRight, Check, User, Sparkles, Calendar, Banknote } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Sparkles, Calendar, Banknote } from 'lucide-react';
 import { addDays, startOfWeek, isSameWeek } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import Confetti from 'react-confetti';
-import './ServicePage.css'; // Import the CSS file
 import { useAuth } from '../contexts/AuthContext';
 import consultingImage from '../assets/images/consulting-intro.png'; // Import the consulting image
 import { motion, AnimatePresence } from 'framer-motion'; // Import for animations
@@ -89,6 +88,12 @@ interface Bill {
   gender?: string;
 }
 
+interface Appointment {
+  dateBooking: string;
+}
+
+type SlotStatus = 'available' | 'booked' | 'past' | 'no-consultant';
+
 export default function ServicePage() {
   const [showIntro, setShowIntro] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
@@ -108,13 +113,11 @@ export default function ServicePage() {
   });
   
   const [formErrors, setFormErrors] = useState({
-    name: '',
     phone: '',
     reason: '',
   });
   const [timeFilter, setTimeFilter] = useState<'morning' | 'afternoon'>('morning');
   const [showConsultantDrawer, setShowConsultantDrawer] = useState(false);
-  const [pendingSlot, setPendingSlot] = useState<{ day: string; time: string } | null>(null);
   const [pendingConsultant, setPendingConsultant] = useState('');
   const MAX_VISIBLE_CONSULTANTS = 6;
   const [expandConsultants, setExpandConsultants] = useState(false);
@@ -125,7 +128,9 @@ export default function ServicePage() {
   const [bill, setBill] = useState<Bill | null>(null);
   const [showError, setShowError] = useState<string | null>(null);
   const { user } = useAuth();
-  const [userAppointments, setUserAppointments] = useState<any[]>([]);
+  const [userAppointments, setUserAppointments] = useState<Appointment[]>([]);
+  const [weekSchedule, setWeekSchedule] = useState<Record<string, { time: string; availableConsultants: AvailableConsultant[] }[]>>({});
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,6 +160,47 @@ export default function ServicePage() {
   }, [user]);
 
   useEffect(() => {
+    const fetchWeekSchedule = async () => {
+      if (!user?._id) return;
+      setIsLoadingSchedule(true);
+      const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+      const promises = [];
+      const daysToFetch = 7;
+
+      for (let i = 0; i < daysToFetch; i++) {
+        const day = addDays(weekStart, i);
+        const dayStr = formatInTimeZone(day, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+        promises.push(getAvailableConsultantsByDayApi(dayStr));
+      }
+
+      try {
+        const results = await Promise.all(promises);
+        const newWeekSchedule: Record<string, { time: string; availableConsultants: AvailableConsultant[] }[]> = {};
+        
+        results.forEach((dayResult, index) => {
+          const day = addDays(weekStart, index);
+          const dayStr = formatInTimeZone(day, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+          
+          if (dayResult && dayResult.slots) {
+            newWeekSchedule[dayStr] = dayResult.slots;
+          } else {
+            newWeekSchedule[dayStr] = [];
+          }
+        });
+        
+        setWeekSchedule(newWeekSchedule);
+      } catch (error) {
+        console.error("Error fetching week schedule:", error);
+        setShowError('Không thể tải lịch trình tuần. Vui lòng thử lại.');
+      } finally {
+        setIsLoadingSchedule(false);
+      }
+    };
+
+    fetchWeekSchedule();
+  }, [currentWeek, user?._id]);
+
+  useEffect(() => {
     if (currentStep === 3 && user) {
       setForm(prev => ({
         ...prev,
@@ -178,16 +224,6 @@ export default function ServicePage() {
     let error = '';
     
     switch (name) {
-      case 'name':
-        if (!value.trim()) {
-          error = 'Họ và tên không được để trống';
-        } else if (value.trim().length < 2) {
-          error = 'Họ và tên phải có ít nhất 2 ký tự';
-        } else if (!/^[a-zA-ZÀÁÂÃÈÉÊẾÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêếìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/.test(value)) {
-          error = 'Họ và tên chỉ được chứa chữ cái và khoảng trắng';
-        }
-        break;
-        
       case 'phone':
         if (!value.trim()) {
           error = 'Số điện thoại không được để trống';
@@ -215,11 +251,10 @@ export default function ServicePage() {
   };
   
   const validateForm = () => {
-    const nameError = validateField('name', form.name);
-    const phoneError = validateField('phone', form.phone);
+    const phoneError = user?.phoneNumber ? '' : validateField('phone', form.phone);
     const reasonError = validateField('reason', form.reason);
     
-    return !nameError && !phoneError && !reasonError;
+    return !phoneError && !reasonError;
   };
 
   const handleNext = () => {
@@ -315,9 +350,7 @@ export default function ServicePage() {
     }
   };
 
-  const handleOpenConsultantDrawer = async (slotDay: string, slotTime: string) => {
-    // Cập nhật slot đang chọn
-    setPendingSlot({ day: slotDay, time: slotTime });
+  const handleOpenConsultantDrawer = (slotDay: string, slotTime: string) => {
     setSelectedSlot({ day: slotDay, time: slotTime });
     
     const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -325,18 +358,18 @@ export default function ServicePage() {
     const slotDate = addDays(weekStart, dayIdx);
     const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
     
-    try {
-      const res = await getAvailableConsultantsByDayApi(slotDateStr);
-      const slot = res.slots.find((s: { time: string }) => s.time === slotTime);
-      setAvailableConsultants(slot?.availableConsultants || []);
-      
-      // Automatically go to next step after selecting time
-      handleNext();
-    } catch (error) {
-      console.error("Error fetching consultants:", error);
-      setAvailableConsultants([]);
-      setShowError('Không thể tải danh sách chuyên gia. Vui lòng thử lại sau.');
+    const daySchedule = weekSchedule[slotDateStr];
+    if (daySchedule) {
+      const slotInfo = daySchedule.find(s => s.time === slotTime);
+      if (slotInfo) {
+        setAvailableConsultants(slotInfo.availableConsultants || []);
+        handleNext(); // Automatically go to next step
+        return;
+      }
     }
+    
+    setAvailableConsultants([]);
+    setShowError('Không thể tải danh sách chuyên gia. Vui lòng thử lại sau.');
   };
 
   // Helper để lấy ngày yyyy-MM-dd từ slot đang chọn
@@ -356,10 +389,11 @@ export default function ServicePage() {
     return `${String(endHour).padStart(2, '0')}:${minuteStr}`;
   };
 
-  const getSlotStatus = (day: string, time: string): 'available' | 'booked' | 'past' => {
+  const getSlotStatus = (day: string, time: string): SlotStatus => {
     const dayIndex = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(day);
     const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
     const slotDate = addDays(weekStart, dayIndex);
+    const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
 
     // 1. Check if the slot is in the past
     const now = new Date();
@@ -390,7 +424,17 @@ export default function ServicePage() {
       }
     }
 
-    return 'available';
+    // 3. Check for consultant availability from the pre-fetched schedule
+    const daySchedule = weekSchedule[slotDateStr];
+    if (daySchedule) {
+      const slotInfo = daySchedule.find(s => s.time === time);
+      if (slotInfo) {
+        return slotInfo.availableConsultants.length > 0 ? 'available' : 'no-consultant';
+      }
+    }
+    
+    // Default to no-consultant if data isn't loaded yet for this slot
+    return 'no-consultant';
   };
 
   return (
@@ -766,42 +810,73 @@ export default function ServicePage() {
                           })}
                         </div>
                       
-                        <div className="space-y-2">
-                          {(timeFilter === 'morning' ? ['08:00', '09:00', '10:00', '11:00'] : ['13:00', '14:00', '15:00', '16:00', '17:00']).map(slot => {
-                            const displayTime = `${slot}-${getEndTime(slot)}`;
-                            return (
-                              <div key={slot} className="grid grid-cols-8 gap-3 items-center border-t border-gray-100">
-                                {/* Time Label */}
-                                <div className="text-center text-sm font-semibold text-gray-700 py-4">
-                                  {displayTime}
+                        {isLoadingSchedule ? (
+                          <div className="flex justify-center items-center h-48">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {(timeFilter === 'morning' ? ['08:00', '09:00', '10:00', '11:00'] : ['13:00', '14:00', '15:00', '16:00', '17:00']).map(slot => {
+                              const displayTime = `${slot}-${getEndTime(slot)}`;
+                              return (
+                                <div key={slot} className="grid grid-cols-8 gap-3 items-center border-t border-gray-100">
+                                  {/* Time Label */}
+                                  <div className="text-center text-sm font-semibold text-gray-700 py-4">
+                                    {displayTime}
+                                  </div>
+                                  {/* Day Buttons */}
+                                  {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day) => {
+                                    const status = getSlotStatus(day, slot);
+                                    
+                                    const statusClasses: Record<SlotStatus, string> = {
+                                      booked: 'bg-slot-booked-bg cursor-not-allowed',
+                                      past: 'bg-slot-past-bg cursor-not-allowed',
+                                      'no-consultant': 'bg-slot-unavailable-bg cursor-not-allowed',
+                                      available: 'bg-slot-available-bg hover:bg-slot-available-hover-bg border border-gray-300'
+                                    };
+                                    
+                                    const titleText: Record<SlotStatus, string> = {
+                                      booked: 'Bạn đã đặt lịch này',
+                                      past: 'Thời gian đã qua',
+                                      'no-consultant': 'Không có chuyên gia trong khung giờ này',
+                                      available: `Chọn lịch ${displayTime} ${day}`
+                                    };
+
+                                    return (
+                                      <div key={day + slot} className="p-1 h-full">
+                                        <button
+                                          className={`w-full h-12 rounded-xl text-center transition-all duration-200 backdrop-blur-sm
+                                          ${statusClasses[status]}
+                                          ${selectedSlot?.day === day && selectedSlot?.time === slot ? 'ring-2 ring-slot-available-ring ring-offset-1' : ''}
+                                          `}
+                                          onClick={() => handleOpenConsultantDrawer(day, slot)}
+                                          disabled={status !== 'available'}
+                                          title={titleText[status]}
+                                        >
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                                {/* Day Buttons */}
-                                {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day) => {
-                                  const status = getSlotStatus(day, slot);
-                                  return (
-                                    <div key={day + slot} className="p-1 h-full">
-                                      <button
-                                        className={`w-full h-full p-3 rounded-xl text-center transition-all duration-200 text-xs font-medium
-                                        ${selectedSlot?.day === day && selectedSlot?.time === slot
-                                          ? 'bg-blue-600 text-white shadow-lg scale-105'
-                                          : status === 'booked'
-                                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300'
-                                          : status === 'past'
-                                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                          : 'bg-white hover:bg-sky-100 hover:border-sky-300 text-sky-800 border border-sky-200/80 shadow-sm hover:shadow-md'
-                                        }`}
-                                        onClick={() => handleOpenConsultantDrawer(day, slot)}
-                                        disabled={status !== 'available'}
-                                        title={status === 'past' ? 'Thời gian đã qua' : status === 'booked' ? 'Bạn đã đặt lịch này' : `Chọn lịch ${displayTime} ${day}`}
-                                      >
-                                        {status === 'booked' ? 'Đã đặt' : status === 'past' ? 'Đã qua' : 'Trống'}
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Color Legend */}
+                      <div className="flex justify-center items-center flex-wrap gap-x-6 gap-y-2 mt-6 text-sm text-gray-700">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-slot-available-bg border border-gray-300 backdrop-blur-sm"></div>
+                          <span>Còn trống</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-slot-unavailable-bg border border-rose-300 backdrop-blur-sm"></div>
+                          <span>Hết chuyên gia</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-slot-past-bg border border-gray-400 backdrop-blur-sm"></div>
+                          <span>Đã qua</span>
                         </div>
                       </div>
                     
@@ -887,7 +962,12 @@ export default function ServicePage() {
                                         ? 'bg-gradient-to-r from-sky-50 to-indigo-50 border-sky-200 shadow-md' 
                                         : 'bg-white border-gray-100 hover:border-sky-200 hover:shadow-sm'
                                     }`}
-                                    onClick={() => setSelectedConsultant(consultant._id)}
+                                    onClick={() => {
+                                      setPendingConsultant(consultant._id);
+                                      setSelectedConsultant(consultant._id);
+                                      setShowConsultantDrawer(false);
+                                      setExpandConsultants(false);
+                                    }}
                                   >
                                     <div className="flex items-center gap-4">
                                       {consultant.photoUrl ? (
@@ -993,14 +1073,12 @@ export default function ServicePage() {
                         <input
                           type="text"
                           name="name"
-                          required
                           placeholder="Nhập họ và tên"
-                          className={`w-full border ${formErrors.name ? 'border-red-300' : 'border-sky-100'} rounded-lg px-4 py-3 focus:outline-none focus:ring-2 ${formErrors.name ? 'focus:ring-red-500' : 'focus:ring-sky-500'} shadow-sm hover:border-sky-300 text-base`}
+                          className="w-full border border-sky-100 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm hover:border-sky-300 text-base disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                           value={form.name}
                           onChange={handleChange}
-                          onBlur={(e) => validateField('name', e.target.value)}
+                          disabled={!!user?.fullName}
                         />
-                        {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
                       </div>
                       <div>
                         <label className="block text-gray-700 mb-2 text-base font-medium">Số điện thoại</label>
@@ -1009,10 +1087,11 @@ export default function ServicePage() {
                           name="phone"
                           required
                           placeholder="Nhập số điện thoại"
-                          className={`w-full border ${formErrors.phone ? 'border-red-300' : 'border-sky-100'} rounded-lg px-4 py-3 focus:outline-none focus:ring-2 ${formErrors.phone ? 'focus:ring-red-500' : 'focus:ring-sky-500'} shadow-sm hover:border-sky-300 text-base`}
+                          className={`w-full border ${formErrors.phone ? 'border-red-300' : 'border-sky-100'} rounded-lg px-4 py-3 focus:outline-none focus:ring-2 ${formErrors.phone ? 'focus:ring-red-500' : 'focus:ring-sky-500'} shadow-sm hover:border-sky-300 text-base disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed`}
                           value={form.phone}
                           onChange={handleChange}
                           onBlur={(e) => validateField('phone', e.target.value)}
+                          disabled={!!user?.phoneNumber}
                         />
                         {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
                       </div>
@@ -1070,7 +1149,7 @@ export default function ServicePage() {
                         type="button"
                         className="bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white py-3 px-10 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-base"
                         onClick={handleNext}
-                        disabled={!form.name || !form.phone || !form.reason || !!formErrors.name || !!formErrors.phone || !!formErrors.reason}
+                        disabled={!form.phone || !form.reason || !!formErrors.phone || !!formErrors.reason}
                       >
                         Tiếp tục
                       </button>
@@ -1202,23 +1281,23 @@ export default function ServicePage() {
                           </div>
                           <div className="flex justify-between border-b border-emerald-100 pb-3">
                             <span className="text-gray-600">Thời gian:</span>
-                            <span className="font-medium">{bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time} - ${getEndTime(bill.slot.time)}` : '--'}</span>
+                            <span className="font-medium text-gray-800">{bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time} - ${getEndTime(bill.slot.time)}` : '--'}</span>
                           </div>
                           <div className="flex justify-between border-b border-emerald-100 pb-3">
                             <span className="text-gray-600">Khách hàng:</span>
-                            <span className="font-medium">{bill.fullName}</span>
+                            <span className="font-medium text-gray-800">{bill.fullName}</span>
                           </div>
                           <div className="flex justify-between border-b border-emerald-100 pb-3">
                             <span className="text-gray-600">SĐT:</span>
-                            <span className="font-medium">{bill.phone}</span>
+                            <span className="font-medium text-gray-800">{bill.phone}</span>
                           </div>
                           <div className="flex justify-between border-b border-emerald-100 pb-3">
                             <span className="text-gray-600">Giới tính:</span>
-                            <span className="font-medium">{bill.gender === 'male' ? 'Nam' : 'Nữ'}</span>
+                            <span className="font-medium text-gray-800">{bill.gender === 'male' ? 'Nam' : 'Nữ'}</span>
                           </div>
                           <div className="flex justify-between border-b border-emerald-100 pb-3">
                             <span className="text-gray-600">Lý do tư vấn:</span>
-                            <span className="font-medium">{bill.reason}</span>
+                            <span className="font-medium text-gray-800">{bill.reason}</span>
                           </div>
                           <div className="flex justify-between items-center pt-3 text-lg font-bold">
                             <span>Tổng cộng:</span>
@@ -1264,7 +1343,6 @@ export default function ServicePage() {
                   onClick={() => {
                     setPendingConsultant(consultant._id);
                     setSelectedConsultant(consultant._id);
-                    setSelectedSlot(pendingSlot);
                     setShowConsultantDrawer(false);
                     setExpandConsultants(false);
                   }}
