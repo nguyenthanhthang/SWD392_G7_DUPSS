@@ -178,7 +178,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             {/* Logo */}
             <div className="flex items-center justify-center h-16">
               <Link to={baseUrl} className="text-xl font-bold text-sky-600">
-                {user?.role === "admin" ? "DUPSS Admin" : "DUPSS Consultant"}
+                {user?.role === "admin" ? "HopeHub Admin" : "HopeHub Consultant"}
               </Link>
             </div>
             {/* Navigation */}

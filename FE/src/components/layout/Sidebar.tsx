@@ -42,7 +42,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {!isCollapsed && (
             <Link to="/admin" className="text-xl font-bold text-indigo-600">
-              DUPSS Admin
+              HopeHub Admin
             </Link>
           )}
           <button
@@ -101,6 +101,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
         {/* Footer HOPEHUB luôn cố định dưới cùng */}
         <div className="p-4 border-t">
           <div className="text-center text-xs text-gray-400">@2025 HOPEHUB</div>
+          <div className="text-sm font-medium text-[#1c1c1c]">
+            {user?.fullName ?? "User Name"}
+          </div>
+          <div className="text-xs text-gray-500">
+            {user?.role === "admin" ? "HopeHub Admin" : "Consultant"}
+          </div>
         </div>
       </div>
     </div>

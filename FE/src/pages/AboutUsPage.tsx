@@ -47,9 +47,11 @@ const AboutUsPage: React.FC = () => {
         >
           <div className="flex flex-col md:flex-row items-center justify-between mb-16 gap-8">
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-4xl md:text-5xl font-bold text-indigo-900 mb-4">Về Chúng Tôi</h1>
-              <p className="text-lg md:text-2xl text-gray-700 max-w-2xl mx-auto md:mx-0">
-                DUPSS - Nơi kết nối những chuyên gia tư vấn hàng đầu với những người cần được tư vấn
+              <h1 className="text-6xl md:text-8xl font-bold uppercase text-center">
+                About Us
+              </h1>
+              <p className="text-xl md:text-2xl mt-4 text-center max-w-3xl mx-auto">
+                HopeHub - Nơi kết nối những chuyên gia tư vấn hàng đầu với những người cần được tư vấn
               </p>
             </div>
             <div className="flex-1 flex justify-center md:justify-end">
@@ -67,12 +69,14 @@ const AboutUsPage: React.FC = () => {
         >
           <div className="mb-16">
             <h2 className="text-2xl md:text-3xl font-bold text-indigo-900 mb-4">Câu Chuyện Của Chúng Tôi</h2>
-            <p className="text-base md:text-lg text-gray-700 mb-2">
-              DUPSS được thành lập với sứ mệnh mang đến một nền tảng kết nối hiệu quả giữa các chuyên gia tư vấn và những người cần được tư vấn. Chúng tôi tin rằng mỗi người đều xứng đáng được tiếp cận với những lời khuyên chuyên môn chất lượng cao.
-            </p>
-            <p className="text-base md:text-lg text-gray-700">
-              Với đội ngũ chuyên gia giàu kinh nghiệm và hệ thống đặt lịch thông minh, chúng tôi cam kết mang đến trải nghiệm tư vấn tốt nhất cho mọi khách hàng.
-            </p>
+            <div className="mt-4">
+              <p className="text-lg text-gray-700 mb-4">
+                HopeHub được thành lập với sứ mệnh mang đến một nền tảng kết nối hiệu quả giữa các chuyên gia tư vấn và những người cần được tư vấn. Chúng tôi tin rằng mỗi người đều xứng đáng được tiếp cận với những lời khuyên và hỗ trợ chất lượng cao.
+              </p>
+              <p className="text-base md:text-lg text-gray-700">
+                Với đội ngũ chuyên gia giàu kinh nghiệm và hệ thống đặt lịch thông minh, chúng tôi cam kết mang đến trải nghiệm tư vấn tốt nhất cho mọi khách hàng.
+              </p>
+            </div>
           </div>
         </motion.div>
 

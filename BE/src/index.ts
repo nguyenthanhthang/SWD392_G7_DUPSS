@@ -51,7 +51,7 @@ app.use("/api/feedback", feedbackRoutes);
 
 // Route kiểm tra
 app.get("/", (_req, res) => {
-  res.send(" DUPSS backend is running");
+  res.send(" HopeHub backend is running");
 });
 
 // Start server
