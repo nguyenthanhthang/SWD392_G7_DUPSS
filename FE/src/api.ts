@@ -55,13 +55,21 @@ export const registerApi = async (
   username: string,
   email: string,
   password: string,
-  confirmPassword: string
+  confirmPassword: string,
+  fullName: string,
+  phoneNumber?: string,
+  yearOfBirth?: number,
+  gender?: string
 ) => {
   const res = await api.post("/auth/register", {
     username,
     email,
     password,
     confirmPassword,
+    fullName,
+    phoneNumber,
+    yearOfBirth,
+    gender,
   });
   return res.data;
 };
@@ -267,6 +275,8 @@ export const updateAccountApi = async (
     fullName: string; 
     phoneNumber: string;
     photoUrl: string;
+    yearOfBirth: number;
+    gender: 'male' | 'female' | 'other';
   }>
 ) => {
   const res = await api.put(`/accounts/${id}`, data);

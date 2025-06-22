@@ -1,5 +1,4 @@
 import loginImg from '../assets/login2.png';
-import logo from '../assets/logo1.png';
 import { useState } from 'react';
 import { registerApi, sendOtpApi, checkOtpApi, loginApi, getAccountByIdApi } from '../api';
 
@@ -8,6 +7,10 @@ function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [yearOfBirth, setYearOfBirth] = useState<number | ''>('');
+  const [gender, setGender] = useState('male');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -25,6 +28,20 @@ function RegisterPage() {
     if (!value) return 'Vui lòng nhập tên tài khoản';
     if (value.length < 8 || value.length > 30) return 'Tên tài khoản phải có độ dài từ 8 đến 30 ký tự!';
     if (!/^(?:[a-zA-Z0-9_]{8,30})$/.test(value)) return 'Tên tài khoản chỉ được chứa chữ, số, dấu gạch dưới!';
+    return '';
+  };
+  const validateFullName = (value: string) => {
+    if (!value) return 'Vui lòng nhập họ và tên';
+    if (value.length < 8 || value.length > 50) return 'Họ và tên phải có độ dài từ 8 đến 50 ký tự!';
+    if (!/^[a-zA-Z\sÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ]+$/.test(value)) return 'Họ và tên chỉ được chứa chữ cái và khoảng trắng!';
+    return '';
+  };
+  const validatePhoneNumber = (value: string) => {
+    if (value && !/^0\d{9}$/.test(value)) return 'Số điện thoại không hợp lệ!';
+    return '';
+  };
+  const validateYearOfBirth = (value: number | '') => {
+    if (value && (value < 1920 || value > new Date().getFullYear())) return 'Năm sinh không hợp lệ!';
     return '';
   };
   const validateEmail = (value: string) => {
@@ -58,12 +75,28 @@ function RegisterPage() {
     setConfirmPassword(e.target.value);
     setFieldErrors(prev => ({ ...prev, confirmPassword: validateConfirmPassword(e.target.value) }));
   };
+  const handleFullNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFullName(e.target.value);
+    setFieldErrors(prev => ({ ...prev, fullName: validateFullName(e.target.value) }));
+  };
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhoneNumber(e.target.value);
+    setFieldErrors(prev => ({ ...prev, phoneNumber: validatePhoneNumber(e.target.value) }));
+  };
+  const handleYearOfBirthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const year = e.target.value === '' ? '' : Number(e.target.value);
+    setYearOfBirth(year);
+    setFieldErrors(prev => ({ ...prev, yearOfBirth: validateYearOfBirth(year) }));
+  };
+  const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setGender(e.target.value);
+  };
 
   const handleEmailBlur = async () => {
     if (validateEmail(email)) return;
     setLoading(true);
     try {
-      await registerApi('___dummy___', email, '___dummy___', '___dummy___');
+      await registerApi('___dummy___', email, '___dummy___', '___dummy___', 'dummy name');
     } catch (err: unknown) {
       const emailError = getEmailError(err);
       if (emailError) {
@@ -84,13 +117,24 @@ function RegisterPage() {
     const emailErr = validateEmail(email);
     const passwordErr = validatePassword(password);
     const confirmPasswordErr = validateConfirmPassword(confirmPassword);
-    setFieldErrors({ username: usernameErr, email: emailErr, password: passwordErr, confirmPassword: confirmPasswordErr });
-    if (usernameErr || emailErr || passwordErr || confirmPasswordErr) {
+    const fullNameErr = validateFullName(fullName);
+    const phoneNumberErr = validatePhoneNumber(phoneNumber);
+    const yearOfBirthErr = validateYearOfBirth(yearOfBirth);
+    setFieldErrors({ 
+      username: usernameErr, 
+      email: emailErr, 
+      password: passwordErr, 
+      confirmPassword: confirmPasswordErr,
+      fullName: fullNameErr,
+      phoneNumber: phoneNumberErr,
+      yearOfBirth: yearOfBirthErr,
+    });
+    if (usernameErr || emailErr || passwordErr || confirmPasswordErr || fullNameErr || phoneNumberErr || yearOfBirthErr) {
       setLoading(false);
       return;
     }
     try {
-      await registerApi(username, email, password, confirmPassword);
+      await registerApi(username, email, password, confirmPassword, fullName, phoneNumber, yearOfBirth || undefined, gender);
       setShowOtp(true);
     } catch (err: unknown) {
       if (
@@ -169,16 +213,6 @@ function RegisterPage() {
     <div className="min-h-screen flex flex-col lg:flex-row bg-white">
       <div className="flex items-center justify-center w-full h-screen lg:w-1/2 lg:h-screen">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm rounded-xl bg-white/70 backdrop-blur-md p-8">
-          <img
-            alt="HopeHub Logo"
-            src={logo}
-            className="mx-auto h-16 w-auto"
-          />
-          <p className="mt-2 text-center text-sm text-gray-600">
-            <a href="#" className="font-semibold text-white-600">
-              HopeHub - Where Recovery Meets Peace
-            </a>
-          </p>
           <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
             Create your account
           </h2>
@@ -191,7 +225,7 @@ function RegisterPage() {
           {!showOtp ? (
             <>
               <div className="mt-10">
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label htmlFor="username" className="block text-sm font-medium text-gray-900">
                       Username
@@ -306,6 +340,84 @@ function RegisterPage() {
                     {fieldErrors.confirmPassword && (
                       <div className="text-red-500 text-xs mt-1">{fieldErrors.confirmPassword}</div>
                     )}
+                  </div>
+                  <div>
+                    <label htmlFor="fullName" className="block text-sm font-medium text-gray-900">
+                      Họ và tên
+                    </label>
+                    <div className="mt-2 relative">
+                      <input
+                        id="fullName"
+                        name="fullName"
+                        type="text"
+                        required
+                        className={`block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border ${fieldErrors.fullName ? 'border-red-500' : 'border-gray-300'} placeholder:text-gray-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600 sm:text-sm`}
+                        value={fullName}
+                        onChange={handleFullNameChange}
+                        disabled={loading}
+                      />
+                      {fieldErrors.fullName && (
+                        <div className="text-red-500 text-xs mt-1">{fieldErrors.fullName}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-900">
+                      Số điện thoại
+                    </label>
+                    <div className="mt-2 relative">
+                      <input
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        type="tel"
+                        className={`block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border ${fieldErrors.phoneNumber ? 'border-red-500' : 'border-gray-300'} placeholder:text-gray-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600 sm:text-sm`}
+                        value={phoneNumber}
+                        onChange={handlePhoneNumberChange}
+                        disabled={loading}
+                      />
+                      {fieldErrors.phoneNumber && (
+                        <div className="text-red-500 text-xs mt-1">{fieldErrors.phoneNumber}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-end gap-4">
+                    <div className="flex-grow">
+                      <label htmlFor="yearOfBirth" className="block text-sm font-medium text-gray-900">
+                        Năm sinh
+                      </label>
+                      <div className="mt-2 relative">
+                        <input
+                          id="yearOfBirth"
+                          name="yearOfBirth"
+                          type="number"
+                          placeholder="YYYY"
+                          className={`block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border ${fieldErrors.yearOfBirth ? 'border-red-500' : 'border-gray-300'} placeholder:text-gray-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600 sm:text-sm`}
+                          value={yearOfBirth}
+                          onChange={handleYearOfBirthChange}
+                          disabled={loading}
+                        />
+                        {fieldErrors.yearOfBirth && (
+                          <div className="text-red-500 text-xs mt-1">{fieldErrors.yearOfBirth}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <div className="relative">
+                        <select
+                          id="gender"
+                          name="gender"
+                          className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600 sm:text-sm h-full"
+                          style={{ height: '2.4rem' }}
+                          value={gender}
+                          onChange={handleGenderChange}
+                          disabled={loading}
+                        >
+                          <option value="male">Nam</option>
+                          <option value="female">Nữ</option>
+                          <option value="other">Khác</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                   {error && (
                     <div className="text-red-500 text-sm mt-2">{error}</div>

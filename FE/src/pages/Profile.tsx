@@ -18,7 +18,8 @@ interface User {
   fullName?: string;
   phoneNumber?: string;
   role?: "consultant" | "customer";
-  gender?: "nam" | "nữ";
+  gender?: "male" | "female" | "other";
+  yearOfBirth?: number;
   isVerified?: boolean;
   isDisabled?: boolean;
 } 
@@ -115,21 +116,13 @@ export default function Profile() {
     if (!user?._id) return;
     if (!(await validateProfile())) return;
     try {
-      if (editPhoneOnly) {
-        await updateAccountApi(user._id, {
-          phoneNumber: editData.phoneNumber,
-        });
-      } else {
-        await updateAccountApi(user._id, {
-          fullName: editData.fullName,
-          phoneNumber: editData.phoneNumber,
-        });
-      }
+      await updateAccountApi(user._id, {
+        fullName: editData.fullName,
+      });
       const updated = await getAccountByIdApi(user._id);
       setUser(updated);
       setEditData(updated);
       setEditMode(false);
-      setEditPhoneOnly(false);
       showToast('success', 'Cập nhật thành công!');
     } catch {
       showToast('error', 'Cập nhật thất bại!');
@@ -442,34 +435,55 @@ export default function Profile() {
                     
                     {/* General info */}
                     <div className="bg-white rounded-2xl border border-gray-100 p-8">
-                      <div className="font-semibold text-gray-700 mb-6">Thông tin chung</div>
-                      <div>
+                      <div className="font-semibold text-gray-700">Thông tin chung</div>
+                      
+                      <div className="mt-4">
                         <label className="block text-gray-500 text-sm mb-2">Họ và tên</label>
-                        <input
-                          disabled={!editMode || editPhoneOnly}
-                          className={`w-full border border-gray-200 rounded-md px-4 py-2 text-gray-700 ${(!editMode || editPhoneOnly) ? 'bg-gray-50' : 'bg-white'}`}
-                          value={editMode && !editPhoneOnly ? (editData.fullName || '') : user?.fullName || ''}
-                          onChange={e => {
-                            if (editMode && !editPhoneOnly) {
-                              setEditData({ ...editData, fullName: e.target.value });
-                            }
-                          }}
-                          onBlur={e => handleBlurField('fullName', e.target.value)}
-                        />
+                        <div className="flex items-center gap-4">
+                            <input
+                                disabled={!editMode}
+                                className={`flex-grow border border-gray-200 rounded-md px-4 py-2 text-gray-700 ${!editMode ? 'bg-gray-50' : 'bg-white'}`}
+                                value={editMode ? (editData.fullName || '') : user?.fullName || ''}
+                                onChange={e => setEditData({ ...editData, fullName: e.target.value })}
+                            />
+                            <div className="text-gray-500 p-2 whitespace-nowrap">
+                                {user?.yearOfBirth ? `(${user.yearOfBirth})` : ''}
+                            </div>
+                        </div>
                         {fieldError.fullName && <div className="text-red-500 text-xs mt-1">{fieldError.fullName}</div>}
                       </div>
-                      <div className="mt-6">
-                        <button 
-                          className={`px-6 py-2 rounded-lg font-medium ${editMode ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}
-                          onClick={editMode ? handleUpdate : undefined}
-                          disabled={!editMode}
-                        >
-                          Cập nhật
-                        </button>
-                        {!editMode && (
-                          <button onClick={() => { handleEdit(); setEditPhoneOnly(false); }} className="ml-4 text-blue-600 text-sm font-medium">
-                            Chỉnh sửa
-                          </button>
+
+                      <div className="mt-6 flex items-center gap-4">
+                        {editMode ? (
+                          <>
+                            <button
+                                className="px-6 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700"
+                                onClick={handleUpdate}
+                            >
+                                Lưu thay đổi
+                            </button>
+                            <button 
+                                onClick={() => { setEditMode(false); setEditData({ ...user }); }}
+                                className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                            >
+                                Hủy
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                                className="px-6 py-2 rounded-lg font-medium bg-gray-200 text-gray-500"
+                                disabled
+                            >
+                                Cập nhật
+                            </button>
+                            <button
+                                onClick={() => { handleEdit(); setEditPhoneOnly(false); }}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                                Chỉnh sửa
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>

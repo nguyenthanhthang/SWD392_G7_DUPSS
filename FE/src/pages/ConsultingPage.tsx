@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { getAllConsultantsApi, getAllSlotTimeApi } from '../api';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FaUserTie, FaEnvelope, FaCalendarAlt, FaSearch, FaUserMd, FaRegCalendarAlt, FaMoneyBillWave } from 'react-icons/fa';
 import consultantImg from '../assets/images/consultant.png';
@@ -46,6 +46,15 @@ function ConsultingPage() {
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState('');
+
+  const handleBookAppointment = (consultantId: string) => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      navigate('/login');
+    } else {
+      navigate(`/consultant/${consultantId}`);
+    }
+  };
 
   // Page transition variants
   const pageVariants = {
@@ -398,7 +407,7 @@ function ConsultingPage() {
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.98 }}
                     className="mt-6 px-8 py-3 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
-                    onClick={() => navigate(`/consultant/${consultant._id}`)}
+                    onClick={() => handleBookAppointment(consultant._id)}
                   >
                     <FaCalendarAlt className="inline-block text-white text-lg mb-0.5" />
                     Đặt lịch
@@ -479,7 +488,7 @@ function ConsultingPage() {
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.98 }}
                       className="mt-6 px-7 py-2.5 rounded-full bg-[#283593] text-white font-semibold shadow hover:bg-[#3a4bb3] transition text-base tracking-wide flex items-center gap-2"
-                      onClick={() => navigate(`/consultant/${consultant._id}`)}
+                      onClick={() => handleBookAppointment(consultant._id)}
                     >
                       <FaCalendarAlt className="inline-block text-white text-lg mb-0.5" />
                       Đặt lịch

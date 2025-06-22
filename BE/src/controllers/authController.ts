@@ -8,12 +8,14 @@ import { sendVerificationEmail, sendResetPasswordEmail } from "../services/email
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, email, password, confirmPassword } = req.body;
+    const { username, email, password, confirmPassword, fullName, phoneNumber, yearOfBirth, gender } = req.body;
 
-    const formatUsername = username.trim().toLowerCase();
-    const formatEmail = email.trim().toLowerCase();
-    const formatPassword = password.trim();
-    const formatConfirmPassword = confirmPassword.trim();
+    const formatUsername = username ? username.trim().toLowerCase() : "";
+    const formatEmail = email ? email.trim().toLowerCase() : "";
+    const formatPassword = password ? password.trim() : "";
+    const formatConfirmPassword = confirmPassword ? confirmPassword.trim() : "";
+    const formatFullName = fullName ? fullName.trim() : "";
+    const formatPhoneNumber = phoneNumber ? phoneNumber.trim() : undefined;
 
     const errors: any = {};
 
@@ -21,9 +23,21 @@ export const register = async (req: Request, res: Response) => {
       !formatUsername ||
       !formatEmail ||
       !formatPassword ||
-      !formatConfirmPassword
+      !formatConfirmPassword ||
+      !formatFullName
     ) {
-      errors.message = "Vui lòng điền đầy đủ các trường!";
+      errors.message = "Vui lòng điền đầy đủ các trường bắt buộc (username, email, password, họ và tên)!";
+      throw new ValidationError(errors);
+    }
+    
+    // Check FullName
+    if (formatFullName.length < 8 || formatFullName.length > 50) {
+      errors.fullName = "Họ và tên phải có độ dài từ 8 đến 50 ký tự!";
+      throw new ValidationError(errors);
+    }
+    // Updated regex to support Vietnamese characters
+    if (!/^[a-zA-Z\sÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ]+$/.test(formatFullName)) {
+      errors.fullName = "Họ và tên chỉ được chứa chữ cái và khoảng trắng!";
       throw new ValidationError(errors);
     }
 
@@ -45,8 +59,13 @@ export const register = async (req: Request, res: Response) => {
       throw new ValidationError(errors);
     }
 
+    const orConditions: any[] = [{ username: formatUsername }, { email: formatEmail }];
+    if (formatPhoneNumber) {
+        orConditions.push({ phoneNumber: formatPhoneNumber });
+    }
+
     const existingUser = await Account.findOne({
-      $or: [{ username: formatUsername }, { email: formatEmail }],
+      $or: orConditions,
     });
 
     if (existingUser) {
@@ -56,7 +75,16 @@ export const register = async (req: Request, res: Response) => {
       if (existingUser.email === formatEmail) {
         errors.email = "Email này đã được sử dụng!";
       }
+      if (formatPhoneNumber && existingUser.phoneNumber === formatPhoneNumber) {
+        errors.phoneNumber = "Số điện thoại này đã được sử dụng!";
+      }
       throw new ValidationError(errors);
+    }
+    
+    // Check phoneNumber format (if provided)
+    if (formatPhoneNumber && !/^0\d{9}$/.test(formatPhoneNumber)) {
+        errors.phoneNumber = "Số điện thoại không hợp lệ (phải đủ 10 số, bắt đầu bằng 0)!";
+        throw new ValidationError(errors);
     }
 
     // Check password strength
@@ -74,6 +102,14 @@ export const register = async (req: Request, res: Response) => {
       errors.confirmPassword = "Mật khẩu xác nhận không khớp!";
       throw new ValidationError(errors);
     }
+    
+    // Check yearOfBirth (if provided)
+    if (yearOfBirth) {
+        if (typeof yearOfBirth !== 'number' || yearOfBirth < 1920 || yearOfBirth > new Date().getFullYear()) {
+            errors.yearOfBirth = "Năm sinh không hợp lệ!";
+            throw new ValidationError(errors);
+        }
+    }
 
     // Create new user
     const salt = await bcrypt.genSalt(10);
@@ -86,6 +122,10 @@ export const register = async (req: Request, res: Response) => {
       username: formatUsername,
       email: formatEmail,
       password: hashedPass,
+      fullName: formatFullName,
+      phoneNumber: formatPhoneNumber,
+      yearOfBirth,
+      gender,
       verificationToken,
       verificationTokenExpiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
@@ -110,6 +150,10 @@ export const register = async (req: Request, res: Response) => {
         id: newUser._id,
         username: newUser.username,
         email: newUser.email,
+        fullName: newUser.fullName,
+        phoneNumber: newUser.phoneNumber,
+        yearOfBirth: newUser.yearOfBirth,
+        gender: newUser.gender,
         role: newUser.role,
         isVerified: false,
         token,
@@ -121,6 +165,7 @@ export const register = async (req: Request, res: Response) => {
     if (error instanceof ValidationError) {
       return res.status(400).json(error.errors);
     }
+    console.error("Register Error:", error);
     res.status(500).json({ message: "Đã xảy ra lỗi server" });
   }
 };

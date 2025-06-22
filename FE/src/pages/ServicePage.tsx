@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi } from '../api';
@@ -384,6 +385,7 @@ interface Appointment {
 type SlotStatus = 'available' | 'booked' | 'past' | 'no-consultant';
 
 export default function ServicePage() {
+  const navigate = useNavigate();
   const [showIntro, setShowIntro] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedConsultant, setSelectedConsultant] = useState('');
@@ -420,6 +422,14 @@ export default function ServicePage() {
   const [userAppointments, setUserAppointments] = useState<Appointment[]>([]);
   const [weekSchedule, setWeekSchedule] = useState<Record<string, { time: string; availableConsultants: AvailableConsultant[] }[]>>({});
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
+
+  const handleStartConsulting = () => {
+    if (!user) {
+      navigate('/login');
+    } else {
+      setShowIntro(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -811,7 +821,7 @@ export default function ServicePage() {
                         whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(14,165,233,0.4)" }}
                         whileTap={{ scale: 0.95 }}
                         transition={{ delay: 0.6, duration: 0.3 }}
-                        onClick={() => setShowIntro(false)}
+                        onClick={handleStartConsulting}
                         className="mt-8 px-10 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-lg rounded-2xl font-semibold shadow-lg transition-all duration-300 w-full md:w-auto"
                       >
                         Bắt đầu tư vấn ngay
