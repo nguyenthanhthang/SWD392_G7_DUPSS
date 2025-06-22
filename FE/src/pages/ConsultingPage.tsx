@@ -125,7 +125,7 @@ function ConsultingPage() {
           {/* Column 1: Text */}
           <div className="w-full md:w-1/2">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
-              Đội ngũ chuyên gia tư vấn
+              <span className="whitespace-nowrap">Đội ngũ chuyên gia tư vấn</span>
               <span className="block text-sky-500 mt-2">tâm lý chuyên nghiệp</span>
             </h1>
             
