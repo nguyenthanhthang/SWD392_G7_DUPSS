@@ -8,15 +8,20 @@ import moment from 'moment';
 
 dotenv.config();
 
+// Interface cho response từ worldtimeapi
+interface WorldTimeResponse {
+    datetime: string;
+    [key: string]: any;
+}
+
 /**
- * Fetches the current time from a reliable network time API to avoid issues with incorrect system clocks.
- * Falls back to the local system time if the API call fails.
- * @returns {Promise<Date>} A promise that resolves to the current Date.
+ * Gets network time from worldtimeapi.org
+ * This is crucial for VNPay integration as it requires accurate time
  */
 async function getNetworkTime(): Promise<Date> {
     try {
         // This API provides accurate time for the specified timezone
-        const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Ho_Chi_Minh', {
+        const response = await axios.get<WorldTimeResponse>('http://worldtimeapi.org/api/timezone/Asia/Ho_Chi_Minh', {
             timeout: 5000 // 5 second timeout
         });
         return new Date(response.data.datetime);

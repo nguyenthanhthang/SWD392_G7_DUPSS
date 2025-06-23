@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { createReport, getReportByConsultantId, getReportByAccountId, getReportByAppointmentId, getReportById, updateReport } from "../controllers/reportController";
+const router = Router();
+router.post("/", createReport);
+router.get("/appointment/:id", getReportByAppointmentId);
+router.get("/account/:id", getReportByAccountId);
+router.get("/consultant/:id", getReportByConsultantId);
+router.get("/:id", getReportById);
+router.put("/:id", updateReport);
+export default router;
