@@ -599,4 +599,15 @@ export const updateFeedbackStatusApi = async (id: string, status: 'approved' | '
   return res.data;
 };
 
+// ===== PAYMENT APIs =====
+export const createMomoPaymentApi = async (data: { amount: number; orderInfo: string; }) => {
+  const res = await api.post('/payment/momo/create-payment', data);
+  return res.data;
+};
+
+export const createVnpayPaymentApi = async (data: { amount: number; orderInfo: string; orderId: string; }) => {
+  const res = await api.post('/payment/vnpay/create-payment', data);
+  return res.data;
+};
+
 export default api;

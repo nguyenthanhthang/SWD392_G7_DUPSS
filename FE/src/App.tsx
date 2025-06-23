@@ -32,6 +32,7 @@ import ScheduleManagement from "./pages/consultant/ScheduleManagement";
 import ReportsAndUpdates from "./pages/consultant/Reports&Updates";
 import ConsultantProfile from "./pages/consultant/ConsultantProfile";
 import ReportsDetails from "./pages/consultant/ReportsDetails";
+import PaymentResultPage from "./pages/PaymentResultPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -127,6 +128,14 @@ function AppContent() {
           element={
             <PrivateRoute>
               <PaymentHistory />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/payment/result"
+          element={
+            <PrivateRoute>
+              <PaymentResultPage />
             </PrivateRoute>
           }
         />

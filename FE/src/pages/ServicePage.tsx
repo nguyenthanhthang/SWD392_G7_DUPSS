@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi } from '../api';
+import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, createMomoPaymentApi, createVnpayPaymentApi } from '../api';
 import { ChevronLeft, ChevronRight, User, Sparkles, Calendar, Banknote, Star, MessageCircle, ChevronDown } from 'lucide-react';
-import { addDays, startOfWeek, isSameWeek, format } from 'date-fns';
+import { addDays, startOfWeek, isSameWeek } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import Confetti from 'react-confetti';
 import { useAuth } from '../contexts/AuthContext';
@@ -104,7 +104,7 @@ interface Feedback {
 }
 
 // Component hiển thị đánh giá sao
-const RatingStars = ({ rating }: { rating: number }) => {
+/* const RatingStars = ({ rating }: { rating: number }) => {
   return (
     <div className="flex items-center">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -117,7 +117,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
       ))}
     </div>
   );
-};
+}; */
 
 // Component đánh giá dịch vụ tách riêng
 const ServiceRatings = ({ services }: { services: Service[] }) => {
@@ -399,7 +399,7 @@ export default function ServicePage() {
     gender: 'male',
     reason: '',
     serviceId: '',
-    paymentMethod: 'card',
+    paymentMethod: 'momo',
     note: '',
   });
   
@@ -605,48 +605,128 @@ export default function ServicePage() {
       setShowError('Thiếu thông tin đặt lịch!');
       return;
     }
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-    const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
-    const slotDate = addDays(weekStart, dayIdx);
-    const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-    const slotHour = selectedSlot.time;
-    const slotTimeObj = allSlotTimes.find(st => {
-      if (st.status !== 'available') return false;
-      const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-      const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
-      return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
-    });
-    if (!slotTimeObj) {
-      setShowError('Không tìm thấy slot time phù hợp!');
-      return;
-    }
+
     try {
-      const payload = {
-        slotTime_id: slotTimeObj._id,
-        user_id: user._id,
-        consultant_id: selectedConsultant,
-        service_id: form.serviceId,
-        dateBooking: slotTimeObj.start_time,
-        reason: form.reason,
-        note: form.note,
-      };
-      await createAppointmentApi(payload);
-      setBill({
-        ...payload,
-        service: services.find(s => s._id === form.serviceId),
-        consultant: consultants.find(c => c._id === selectedConsultant),
-        slot: selectedSlot,
-        dateStr: getSelectedSlotDateStr(),
-        price: services.find(s => s._id === form.serviceId)?.price,
-        fullName: form.name,
-        phone: form.phone,
-        gender: form.gender,
-      });
-      setCurrentStep(5); // Hiển thị bill
-    } catch {
-      setShowError('Đặt lịch thất bại! Vui lòng thử lại hoặc liên hệ hỗ trợ.');
+        const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+        const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
+        const slotDate = addDays(weekStart, dayIdx);
+        const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+        const slotHour = selectedSlot.time;
+        const slotTimeObj = allSlotTimes.find(st => {
+          if (st.status !== 'available') return false;
+          const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+          const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+          return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
+        });
+
+        if (!slotTimeObj) {
+          setShowError('Không tìm thấy slot time phù hợp!');
+          return;
+        }
+
+        const payload = {
+          slotTime_id: slotTimeObj._id,
+          user_id: user._id,
+          consultant_id: selectedConsultant,
+          service_id: form.serviceId,
+          dateBooking: slotTimeObj.start_time,
+          reason: form.reason,
+          note: form.note,
+        };
+
+        const service = services.find(s => s._id === form.serviceId);
+        if (!service || !service.price) {
+          setShowError('Dịch vụ không hợp lệ hoặc không có giá!');
+          return;
+        }
+
+        // Luôn tạo lịch hẹn trước
+        const newAppointment = await createAppointmentApi(payload);
+        console.log("=== [FE] Created appointment ===", newAppointment);
+
+        const billData = {
+          ...payload,
+          service: service,
+          consultant: consultants.find(c => c._id === selectedConsultant),
+          slot: selectedSlot,
+          dateStr: getSelectedSlotDateStr(),
+          price: service.price,
+          fullName: form.name,
+          phone: form.phone,
+          gender: form.gender,
+        };
+
+        localStorage.setItem('pendingBill', JSON.stringify(billData));
+
+        // Xử lý thanh toán dựa trên phương thức được chọn
+        if (form.paymentMethod === 'momo') {
+          const paymentData = {
+            amount: service.price,
+            orderInfo: `Thanh toán cho lịch hẹn ${newAppointment._id}`,
+          };
+
+          try {
+            const momoResponse = await createMomoPaymentApi(paymentData);
+            console.log("=== [FE] MoMo payment response ===", momoResponse);
+            
+            if (momoResponse && momoResponse.payUrl) {
+              window.location.href = momoResponse.payUrl;
+            } else {
+              setShowError('Không thể tạo thanh toán MoMo. Vui lòng thử lại.');
+              localStorage.removeItem('pendingBill');
+            }
+          } catch (err) {
+            console.error("=== [FE] Error creating MoMo payment ===", err);
+            setShowError('Có lỗi xảy ra khi kết nối với MoMo. Vui lòng thử lại.');
+            localStorage.removeItem('pendingBill');
+          }
+        } else if (form.paymentMethod === 'vnpay') {
+          const paymentData = {
+            amount: service.price,
+            orderInfo: `Thanh toán cho lịch hẹn ${newAppointment._id}`,
+            orderId: newAppointment._id,
+          };
+
+          console.log("=== [FE] VNPay PaymentData to be sent to BE ===", paymentData);
+
+          try {
+            const vnpayResponse = await createVnpayPaymentApi(paymentData);
+            console.log("=== [FE] VNPay Response from BE ===", vnpayResponse);
+
+            if (vnpayResponse && vnpayResponse.payUrl) {
+              console.log("=== [FE] Redirecting to VNPay URL:", vnpayResponse.payUrl);
+              window.location.href = vnpayResponse.payUrl;
+            } else {
+              console.error("=== [FE] VNPay response from BE is invalid ===", vnpayResponse);
+              setShowError('Không thể tạo thanh toán VNPay. Phản hồi không hợp lệ.');
+              localStorage.removeItem('pendingBill');
+            }
+          } catch (err) {
+            const error = err as { response?: { data: { message?: string }, status: number }, request?: unknown, message?: string };
+            console.error('=== [FE] Error calling createVnpayPaymentApi ===', error);
+            if (error.response) {
+                console.error('[FE] Error Response Data:', error.response.data);
+                console.error('[FE] Error Response Status:', error.response.status);
+                setShowError(`Lỗi từ máy chủ: ${error.response.data.message || 'Vui lòng thử lại'}`);
+            } else if (error.request) {
+                console.error('[FE] Error Request:', error.request);
+                setShowError('Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối mạng.');
+            } else {
+                console.error('[FE] Error Message:', error.message);
+                setShowError('Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại.');
+            }
+            localStorage.removeItem('pendingBill');
+          }
+        } else {
+          // Thanh toán tại quầy
+          setBill(billData);
+          setCurrentStep(5);
+        }
+    } catch (error) {
+        console.error("=== [FE] Error creating appointment ===", error);
+        setShowError('Đặt lịch thất bại! Vui lòng thử lại hoặc liên hệ hỗ trợ.');
     }
-  };
+};
 
   const handleOpenConsultantDrawer = (slotDay: string, slotTime: string) => {
     setSelectedSlot({ day: slotDay, time: slotTime });
@@ -1514,20 +1594,33 @@ export default function ServicePage() {
                               value="card"
                               checked={form.paymentMethod === 'card'}
                               onChange={handleChange}
-                              className="mr-3 w-5 h-5 text-sky-600"
+                              className="mr-3 w-5 h-5 text-sky-600 focus:ring-sky-500"
                             />
-                            <span>Thẻ tín dụng / Ghi nợ <span className="text-gray-500">(Visa, Mastercard, JCB)</span></span>
+                            <span>Thanh toán tại quầy</span>
                           </label>
-                          <label className="flex items-center p-4 border border-sky-100 rounded-xl cursor-pointer hover:bg-sky-50/30 transition-all text-base hover:border-sky-300">
+                          <label className={`flex items-center p-4 border rounded-xl cursor-pointer hover:bg-fuchsia-50/30 transition-all text-base hover:border-fuchsia-300 ${form.paymentMethod === 'momo' ? 'border-fuchsia-300' : 'border-sky-100'}`}>
                             <input
                               type="radio"
                               name="paymentMethod"
-                              value="transfer"
-                              checked={form.paymentMethod === 'transfer'}
+                              value="momo"
+                              checked={form.paymentMethod === 'momo'}
                               onChange={handleChange}
-                              className="mr-3 w-5 h-5 text-sky-600"
+                              className="mr-3 w-5 h-5 text-fuchsia-600 focus:ring-fuchsia-500"
                             />
-                            <span>Chuyển khoản ngân hàng <span className="text-gray-500">(trực tiếp)</span></span>
+                            <img src="https://developers.momo.vn/v3/assets/images/logo-e54a548.svg" alt="Ví MoMo" className="w-6 h-6 mr-2" />
+                            <span>Ví điện tử MoMo</span>
+                          </label>
+                          <label className={`flex items-center p-4 border rounded-xl cursor-pointer hover:bg-blue-50/30 transition-all text-base hover:border-blue-300 ${form.paymentMethod === 'vnpay' ? 'border-blue-400' : 'border-sky-100'}`}>
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value="vnpay"
+                              checked={form.paymentMethod === 'vnpay'}
+                              onChange={handleChange}
+                              className="mr-3 w-5 h-5 text-blue-600 focus:ring-blue-500"
+                            />
+                            <img src="https://vnpay.vn/assets/images/logo-icon.svg" alt="VNPay" className="w-7 h-7 mr-2" />
+                            <span>VNPay (ATM/QR/Thẻ nội địa)</span>
                           </label>
                         </div>
                       </div>
@@ -1544,7 +1637,7 @@ export default function ServicePage() {
                         type="submit"
                         className="bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white py-3 px-10 rounded-xl font-semibold transition-colors shadow-md text-base"
                       >
-                        Xác nhận đặt lịch
+                        Xác nhận & Thanh toán
                       </button>
                     </div>
                     <p className="text-sm text-gray-500 mt-2 text-center">
