@@ -236,12 +236,12 @@ function ConsultingPage() {
               <motion.div 
                 variants={itemVariants}
                 whileHover={{ x: 5 }}
-                className="flex items-start gap-4"
+                className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
               >
                 <motion.div 
                   variants={featureIconVariants}
                   whileHover="hover"
-                  className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0"
+                  className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0"
                 >
                   <FaUserMd className="text-sky-600 text-xl" />
                 </motion.div>
@@ -254,12 +254,12 @@ function ConsultingPage() {
               <motion.div 
                 variants={itemVariants}
                 whileHover={{ x: 5 }}
-                className="flex items-start gap-4"
+                className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
               >
                 <motion.div 
                   variants={featureIconVariants}
                   whileHover="hover"
-                  className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0"
+                  className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0"
                 >
                   <FaRegCalendarAlt className="text-sky-600 text-xl" />
                 </motion.div>
@@ -272,12 +272,12 @@ function ConsultingPage() {
               <motion.div 
                 variants={itemVariants}
                 whileHover={{ x: 5 }}
-                className="flex items-start gap-4"
+                className="flex items-center gap-4 bg-white/80 p-4 rounded-2xl shadow-sm"
               >
                 <motion.div 
                   variants={featureIconVariants}
                   whileHover="hover"
-                  className="bg-sky-100 p-3 rounded-full mt-1 flex-shrink-0"
+                  className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0"
                 >
                   <FaMoneyBillWave className="text-sky-600 text-xl" />
                 </motion.div>
