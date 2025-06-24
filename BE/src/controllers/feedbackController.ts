@@ -148,3 +148,15 @@ export const getFeedbacksByAccountId = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Lỗi khi lấy feedback theo người dùng", error });
     }
 };
+
+export const getFeedbacksByAppointmentId = async (req: Request, res: Response) => {
+    try {
+        const feedbacks = await Feedback.find({ appointment_id: req.params.appointmentId })
+            .populate("account_id", "fullName email photoUrl")
+            .sort({ feedback_date: -1 }); // Sắp xếp theo thời gian mới nhất
+            
+        res.status(200).json(feedbacks);
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi khi lấy feedback theo appointment", error });
+    }
+};

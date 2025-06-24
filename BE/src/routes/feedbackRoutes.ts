@@ -5,6 +5,7 @@ import {
   getAllFeedbacks,
   getFeedbacksByServiceId,
   getFeedbacksByAccountId,
+  getFeedbacksByAppointmentId,
   updateFeedbackStatus
 } from "../controllers/feedbackController";
 
@@ -27,5 +28,8 @@ router.get("/service/:serviceId", getFeedbacksByServiceId);
 
 // Lấy feedback theo account
 router.get("/account/:accountId", getFeedbacksByAccountId);
+
+// Lấy feedback theo appointment
+router.get("/appointment/:appointmentId", getFeedbacksByAppointmentId);
 
 export default router;
