@@ -62,7 +62,7 @@ export default function EventsPage() {
     { id: "upcoming", name: "Sắp diễn ra", icon: "🎓" },
     { id: "ongoing", name: "Đang diễn ra", icon: "🎤" },
     { id: "completed", name: "Đã kết thúc", icon: "📚" },
-    { id: "my_cancelled", name: "Đã hủy đăng ký", icon: "🚫" },
+    
   ];
 
   useEffect(() => {
@@ -167,6 +167,15 @@ export default function EventsPage() {
     }
   };
 
+  useEffect(() => {
+    const cancelled = localStorage.getItem('cancelledEvents');
+    if (cancelled) {
+      setCancelledEvents(JSON.parse(cancelled));
+    } else {
+      setCancelledEvents([]);
+    }
+  }, [user]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-[#f6f8fb]">
@@ -190,120 +199,6 @@ export default function EventsPage() {
       </div>
     );
   }
-
-  const RegisteredEventsModal = () => {
-    if (!showRegisteredModal) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">
-              Sự kiện đã đăng ký
-            </h2>
-            <button
-              onClick={() => setShowRegisteredModal(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Registered Events */}
-          {registeredEvents.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Đã đăng ký</h3>
-              <div className="space-y-4">
-                {registeredEvents.map((event) => (
-                  <div
-                    key={event._id}
-                    className="bg-green-50 border border-green-200 rounded-xl p-4 hover:bg-green-100 transition-colors"
-                  >
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                      {event.title}
-                    </h3>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>
-                        <span className="font-medium">Thời gian:</span>{" "}
-                        {format(new Date(event.startDate), "dd/MM/yyyy HH:mm")}
-                      </p>
-                      <p>
-                        <span className="font-medium">Địa điểm:</span>{" "}
-                        {event.location}
-                      </p>
-                      <p>
-                        <span className="font-medium">Trạng thái:</span>{" "}
-                        <span className="text-green-600">Đã đăng ký</span>
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between mt-4">
-                      <button
-                        onClick={() => handleUnregister(event._id)}
-                        className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors text-sm font-medium"
-                      >
-                        Hủy đăng ký
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Cancelled Events */}
-          {cancelledEvents.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Đã hủy đăng ký</h3>
-              <div className="space-y-4">
-                {cancelledEvents.map((event) => (
-                  <div
-                    key={event._id}
-                    className="bg-red-50 border border-red-200 rounded-xl p-4"
-                  >
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                      {event.title}
-                    </h3>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>
-                        <span className="font-medium">Thời gian:</span>{" "}
-                        {format(new Date(event.startDate), "dd/MM/yyyy HH:mm")}
-                      </p>
-                      <p>
-                        <span className="font-medium">Địa điểm:</span>{" "}
-                        {event.location}
-                      </p>
-                      <p>
-                        <span className="font-medium">Trạng thái:</span>{" "}
-                        <span className="text-red-600">Đã hủy đăng ký</span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {registeredEvents.length === 0 && cancelledEvents.length === 0 && (
-            <p className="text-gray-500 text-center py-4">
-              Bạn chưa đăng ký sự kiện nào
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   const RegistrationConfirmationModal = () => {
     if (!showConfirmationModal || !registrationConfirmation) return null;
@@ -500,15 +395,7 @@ export default function EventsPage() {
                   </button>
                 ))}
               </div>
-              {user && (
-                <button
-                  onClick={() => setShowRegisteredModal(true)}
-                  className="px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap"
-                >
-                  <span className="mr-2">📋</span>
-                  Sự kiện đã đăng ký
-                </button>
-              )}
+              
             </div>
           </div>
         </div>
@@ -521,7 +408,7 @@ export default function EventsPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col h-full min-h-[420px]"
             >
               <div className="relative h-48">
                 <img
@@ -542,11 +429,11 @@ export default function EventsPage() {
                     : "Đã hủy"}
                 </div>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex flex-col flex-1">
                 <h3 className="text-xl font-bold text-gray-800 mb-2">
                   {event.title}
                 </h3>
-                <p className="text-gray-600 mb-4 line-clamp-2">
+                <p className="text-gray-600 mb-4 line-clamp-2 min-h-[48px]">
                   {event.description}
                 </p>
                 <div className="flex items-center text-gray-500 mb-4">
@@ -587,10 +474,10 @@ export default function EventsPage() {
                   </svg>
                   {event.location}
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex-1"></div>
+                <div className="flex items-end justify-between mt-6">
                   <div className="text-sm text-gray-500">
-                    {event.registeredUsers.length}/{event.capacity} người tham
-                    gia
+                    {event.registeredUsers.length}/{event.capacity} người tham gia
                   </div>
                   <button
                     onClick={() => handleRegister(event._id)}
@@ -600,16 +487,16 @@ export default function EventsPage() {
                       registeredEvents.some(regEvent => regEvent._id === event._id) ||
                       cancelledEvents.some(cancelledEvent => cancelledEvent._id === event._id)
                     }
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                      event.registeredUsers.length >= event.capacity ||
-                      event.status !== "upcoming"
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : registeredEvents.some(regEvent => regEvent._id === event._id)
-                        ? "bg-green-600 text-white cursor-not-allowed"
-                        : cancelledEvents.some(cancelledEvent => cancelledEvent._id === event._id)
-                        ? "bg-red-300 text-red-600 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all min-w-[120px] text-center
+                      ${
+                        event.registeredUsers.length >= event.capacity ||
+                        event.status !== "upcoming" ||
+                        cancelledEvents.some(cancelledEvent => cancelledEvent._id === event._id)
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : registeredEvents.some(regEvent => regEvent._id === event._id)
+                          ? "bg-green-600 text-white cursor-not-allowed"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
                   >
                     {event.registeredUsers.length >= event.capacity
                       ? "Đã đầy"
@@ -635,7 +522,6 @@ export default function EventsPage() {
           </div>
         )}
 
-        <RegisteredEventsModal />
         <RegistrationConfirmationModal />
         <UnregisterSuccessModal />
         <UnregisterConfirmModal />
