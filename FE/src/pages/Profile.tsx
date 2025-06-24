@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByUserIdApi, updateBlogApi } from '../api';
+import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByUserIdApi, updateBlogApi, getRegisteredEventsApi, unregisterEventApi } from '../api';
 import whaleLogo from '../assets/whale.png';
 import AppointmentsPage from './Appointments';
 import PaymentsTable  from './PaymentHistory';
@@ -8,6 +8,8 @@ import type { AxiosError } from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
 import BlogDetailView from '../components/blog/BlogDetailView';
 import CreateBlogForm from '../components/blog/CreateBlogForm';
+import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 interface User {
   _id?: string;
@@ -45,6 +47,7 @@ const menuTabs = [
   { key: "blogs", label: "Bài viết" },
   { key: "Appointments", label: "Lịch hẹn" },
   { key: "payments", label: "Thanh toán" },
+  { key: "registeredEvents", label: "Sự kiện đã đăng ký" },
 ];
 
 export default function Profile() {
@@ -75,6 +78,13 @@ export default function Profile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user: authUser } = useAuth();
+  const [registeredEvents, setRegisteredEvents] = useState<any[]>([]);
+  const [cancelledEvents, setCancelledEvents] = useState<any[]>([]);
+  const [showRegisteredModal, setShowRegisteredModal] = useState(false);
+  const [showUnregisterConfirm, setShowUnregisterConfirm] = useState(false);
+  const [eventToUnregister, setEventToUnregister] = useState<string | null>(null);
+  const [showUnregisterSuccess, setShowUnregisterSuccess] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -262,6 +272,49 @@ export default function Profile() {
       setAvatarPreview(null); // Reset preview on error
     } finally {
       setIsUploadingAvatar(false);
+    }
+  };
+
+  const fetchRegisteredEvents = async () => {
+    if (!authUser) return;
+    try {
+      const data = await getRegisteredEventsApi(authUser._id);
+      setRegisteredEvents(data);
+    } catch (err) {
+      // handle error if needed
+    }
+  };
+
+  useEffect(() => {
+    if (authUser) {
+      fetchRegisteredEvents();
+    }
+  }, [authUser]);
+
+  const handleUnregister = async (eventId: string) => {
+    setEventToUnregister(eventId);
+    setShowUnregisterConfirm(true);
+  };
+
+  const confirmUnregister = async () => {
+    if (!authUser || !eventToUnregister) return;
+    try {
+      await unregisterEventApi(eventToUnregister, authUser._id);
+      const cancelledEvent = registeredEvents.find(event => event._id === eventToUnregister);
+      if (cancelledEvent) {
+        setCancelledEvents(prev => {
+          const updated = [...prev, cancelledEvent];
+          localStorage.setItem('cancelledEvents', JSON.stringify(updated));
+          return updated;
+        });
+        setRegisteredEvents(prev => prev.map(event => event._id === eventToUnregister ? { ...event, isCancelled: true } : event));
+      }
+      setShowUnregisterSuccess(true);
+      setShowUnregisterConfirm(false);
+      setEventToUnregister(null);
+    } catch (err) {
+      setShowUnregisterConfirm(false);
+      setEventToUnregister(null);
     }
   };
 
@@ -658,6 +711,187 @@ export default function Profile() {
                   <PaymentsTable />
                 </div>
               )}
+              {tab === 'registeredEvents' && (
+                <div className="w-full">
+                  {/* Sự kiện đã đăng ký */}
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Sự kiện đã đăng ký</h2>
+                    {/* Registered Events */}
+                    {registeredEvents.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Đã đăng ký</h3>
+                        <div className="space-y-4">
+                          {registeredEvents.map((event) => (
+                            <div
+                              key={event._id}
+                              className={`border rounded-xl p-4 transition-colors ${
+                                event.isCancelled
+                                  ? 'bg-red-50 border-red-200 opacity-80'
+                                  : 'bg-green-50 border-green-200'
+                              }`}
+                            >
+                              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                                {event.title}
+                              </h3>
+                              <div className="text-sm text-gray-600 space-y-1">
+                                <p>
+                                  <span className="font-medium">Thời gian:</span>{" "}
+                                  {format(new Date(event.startDate), "dd/MM/yyyy HH:mm")}
+                                </p>
+                                <p>
+                                  <span className="font-medium">Địa điểm:</span>{" "}
+                                  {event.location}
+                                </p>
+                                <p>
+                                  <span className="font-medium">Trạng thái:</span>{" "}
+                                  <span className={event.isCancelled ? "text-red-600" : "text-green-600"}>
+                                    {event.isCancelled ? "Đã hủy" : "Đã đăng ký"}
+                                  </span>
+                                </p>
+                              </div>
+                              {!event.isCancelled && (
+                                <div className="flex items-center justify-between mt-4">
+                                  <button
+                                    onClick={() => handleUnregister(event._id)}
+                                    className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors text-sm font-medium"
+                                  >
+                                    Hủy đăng ký
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Cancelled Events */}
+                    {cancelledEvents.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Đã hủy đăng ký</h3>
+                        <div className="space-y-4">
+                          {cancelledEvents.map((event) => (
+                            <div
+                              key={event._id}
+                              className="bg-red-50 border border-red-200 rounded-xl p-4"
+                            >
+                              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                                {event.title}
+                              </h3>
+                              <div className="text-sm text-gray-600 space-y-1">
+                                <p>
+                                  <span className="font-medium">Thời gian:</span>{' '}
+                                  {format(new Date(event.startDate), 'dd/MM/yyyy HH:mm')}
+                                </p>
+                                <p>
+                                  <span className="font-medium">Địa điểm:</span>{' '}
+                                  {event.location}
+                                </p>
+                                <p>
+                                  <span className="font-medium">Trạng thái:</span>{' '}
+                                  <span className="text-red-600">Đã hủy đăng ký</span>
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {registeredEvents.length === 0 && cancelledEvents.length === 0 && (
+                      <p className="text-gray-500 text-center py-4">
+                        Bạn chưa đăng ký sự kiện nào
+                      </p>
+                    )}
+                    {/* Confirm Unregister Modal */}
+                    {showUnregisterConfirm && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+                          <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold text-gray-800">
+                              Xác nhận hủy đăng ký
+                            </h2>
+                            <button
+                              onClick={() => setShowUnregisterConfirm(false)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <svg
+                                className="w-6 h-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="text-gray-700 mb-4">
+                            Bạn có chắc chắn muốn hủy đăng ký sự kiện này không?
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setShowUnregisterConfirm(false)}
+                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors"
+                            >
+                              Hủy
+                            </button>
+                            <button
+                              onClick={confirmUnregister}
+                              className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
+                            >
+                              Xác nhận
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Unregister Success Modal */}
+                    {showUnregisterSuccess && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+                          <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold text-gray-800">
+                              Hủy đăng ký thành công
+                            </h2>
+                            <button
+                              onClick={() => setShowUnregisterSuccess(false)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <svg
+                                className="w-6 h-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="text-green-600 text-lg font-medium mb-4">
+                            Bạn đã hủy đăng ký sự kiện thành công.
+                          </div>
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => setShowUnregisterSuccess(false)}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                            >
+                              Đóng
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -767,7 +1001,7 @@ export default function Profile() {
                 published: blogDangSua.published,
               }}
               onCancel={() => setModalEdit(false)}
-              onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(user?._id) getBlogsByUserIdApi(user._id).then(setBlogs); }}
+              onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(authUser?._id) getBlogsByUserIdApi(authUser._id).then(setBlogs); }}
               onSubmit={async (data) => {
                 const dataUpdate = { ...data };
                 if (blogDangSua.published === 'published') dataUpdate.published = 'draft';
