@@ -69,8 +69,7 @@ const ConsultantDashboard = () => {
             const slotTimeData = await getSlotTimeByConsultantIdApi(consultantRes._id);
             setSlotTimes(slotTimeData);
           }
-        } catch (error) {
-          console.error("Failed to fetch consultant data:", error);
+        } catch {
           setAppointments([]); // Reset on error
           setSlotTimes([]);
         } finally {
@@ -179,13 +178,9 @@ const ConsultantDashboard = () => {
 
   }, [appointments, slotTimes]);
 
-  useEffect(() => {
-    console.log('Dữ liệu thẻ thống kê:', stats);
-  }, [stats]);
-
   // Hàm xử lý bắt đầu buổi tư vấn
-  const handleStartSession = (patientId: string) => {
-    navigate(`/consultants/reports/${patientId}`);
+  const handleStartSession = (appointmentId: string) => {
+    navigate(`/consultants/reports/${appointmentId}`);
   };
 
   // Hàm lấy màu dựa trên trạng thái
@@ -347,7 +342,7 @@ const ConsultantDashboard = () => {
                           {/* -- Section 3: Action Button -- */}
                           <div className="w-full sm:w-auto">
                             <button
-                              onClick={() => handleStartSession(appointment.patientId)}
+                              onClick={() => handleStartSession(appointment.id)}
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full sm:w-auto whitespace-nowrap ${
                                 appointment.status === 'ongoing' 
                                   ? 'bg-green-100 text-green-700 cursor-not-allowed' 

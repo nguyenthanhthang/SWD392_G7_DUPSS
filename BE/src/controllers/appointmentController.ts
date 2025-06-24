@@ -49,6 +49,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
                     path: "accountId"
                 }
             })
+            .populate("slotTime_id")
             .populate("service_id");
         res.status(200).json(appointment);
     } catch (err: any) {
@@ -103,6 +104,7 @@ export const getAppointmentByConsultantId = async (req: Request, res: Response) 
                     path: "accountId"
                 }
             })
+            .populate("slotTime_id")
             .populate("service_id");
         res.status(200).json(appointment);
     } catch (err: any) {

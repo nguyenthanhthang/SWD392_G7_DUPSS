@@ -161,7 +161,13 @@ export const updateStatusSlotTimeApi = async (id: string, status: string) => {
 export const deleteSlotTimeApi = async (id: string) => {
   const res = await api.delete(`/slot-times/${id}`);
   return res.data;
-}; 
+};
+
+// Lấy slot time theo id
+export const getSlotTimeByIdApi = async (id: string) => {
+  const res = await api.get(`/slot-times/${id}`);
+  return res.data;
+};
 
 // Event APIs
 export const getAllEventsApi = async (status?: string) => {
@@ -607,6 +613,56 @@ export const createMomoPaymentApi = async (data: { amount: number; orderInfo: st
 
 export const createVnpayPaymentApi = async (data: { amount: number; orderInfo: string; orderId: string; }) => {
   const res = await api.post('/payment/vnpay/create-payment', data);
+  return res.data;
+};
+
+export const getAppointmentByIdApi = async (id: string) => {
+  const res = await api.get(`/appointments/${id}`);
+  return res.data;
+};
+
+// ===== REPORT APIs =====
+export const createReportApi = async (data: {
+  account_id: string;
+  appointment_id: string;
+  consultant_id: string;
+  nameOfPatient: string;
+  age: number;
+  gender: string;
+  condition: string;
+  notes?: string;
+  recommendations?: string;
+  status?: string;
+}) => {
+  const res = await api.post("/reports", data);
+  return res.data;
+};
+
+export const getReportByAppointmentIdApi = async (appointmentId: string) => {
+  const res = await api.get(`/reports/appointment/${appointmentId}`);
+  return res.data;
+};
+
+export const getReportByConsultantIdApi = async (consultantId: string) => {
+  const res = await api.get(`/reports/consultant/${consultantId}`);
+  return res.data;
+};
+
+export const getReportByIdApi = async (reportId: string) => {
+  const res = await api.get(`/reports/${reportId}`);
+  return res.data;
+};
+
+export const updateReportApi = async (reportId: string, data: {
+  nameOfPatient?: string;
+  age?: number;
+  gender?: string;
+  condition?: string;
+  notes?: string;
+  recommendations?: string;
+  status?: string;
+}) => {
+  const res = await api.put(`/reports/${reportId}`, data);
   return res.data;
 };
 

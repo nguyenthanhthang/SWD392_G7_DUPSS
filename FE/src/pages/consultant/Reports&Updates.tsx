@@ -1,169 +1,171 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, ChevronDown, FileText, Download, Calendar, Clock, MoreHorizontal, ChevronLeft, ChevronRight, Plus, Check } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus, Check, FileText, Calendar, Clock, MoreHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getReportByConsultantIdApi, getConsultantByAccountIdApi, getAppointmentByConsultantIdApi } from '../../api';
+
+interface ApiReport {
+  _id: string;
+  appointment_id: string;
+  account_id: string;
+  consultant_id: string;
+  nameOfPatient: string;
+  age: number;
+  gender: string;
+  condition: string;
+  notes?: string;
+  recommendations?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Appointment {
+  _id: string;
+  user_id?: {
+    fullName: string;
+    photoUrl?: string;
+  };
+  service_id?: {
+    name: string;
+  };
+  dateBooking: string;
+  slotTime_id?: {
+    start_time: string;
+    end_time: string;
+  };
+}
 
 interface Report {
-  id: number;
+  id: string;
   patientName: string;
+  patientAge: number;
+  patientGender: string;
   patientAvatar: string;
+  customerName: string;
+  customerAvatar: string;
   appointmentDate: string;
+  appointmentTime: string;
   reportDate: string;
-  status: 'completed' | 'pending' | 'draft';
-  summary: string;
+  status: 'completed' | 'in-progress' | 'draft';
+  condition: string;
+  notes: string;
   recommendations: string[];
   nextAppointment?: string;
   tags: string[];
+  appointmentId: string;
 }
 
 const ReportsAndUpdates = () => {
-  // Mock data cho báo cáo
-  const mockReports: Report[] = [
-    {
-      id: 1,
-      patientName: 'Nguyễn Văn A',
-      patientAvatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-      appointmentDate: '15/06/2023',
-      reportDate: '15/06/2023',
-      status: 'completed',
-      summary: 'Bệnh nhân đã có những tiến triển tích cực trong việc kiểm soát lo âu.',
-      recommendations: ['Tiếp tục thực hành các bài tập thư giãn', 'Ghi nhật ký cảm xúc hàng ngày'],
-      nextAppointment: '22/06/2023',
-      tags: ['Lo âu', 'Stress']
-    },
-    {
-      id: 2,
-      patientName: 'Trần Thị B',
-      patientAvatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-      appointmentDate: '10/06/2023',
-      reportDate: '10/06/2023',
-      status: 'completed',
-      summary: 'Bệnh nhân đã chia sẻ về các vấn đề mất ngủ và trầm cảm gần đây.',
-      recommendations: ['Tham gia nhóm hỗ trợ', 'Tập thể dục nhẹ nhàng mỗi ngày'],
-      nextAppointment: '24/06/2023',
-      tags: ['Trầm cảm', 'Mất ngủ']
-    },
-    {
-      id: 3,
-      patientName: 'Lê Văn C',
-      patientAvatar: 'https://randomuser.me/api/portraits/men/67.jpg',
-      appointmentDate: '05/06/2023',
-      reportDate: '05/06/2023',
-      status: 'completed',
-      summary: 'Thảo luận về các xung đột trong gia đình và cách giải quyết.',
-      recommendations: ['Thực hành kỹ năng giao tiếp', 'Dành thời gian chất lượng với gia đình'],
-      nextAppointment: '19/06/2023',
-      tags: ['Vấn đề gia đình']
-    },
-    {
-      id: 4,
-      patientName: 'Phạm Thị D',
-      patientAvatar: 'https://randomuser.me/api/portraits/women/65.jpg',
-      appointmentDate: '01/06/2023',
-      reportDate: '02/06/2023',
-      status: 'completed',
-      summary: 'Bệnh nhân gặp áp lực học tập và lo âu về kỳ thi sắp tới.',
-      recommendations: ['Lập kế hoạch học tập hợp lý', 'Thực hành kỹ thuật thư giãn trước khi học'],
-      tags: ['Lo âu', 'Stress học tập']
-    },
-    {
-      id: 5,
-      patientName: 'Hoàng Văn E',
-      patientAvatar: 'https://randomuser.me/api/portraits/men/42.jpg',
-      appointmentDate: '28/05/2023',
-      reportDate: '28/05/2023',
-      status: 'completed',
-      summary: 'Thảo luận về các vấn đề giấc ngủ và stress công việc.',
-      recommendations: ['Thiết lập thói quen đi ngủ đều đặn', 'Giảm caffeine vào buổi chiều'],
-      nextAppointment: '11/06/2023',
-      tags: ['Rối loạn giấc ngủ', 'Stress công việc']
-    },
-    {
-      id: 6,
-      patientName: 'Ngô Thị F',
-      patientAvatar: 'https://randomuser.me/api/portraits/women/22.jpg',
-      appointmentDate: '25/05/2023',
-      reportDate: '',
-      status: 'pending',
-      summary: 'Đang soạn báo cáo...',
-      recommendations: [],
-      nextAppointment: '08/06/2023',
-      tags: ['Khủng hoảng tuổi trung niên']
-    },
-    {
-      id: 7,
-      patientName: 'Vũ Văn G',
-      patientAvatar: 'https://randomuser.me/api/portraits/men/55.jpg',
-      appointmentDate: '20/05/2023',
-      reportDate: '',
-      status: 'draft',
-      summary: 'Bản nháp: Thảo luận về stress công việc và các mối quan hệ.',
-      recommendations: ['Thiết lập ranh giới công việc-cá nhân'],
-      tags: ['Stress công việc', 'Mối quan hệ']
-    },
-  ];
-
   // State
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [reports, setReports] = useState<Report[]>(mockReports); // setReports sẽ được sử dụng khi có API thực
-  const [filteredReports, setFilteredReports] = useState<Report[]>(mockReports);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filteredReports, setFilteredReports] = useState<Report[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [tagFilter, setTagFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [reportsPerPage] = useState(5);
 
-  // Danh sách tất cả các tags để lọc
-  const allTags = Array.from(
-    new Set(mockReports.flatMap(report => report.tags))
-  );
+  // Fetch data từ API
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setLoading(true);
+        
+        const accountId = localStorage.getItem('accountId') || 
+                         localStorage.getItem('userId') || 
+                         localStorage.getItem('id') ||
+                         sessionStorage.getItem('accountId') ||
+                         sessionStorage.getItem('userId');
+        
+        if (!accountId) {
+          setReports([]);
+          setFilteredReports([]);
+          setLoading(false);
+          return;
+        }
+
+        // Lấy consultant info
+        const consultantData = await getConsultantByAccountIdApi(accountId);
+        const consultantId = consultantData._id;
+
+        // Lấy reports và appointments
+        const [reportsData, appointmentsData] = await Promise.all([
+          getReportByConsultantIdApi(consultantId),
+          getAppointmentByConsultantIdApi(consultantId)
+        ]);
+
+        // Kiểm tra format data
+        if (!Array.isArray(reportsData)) {
+          setReports([]);
+          setFilteredReports([]);
+          return;
+        }
+
+        if (!Array.isArray(appointmentsData)) {
+          setReports([]);
+          setFilteredReports([]);
+          return;
+        }
+
+        // Convert API data to component format
+        const formattedReports: Report[] = reportsData.map((apiReport: ApiReport) => {
+          const matchingAppointment = appointmentsData.find((app: Appointment) => app._id === apiReport.appointment_id);
+          
+          const formattedReport = {
+            id: apiReport._id,
+            patientName: apiReport.nameOfPatient || 'Không có tên',
+            patientAge: apiReport.age || 0,
+            patientGender: apiReport.gender || 'Không rõ',
+            patientAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apiReport.nameOfPatient || 'Patient')}`,
+            customerName: matchingAppointment?.user_id?.fullName || 'Không có tên',
+            customerAvatar: matchingAppointment?.user_id?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(matchingAppointment?.user_id?.fullName || 'Customer')}`,
+            appointmentDate: matchingAppointment?.dateBooking ? new Date(matchingAppointment.dateBooking).toLocaleDateString('vi-VN') : '',
+            appointmentTime: matchingAppointment?.slotTime_id?.start_time ? 
+              `${new Date(matchingAppointment.slotTime_id.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${new Date(matchingAppointment.slotTime_id.end_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : 'Chưa có thời gian',
+            reportDate: new Date(apiReport.createdAt).toLocaleDateString('vi-VN'),
+            status: apiReport.status as 'completed' | 'in-progress' | 'draft',
+            condition: apiReport.condition || 'Không có thông tin',
+            notes: apiReport.notes || 'Không có ghi chú',
+            recommendations: apiReport.recommendations ? [apiReport.recommendations] : [],
+            tags: [apiReport.condition || 'Không có thông tin'],
+            appointmentId: apiReport.appointment_id,
+            nextAppointment: undefined
+          };
+          
+          return formattedReport;
+        });
+
+        setReports(formattedReports);
+        setFilteredReports(formattedReports); // Set initial filtered reports
+      } catch (error) {
+        console.error('Lỗi khi fetch reports:', error);
+        setReports([]);
+        setFilteredReports([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
 
   // Xử lý tìm kiếm và lọc
   useEffect(() => {
-    let result = reports;
+    if (reports.length === 0) {
+      setFilteredReports([]);
+      return;
+    }
+
+    let result = [...reports]; // Create a copy
     
-    // Tìm kiếm
+    // Tìm kiếm theo tên bệnh nhân
     if (searchTerm) {
       result = result.filter(report => 
-        report.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.summary.toLowerCase().includes(searchTerm.toLowerCase())
+        report.patientName.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    }
-    
-    // Lọc theo trạng thái
-    if (statusFilter !== 'all') {
-      result = result.filter(report => report.status === statusFilter);
-    }
-    
-    // Lọc theo tag
-    if (tagFilter !== 'all') {
-      result = result.filter(report => 
-        report.tags.includes(tagFilter)
-      );
-    }
-    
-    // Lọc theo khoảng thời gian
-    if (dateFilter !== 'all') {
-      const today = new Date();
-      const oneDay = 24 * 60 * 60 * 1000;
-      
-      result = result.filter(report => {
-        if (!report.appointmentDate) return false;
-        
-        const [day, month, year] = report.appointmentDate.split('/').map(Number);
-        const appointmentDate = new Date(year, month - 1, day);
-        const diffDays = Math.round(Math.abs((today.getTime() - appointmentDate.getTime()) / oneDay));
-        
-        if (dateFilter === 'last7days') return diffDays <= 7;
-        if (dateFilter === 'last30days') return diffDays <= 30;
-        if (dateFilter === 'last3months') return diffDays <= 90;
-        
-        return true;
-      });
     }
     
     // Sắp xếp theo ngày báo cáo (mới nhất lên đầu)
-    result = [...result].sort((a, b) => {
+    result = result.sort((a, b) => {
       if (!a.reportDate) return 1;
       if (!b.reportDate) return -1;
       
@@ -177,7 +179,7 @@ const ReportsAndUpdates = () => {
     });
     
     setFilteredReports(result);
-  }, [reports, searchTerm, statusFilter, tagFilter, dateFilter]);
+  }, [reports, searchTerm]);
 
   // Phân trang
   const indexOfLastReport = currentPage * reportsPerPage;
@@ -194,7 +196,7 @@ const ReportsAndUpdates = () => {
     switch (status) {
       case 'completed':
         return 'bg-green-100 text-green-800';
-      case 'pending':
+      case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'draft':
         return 'bg-gray-100 text-gray-800';
@@ -208,8 +210,8 @@ const ReportsAndUpdates = () => {
     switch (status) {
       case 'completed':
         return 'Đã hoàn thành';
-      case 'pending':
-        return 'Đang chờ';
+      case 'in-progress':
+        return 'Đang tiến hành';
       case 'draft':
         return 'Bản nháp';
       default:
@@ -222,7 +224,7 @@ const ReportsAndUpdates = () => {
     switch (status) {
       case 'completed':
         return <Check className="w-4 h-4 text-green-600" />;
-      case 'pending':
+      case 'in-progress':
         return <Clock className="w-4 h-4 text-yellow-600" />;
       case 'draft':
         return <FileText className="w-4 h-4 text-gray-600" />;
@@ -241,47 +243,15 @@ const ReportsAndUpdates = () => {
             <p className="text-gray-600 mt-2">Quản lý báo cáo sau các buổi tư vấn và theo dõi tiến trình</p>
           </div>
           <div className="flex space-x-3">
-            <button className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-gray-700 flex items-center">
-              <Download className="w-4 h-4 mr-2" />
-              Xuất báo cáo
-            </button>
             <button className="bg-blue-600 px-4 py-2 rounded-lg shadow-sm text-white flex items-center">
               <Plus className="w-4 h-4 mr-2" />
-              Tạo báo cáo mới
+              Thêm báo cáo
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-green-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Báo cáo đã hoàn thành</p>
-                <h3 className="text-2xl font-bold text-gray-800">
-                  {reports.filter(r => r.status === 'completed').length}
-                </h3>
-              </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <Check className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-yellow-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Đang chờ hoàn thành</p>
-                <h3 className="text-2xl font-bold text-gray-800">
-                  {reports.filter(r => r.status === 'pending').length}
-                </h3>
-              </div>
-              <div className="bg-yellow-100 p-3 rounded-lg">
-                <Clock className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-8 max-w-md">
           <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-blue-500">
             <div className="flex items-center justify-between">
               <div>
@@ -303,60 +273,11 @@ const ReportsAndUpdates = () => {
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input 
                   type="text" 
-                  placeholder="Tìm kiếm báo cáo..." 
+                  placeholder="Tìm kiếm theo tên bệnh nhân..." 
                   className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-full md:w-64"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="flex items-center">
-                  <Filter className="w-4 h-4 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-600">Lọc:</span>
-                </div>
-                
-                <div className="relative">
-                  <select 
-                    className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="completed">Đã hoàn thành</option>
-                    <option value="pending">Đang chờ</option>
-                    <option value="draft">Bản nháp</option>
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-                </div>
-                
-                <div className="relative">
-                  <select 
-                    className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-                    value={tagFilter}
-                    onChange={(e) => setTagFilter(e.target.value)}
-                  >
-                    <option value="all">Tất cả vấn đề</option>
-                    {allTags.map(tag => (
-                      <option key={tag} value={tag}>{tag}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-                </div>
-                
-                <div className="relative">
-                  <select 
-                    className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                  >
-                    <option value="all">Tất cả thời gian</option>
-                    <option value="last7days">7 ngày qua</option>
-                    <option value="last30days">30 ngày qua</option>
-                    <option value="last3months">3 tháng qua</option>
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-                </div>
               </div>
             </div>
           </div>
@@ -364,7 +285,15 @@ const ReportsAndUpdates = () => {
 
         {/* Reports List */}
         <div className="space-y-6 mb-8">
-          {currentReports.length > 0 ? (
+          {loading ? (
+            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <Clock className="w-8 h-8 text-gray-400 animate-spin" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Đang tải báo cáo...</h3>
+              <p className="text-gray-500">Vui lòng chờ trong giây lát</p>
+            </div>
+          ) : currentReports.length > 0 ? (
             currentReports.map((report) => (
               <div key={report.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="p-6">
@@ -377,12 +306,19 @@ const ReportsAndUpdates = () => {
                       />
                       <div>
                         <Link 
-                          to={`/consultants/reports/${report.id}`} 
+                          to={`/consultants/reports/${report.appointmentId}`} 
                           className="font-medium text-blue-600 hover:text-blue-800"
                         >
                           {report.patientName}
                         </Link>
-                        <div className="text-sm text-gray-500">Buổi tư vấn: {report.appointmentDate}</div>
+                        <div className="text-sm font-medium text-gray-600">
+                          {report.patientAge > 0 ? `${report.patientAge} tuổi` : 'Chưa rõ tuổi'}
+                          {' • '}
+                          {report.patientGender || 'Chưa rõ giới tính'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Buổi tư vấn: {report.appointmentDate} • {report.appointmentTime}
+                        </div>
                       </div>
                     </div>
                     
@@ -392,12 +328,6 @@ const ReportsAndUpdates = () => {
                         <span className="ml-1">{getStatusText(report.status)}</span>
                       </div>
                       
-                      {report.reportDate && (
-                        <div className="text-sm text-gray-500">
-                          Báo cáo: {report.reportDate}
-                        </div>
-                      )}
-                      
                       <div className="flex space-x-2">
                         <button className="p-1 hover:bg-gray-100 rounded">
                           <MoreHorizontal className="w-5 h-5 text-gray-500" />
@@ -406,9 +336,36 @@ const ReportsAndUpdates = () => {
                     </div>
                   </div>
                   
+                  {/* Thông tin khách hàng */}
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <img 
+                        src={report.customerAvatar} 
+                        alt={report.customerName} 
+                        className="w-8 h-8 rounded-full object-cover mr-3"
+                      />
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700">Tài khoản đặt lịch</h4>
+                        <p className="text-sm text-gray-600">{report.customerName}</p>
+                        {report.customerName !== report.patientName && (
+                          <p className="text-xs text-gray-500">Đặt lịch cho: {report.patientName}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div className="border-t border-gray-100 pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Tóm tắt:</h4>
-                    <p className="text-gray-600 mb-4">{report.summary}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Tình trạng:</h4>
+                        <p className="text-gray-600">{report.condition}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Ghi chú:</h4>
+                        <p className="text-gray-600">{report.notes}</p>
+                      </div>
+                    </div>
                     
                     {report.recommendations.length > 0 && (
                       <div className="mb-4">
@@ -440,13 +397,13 @@ const ReportsAndUpdates = () => {
                   
                   <div className="mt-4 flex justify-end gap-2">
                     {report.status === 'completed' ? (
-                      <Link to={`/consultants/reports/${report.id}`} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                      <Link to={`/consultants/reports/${report.appointmentId}`} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                         Xem chi tiết
                       </Link>
                     ) : (
-                      <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                      <Link to={`/consultants/reports/${report.appointmentId}`} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                         {report.status === 'draft' ? 'Tiếp tục chỉnh sửa' : 'Tạo báo cáo'}
-                      </button>
+                      </Link>
                     )}
                   </div>
                 </div>

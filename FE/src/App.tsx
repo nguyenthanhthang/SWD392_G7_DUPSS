@@ -172,7 +172,7 @@ function AppContent() {
                   <Route path="events" element={<EventManagement />} />
                   <Route path="schedule" element={<ScheduleManagement />} />
                   <Route path="reports" element={<ReportsAndUpdates />} />
-                  <Route path="reports/:patientId" element={<ReportsDetails />} />
+                  <Route path="reports/:appointmentId" element={<ReportsDetails />} />
                   <Route path="consultant-profile" element={<ConsultantProfile />} />
                 </Routes>
               </ConsultantLayout>

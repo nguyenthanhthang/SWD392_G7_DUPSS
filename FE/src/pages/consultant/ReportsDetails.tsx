@@ -1,55 +1,105 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Phone, Mail, MapPin, Clipboard, ArrowLeft, Save, User, FileDown } from 'lucide-react';
-import { getAccountByIdApi, getAppointmentByUserIdApi } from '../../api';
+import { Phone, Mail, MapPin, Clipboard, ArrowLeft, User, FileDown, Clock, CheckCircle } from 'lucide-react';
+import { getAppointmentByIdApi, createReportApi, getReportByAppointmentIdApi, getAppointmentByConsultantIdApi, getReportByConsultantIdApi, updateReportApi } from '../../api';
 
-// Interfaces
-interface ApiAppointment {
+// Định nghĩa type cho appointment dựa trên response thực tế
+interface Appointment {
   _id: string;
+  slotTime_id: {
+    _id: string;
+    consultant_id: string;
+    start_time: string;
+    end_time: string;
+    status: string;
+    __v?: number;
+  };
+  user_id: {
+    _id: string;
+    username: string;
+    email: string;
+    photoUrl?: string;
+    fullName?: string;
+    phoneNumber?: string;
+    gender?: string;
+    birthday?: string;
+    age?: string;
+    yearOfBirth?: number;
+    address?: string;
+  };
+  consultant_id: {
+    _id: string;
+    // ... các trường khác nếu cần
+  };
+  service_id: {
+    _id: string;
+    name: string;
+    // ... các trường khác nếu cần
+  };
   dateBooking: string;
-  status: string;
-  user_id: string;
-  consultant_id: string;
-  service_id: string;
   reason: string;
   note?: string;
-}
-
-interface RecordOfAppointment {
-  _id: string;
-  appointmentId: string;
-  customer_Id: string;
-  nameOfPatient: string;
-  ageOfPatient: number;
-  condition: string;
   status: string;
-  consultation_notes: string;
-  recommendations: string;
-  dateOfAppointment: string;
-  timeOfAppointment: string;
 }
 
-interface PatientInfo {
+interface ConsultantAppointment {
   _id: string;
-  fullName: string;
-  email: string;
-  phoneNumber?: string;
-  gender?: string;
-  yearOfBirth?: number;
-  address?: string;
-  photoUrl?: string;
-  maritalStatus?: string;
-  occupation?: string;
-  emergencyContact?: string;
+  slotTime_id?: {
+    start_time: string;
+    end_time: string;
+  };
+  user_id?: {
+    _id: string;
+    fullName: string;
+    photoUrl?: string;
+  };
+  service_id?: {
+    name: string;
+  };
+  status: string;
+  reason?: string;
+  dateBooking: string;
+}
+
+interface FilteredReportItem extends Report {
+  appointmentData?: ConsultantAppointment;
+}
+
+interface Report {
+  _id: string;
+  appointment_id: string;
+  account_id: string;
+  consultant_id: string;
+  nameOfPatient: string;
+  age: number;
+  gender: string;
+  condition: string;
+  notes?: string;
+  recommendations?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const ReportsDetails = () => {
   const navigate = useNavigate();
-  const { patientId } = useParams<{ patientId: string }>();
-  const [patient, setPatient] = useState<PatientInfo | null>(null);
-  const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<RecordOfAppointment[]>([]);
+  const { appointmentId } = useParams<{ appointmentId: string }>();
   const [loading, setLoading] = useState(true);
+  const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [consultantAppointments, setConsultantAppointments] = useState<ConsultantAppointment[]>([]);
+  const [consultantReports, setConsultantReports] = useState<Report[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<FilteredReportItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [tenBenhNhan, setTenBenhNhan] = useState('');
+  const [tuoiBenhNhan, setTuoiBenhNhan] = useState('');
+  const [gioiTinhBenhNhan, setGioiTinhBenhNhan] = useState('');
+  const [daGhiNhan, setDaGhiNhan] = useState(false);
+  const [dangChinhSua, setDangChinhSua] = useState(false);
+  const [currentReportId, setCurrentReportId] = useState<string | null>(null);
+
+  // Thêm state để trigger reload lịch sử
+  const [shouldReloadHistory, setShouldReloadHistory] = useState(0);
 
   const [newRecord, setNewRecord] = useState({
     appointmentId: '',
@@ -59,88 +109,261 @@ const ReportsDetails = () => {
     recommendations: '',
   });
 
+  // Hàm reload data consultant
+  const reloadConsultantData = async () => {
+    if (!appointment?.consultant_id?._id) return;
+    
+    try {
+      // Reload consultant reports
+      const consultantReports = await getReportByConsultantIdApi(appointment.consultant_id._id);
+      setConsultantReports(consultantReports);
+      
+      // Reload consultant appointments
+      const consultantAppointments = await getAppointmentByConsultantIdApi(appointment.consultant_id._id);
+      setConsultantAppointments(consultantAppointments);
+    } catch (error) {
+      console.error('Lỗi khi reload data consultant:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
-      if (!patientId) {
-        setLoading(false);
+      if (!appointmentId) {
         return;
       }
+      
+      setLoading(true);
+      
       try {
-        setLoading(true);
-        const patientData = await getAccountByIdApi(patientId);
-        const appointmentData = await getAppointmentByUserIdApi(patientId);
+        // Lấy reports trước để kiểm tra
+        const reports = await getReportByAppointmentIdApi(appointmentId);
         
-        setPatient(patientData);
-        setAppointments(appointmentData);
+        let report = null;
+        if (reports && Array.isArray(reports) && reports.length > 0) {
+          report = reports[reports.length - 1];
+        }
 
-        // Map appointment data to detailed record format for display
-        const records = appointmentData
-          .filter((app: ApiAppointment) => app.status === 'completed') // Chỉ hiển thị các buổi đã hoàn thành
-          .map((app: ApiAppointment) => ({
-            _id: app._id,
-            appointmentId: app._id,
-            customer_Id: app.user_id,
-            nameOfPatient: patientData.fullName,
-            ageOfPatient: calculateAge(patientData.yearOfBirth),
-            condition: app.reason,
-            status: app.status,
-            consultation_notes: app.note || 'Bệnh nhân không cung cấp ghi chú ban đầu.',
-            recommendations: 'Chưa có khuyến nghị chính thức.',
-            dateOfAppointment: app.dateBooking,
-            timeOfAppointment: new Date(app.dateBooking).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit'}),
-          }));
-        setFilteredRecords(records.reverse()); // Show latest first
+        // Thử lấy chi tiết appointment
+        let appointmentData = null;
+        try {
+          appointmentData = await getAppointmentByIdApi(appointmentId);
+        } catch {
+          // Có thể tiếp tục với report data
+        }
 
+        // Nếu có appointment data
+        if (appointmentData) {
+          setAppointment(appointmentData);
+
+          // Lấy danh sách appointments của consultant này
+          if (appointmentData.consultant_id?._id) {
+            const consultantAppointments = await getAppointmentByConsultantIdApi(appointmentData.consultant_id._id);
+            setConsultantAppointments(consultantAppointments);
+
+            // Lấy danh sách reports của consultant này
+            const consultantReports = await getReportByConsultantIdApi(appointmentData.consultant_id._id);
+            setConsultantReports(consultantReports);
+          }
+        } 
+        // Nếu không có appointment data nhưng có report, tạo fake appointment
+        else if (report) {
+          const fakeAppointment = {
+            _id: appointmentId,
+            slotTime_id: {
+              _id: '',
+              consultant_id: report.consultant_id || '',
+              start_time: new Date().toISOString(),
+              end_time: new Date().toISOString(),
+              status: 'completed'
+            },
+            user_id: {
+              _id: report.account_id || '',
+              username: '',
+              email: '',
+              fullName: report.nameOfPatient || 'Unknown',
+              gender: report.gender || '',
+              age: report.age?.toString() || '',
+            },
+            consultant_id: {
+              _id: report.consultant_id || ''
+            },
+            service_id: {
+              _id: '',
+              name: 'Dịch vụ tư vấn'
+            },
+            dateBooking: report.createdAt || new Date().toISOString(),
+            reason: report.condition || '',
+            note: report.notes || '',
+            status: 'completed'
+          };
+          setAppointment(fakeAppointment);
+          
+          // Thử lấy consultant data nếu có consultant_id
+          if (report.consultant_id) {
+            try {
+              const consultantReports = await getReportByConsultantIdApi(report.consultant_id);
+              setConsultantReports(consultantReports);
+            } catch {
+              // Không thể lấy consultant reports
+            }
+          }
+        }
+
+        // Xử lý report data
+        if (report) {
+          setTenBenhNhan(report.nameOfPatient || '');
+          setTuoiBenhNhan(report.age ? String(report.age) : '');
+          setGioiTinhBenhNhan(report.gender || '');
+          setNewRecord({
+            appointmentId: appointmentId,
+            condition: report.condition || '',
+            status: report.status || 'completed',
+            consultation_notes: report.notes || '',
+            recommendations: report.recommendations || '',
+          });
+          setDaGhiNhan(true);
+          setCurrentReportId(report._id);
+        } else if (appointmentData) {
+          setTenBenhNhan(appointmentData.user_id?.fullName || '');
+          setTuoiBenhNhan(appointmentData.user_id?.birthday ? (new Date().getFullYear() - Number(appointmentData.user_id.birthday)).toString() : '');
+          setGioiTinhBenhNhan(appointmentData.user_id?.gender || '');
+          setDaGhiNhan(false);
+        }
       } catch (error) {
-        console.error("Lỗi khi tải dữ liệu chi tiết báo cáo:", error);
+        console.error('Lỗi khi lấy dữ liệu:', error);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [patientId]);
+  }, [appointmentId, daGhiNhan]);
   
+  // Filter reports based on tab, search and filter
+  useEffect(() => {
+    let filtered = consultantReports;
+
+    // Filter by search term (chỉ tìm theo tên)
+    if (searchTerm) {
+      filtered = filtered.filter(report => 
+        report.nameOfPatient?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by status
+    if (filterStatus) {
+      filtered = filtered.filter(report => report.status === filterStatus);
+    }
+
+    // Convert reports to display format (we'll use appointment data for missing info)
+    const filteredWithAppointmentData = filtered.map(report => {
+      const matchingAppointment = consultantAppointments.find(app => app._id === report.appointment_id);
+      return {
+        ...report,
+        appointmentData: matchingAppointment
+      };
+    });
+
+         setFilteredAppointments(filteredWithAppointmentData);
+  }, [consultantReports, consultantAppointments, searchTerm, filterStatus]);
+
+  // Thêm useEffect để reload reports khi cần
+  useEffect(() => {
+    if (shouldReloadHistory > 0) {
+      reloadConsultantData();
+    }
+  }, [shouldReloadHistory, appointment?.consultant_id?._id]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewRecord(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newRecord.appointmentId) {
-      alert("Vui lòng chọn một buổi tư vấn.");
+    if (!appointment) return;
+    
+    // Validation cho các trường bắt buộc
+    const errors = [];
+    if (!tenBenhNhan.trim()) errors.push('Tên bệnh nhân');
+    if (!tuoiBenhNhan.trim()) errors.push('Tuổi bệnh nhân');
+    if (!gioiTinhBenhNhan.trim()) errors.push('Giới tính');
+    if (!newRecord.condition.trim()) errors.push('Tình trạng / Chủ đề');
+    
+    if (errors.length > 0) {
+      alert(`Vui lòng nhập đầy đủ thông tin bắt buộc:\n• ${errors.join('\n• ')}`);
       return;
     }
-    // Logic để gửi dữ liệu đi (gọi API)
-    console.log("Submitting new record:", {
-      ...newRecord,
-      customer_Id: patientId,
-      nameOfPatient: patient?.fullName,
-      ageOfPatient: patient ? calculateAge(patient.yearOfBirth) : 0,
-    });
-    // Reset form sau khi submit
-    setNewRecord({
-      appointmentId: '',
-      condition: '',
-      status: 'completed',
-      consultation_notes: '',
-      recommendations: '',
-    });
-    alert("Đã tạo ghi nhận thành công!");
+    
+    try {
+      const payload = {
+        account_id: typeof appointment.user_id === 'object' ? appointment.user_id._id : appointment.user_id,
+        appointment_id: appointment._id,
+        consultant_id: typeof appointment.consultant_id === 'object' ? appointment.consultant_id._id : appointment.consultant_id,
+        nameOfPatient: tenBenhNhan,
+        age: Number(tuoiBenhNhan),
+        gender: gioiTinhBenhNhan,
+        condition: newRecord.condition,
+        notes: newRecord.consultation_notes,
+        recommendations: newRecord.recommendations,
+        status: newRecord.status,
+      };
+      if (currentReportId && daGhiNhan) {
+        // Chỉnh sửa report existing
+        await updateReportApi(currentReportId, {
+          nameOfPatient: tenBenhNhan,
+          age: Number(tuoiBenhNhan),
+          gender: gioiTinhBenhNhan,
+          condition: newRecord.condition,
+          notes: newRecord.consultation_notes,
+          recommendations: newRecord.recommendations,
+          status: newRecord.status,
+        });
+        alert('Cập nhật ghi nhận thành công!');
+        setDangChinhSua(false);
+        // Trigger reload lịch sử
+        setShouldReloadHistory(prev => prev + 1);
+      } else {
+        // Tạo report mới
+        await createReportApi(payload);
+        alert('Tạo ghi nhận thành công!');
+        setDaGhiNhan(true);
+        // Trigger reload lịch sử
+        setShouldReloadHistory(prev => prev + 1);
+      }
+      // Reset form nếu muốn
+    } catch (error: unknown) {
+      let message = 'Có lỗi khi tạo ghi nhận!';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          message = axiosError.response.data.message;
+        }
+      }
+      alert(message);
+      console.error(error);
+    }
   };
 
-  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  // Helper function để check field có bị lỗi không
+  const getFieldErrorClass = (value: string, isRequired: boolean = false) => {
+    if (!isRequired) return 'border-gray-300';
+    return !value.trim() ? 'border-red-500 bg-red-50' : 'border-gray-300';
+  };
+
   const calculateAge = (yearOfBirth?: number) => {
     if (!yearOfBirth) return 0;
     return new Date().getFullYear() - yearOfBirth;
   };
-  const getStatusColor = (status: string) => status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-  const getStatusText = (status: string) => status === 'completed' ? 'Đã hoàn thành' : 'Trạng thái khác';
 
-  if (loading) return <div className="p-6">Đang tải...</div>;
-  if (!patient) return <div className="p-6">Không tìm thấy bệnh nhân.</div>;
+  if (loading) {
+    return <div className="p-6">Đang tải...</div>;
+  }
+  
+  if (!appointment) {
+    return <div className="p-6">Không tìm thấy buổi tư vấn.</div>;
+  }
 
-  const ageDisplay = patient.yearOfBirth ? `${calculateAge(patient.yearOfBirth)} tuổi` : "Chưa rõ tuổi";
+  const ageDisplay = appointment?.user_id?.yearOfBirth ? `${calculateAge(appointment.user_id.yearOfBirth)} tuổi` : "Chưa rõ tuổi";
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -152,7 +375,7 @@ const ReportsDetails = () => {
             Quay lại
           </button>
           <span className="mx-2">/</span>
-          <span className="font-medium">{patient.fullName}</span>
+          <span className="font-medium">{appointment?.user_id?.fullName}</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -166,16 +389,16 @@ const ReportsDetails = () => {
               </div>
               <div className="p-4 space-y-3">
                 <div className="flex items-center gap-4">
-                  <img src={patient.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(patient.fullName)}`} alt={patient.fullName} className="w-20 h-20 rounded-full object-cover" />
+                  <img src={appointment?.user_id?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment?.user_id?.fullName || '')}`} alt={appointment?.user_id?.fullName || ''} className="w-20 h-20 rounded-full object-cover" />
                   <div>
-                    <h3 className="text-xl font-bold text-gray-800">{patient.fullName}</h3>
-                    <p className="text-gray-500">{ageDisplay}, {patient.gender || 'Chưa rõ'}</p>
+                    <h3 className="text-xl font-bold text-gray-800">{appointment?.user_id?.fullName}</h3>
+                    <p className="text-gray-500">{ageDisplay}, {appointment?.user_id?.gender || 'Chưa rõ'}</p>
                   </div>
                 </div>
                 <div className="text-sm space-y-2">
-                  {patient.email && <div className="flex items-start gap-2"><Mail className="w-4 h-4 mt-0.5 text-[#283593] flex-shrink-0" /><span className="text-gray-700">{patient.email}</span></div>}
-                  {patient.phoneNumber && <div className="flex items-start gap-2"><Phone className="w-4 h-4 mt-0.5 text-[#283593] flex-shrink-0" /><span className="text-gray-700">{patient.phoneNumber}</span></div>}
-                  {patient.address && <div className="flex items-start gap-2"><MapPin className="w-4 h-4 mt-0.5 text-[#283593] flex-shrink-0" /><span className="text-gray-700">{patient.address}</span></div>}
+                  {appointment?.user_id?.email && <div className="flex items-start gap-2"><Mail className="w-4 h-4 mt-0.5 text-[#283593] flex-shrink-0" /><span className="text-gray-700">{appointment.user_id.email}</span></div>}
+                  {appointment?.user_id?.phoneNumber && <div className="flex items-start gap-2"><Phone className="w-4 h-4 mt-0.5 text-[#283593] flex-shrink-0" /><span className="text-gray-700">{appointment.user_id.phoneNumber}</span></div>}
+                  {appointment?.user_id?.address && <div className="flex items-start gap-2"><MapPin className="w-4 h-4 mt-0.5 text-[#283593] flex-shrink-0" /><span className="text-gray-700">{appointment.user_id.address}</span></div>}
                 </div>
               </div>
             </div>
@@ -190,22 +413,26 @@ const ReportsDetails = () => {
                         <span>Xuất báo cáo</span>
                     </button>
                 </div>
-                 {/* Tabs */}
-                <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5 w-fit">
-                    <button className="px-4 py-1 rounded-md text-sm font-medium text-white bg-[#283593]">Tất cả</button>
-                    <button className="px-4 py-1 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100">Sắp tới</button>
-                    <button className="px-4 py-1 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100">Đã qua</button>
-                </div>
               </div>
               {/* Search and Filters */}
               <div className="p-4 border-b border-[#DBE8FA]">
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex-grow min-w-[150px]">
-                      <input type="text" placeholder="Tìm kiếm..." className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                      <input 
+                        type="text" 
+                        placeholder="Tìm kiếm theo tên bệnh nhân..." 
+                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-600">Lọc:</span>
-                      <select className="p-2 border border-gray-300 rounded-md text-sm">
+                      <select 
+                        className="p-2 border border-gray-300 rounded-md text-sm"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                      >
                           <option value="">Tất cả</option>
                           <option value="completed">Hoàn thành</option>
                           <option value="in-progress">Đang xử lý</option>
@@ -215,39 +442,76 @@ const ReportsDetails = () => {
               </div>
               {/* Record List */}
               <div className="p-4">
-                {filteredRecords.length > 0 ? (
-                  <div className="space-y-4">
-                    {filteredRecords.map((record) => (
-                      <div key={record._id} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-4 h-4 text-[#283593]" />
-                            <span className="font-medium text-gray-800">{formatDate(record.dateOfAppointment)}</span>
-                            <span className="text-gray-400">•</span>
-                            <span className="text-gray-500">{record.timeOfAppointment}</span>
-                          </div>
-                          <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${getStatusColor(record.status)}`}>{getStatusText(record.status)}</span>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div>
-                            <h4 className="font-semibold text-gray-700">Tình trạng:</h4>
-                            <p className="text-gray-600 pl-2">{record.condition}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-gray-700">Ghi chú:</h4>
-                            <p className="text-gray-600 pl-2 whitespace-pre-line">{record.consultation_notes}</p>
-                          </div>
-                           <div>
-                            <h4 className="font-semibold text-gray-700">Khuyến nghị:</h4>
-                            <p className="text-gray-600 pl-2 whitespace-pre-line">{record.recommendations}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                {filteredAppointments.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <p>Không có báo cáo nào</p>
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">Chưa có ghi nhận nào cho bệnh nhân này.</p>
+                  <div className="space-y-3">
+                    {filteredAppointments.map((report) => {
+                      const appointmentData = report.appointmentData;
+                      return (
+                        <div 
+                          key={report._id} 
+                          className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                          onClick={() => navigate(`/consultant/reports/${report.appointment_id}`)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <img 
+                                  src={appointmentData?.user_id?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(report.nameOfPatient || '')}`}
+                                  alt={report.nameOfPatient || ''}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 text-base">{report.nameOfPatient}</h4>
+                                  <p className="text-sm font-medium text-gray-600">{report.age} tuổi • {report.gender}</p>
+                                  <p className="text-xs text-gray-500">{appointmentData?.service_id?.name || 'Dịch vụ tư vấn'}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-4 h-4" />
+                                  <span>
+                                    {appointmentData?.slotTime_id?.start_time ? (
+                                      `${new Date(appointmentData.slotTime_id.start_time).toLocaleDateString('vi-VN')} - ${new Date(appointmentData.slotTime_id.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} đến ${new Date(appointmentData.slotTime_id.end_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+                                    ) : appointmentData?.dateBooking ? (
+                                      new Date(appointmentData.dateBooking).toLocaleDateString('vi-VN')
+                                    ) : (
+                                      `${new Date(report.createdAt).toLocaleDateString('vi-VN')} - ${new Date(report.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <p className="text-sm text-gray-700 mb-2">
+                                <strong>Tình trạng:</strong> {report.condition}
+                              </p>
+                              
+                              {report.notes && (
+                                <p className="text-sm text-gray-600 mb-2">
+                                  <strong>Ghi chú:</strong> {report.notes}
+                                </p>
+                              )}
+                              
+                              {report.recommendations && (
+                                <p className="text-sm text-gray-600 line-clamp-2">
+                                  <strong>Khuyến nghị:</strong> {report.recommendations}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div className="flex flex-col items-end gap-2">
+                              {report.status === 'completed' && (
+                                <CheckCircle className="w-4 h-4 text-green-600" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -264,41 +528,92 @@ const ReportsDetails = () => {
               </div>
               <form onSubmit={handleFormSubmit} className="p-4 space-y-4">
                 <div>
-                  <label htmlFor="appointmentId" className="block text-sm font-medium text-gray-700 mb-1">Buổi tư vấn</label>
-                  <select id="appointmentId" name="appointmentId" value={newRecord.appointmentId} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md text-sm">
-                    <option value="">-- Chọn buổi tư vấn --</option>
-                    {appointments.filter(a => a.status === 'scheduled' || a.status === 'completed').map(app => (
-                      <option key={app._id} value={app._id}>
-                        {formatDate(app.dateBooking)} - {app.reason}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Buổi tư vấn</label>
+                  <div className="w-full p-2 border border-gray-300 rounded-md text-sm bg-gray-100">
+                    {appointment?.slotTime_id?.start_time && appointment?.slotTime_id?.end_time
+                      ? `${new Date(appointment.slotTime_id.start_time).toLocaleDateString('vi-VN')} - ${new Date(appointment.slotTime_id.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} đến ${new Date(appointment.slotTime_id.end_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+                      : '-'}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tên bệnh nhân <span className="text-red-500">*</span>
+                    </label>
+                    <input type="text" value={tenBenhNhan} onChange={e => setTenBenhNhan(e.target.value)} className={`w-full p-2 border ${getFieldErrorClass(tenBenhNhan, true)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tuổi bệnh nhân <span className="text-red-500">*</span>
+                    </label>
+                    <input type="text" value={tuoiBenhNhan} onChange={e => setTuoiBenhNhan(e.target.value)} className={`w-full p-2 border ${getFieldErrorClass(tuoiBenhNhan, true)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Giới tính <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={gioiTinhBenhNhan}
+                      onChange={e => setGioiTinhBenhNhan(e.target.value)}
+                      className={`w-full p-2 border ${getFieldErrorClass(gioiTinhBenhNhan, true)} rounded-md text-sm`}
+                      disabled={daGhiNhan && !dangChinhSua}
+                    >
+                      <option value="">Chọn giới tính</option>
+                      <option value="Nam">Nam</option>
+                      <option value="Nữ">Nữ</option>
+                      <option value="Khác">Khác</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label htmlFor="condition" className="block text-sm font-medium text-gray-700 mb-1">Tình trạng / Chủ đề</label>
-                  <input type="text" id="condition" name="condition" value={newRecord.condition} onChange={handleInputChange} placeholder="VD: Stress, Lo âu..." className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                  <label htmlFor="condition" className="block text-sm font-medium text-gray-700 mb-1">
+                    Tình trạng / Chủ đề <span className="text-red-500">*</span>
+                  </label>
+                  <input type="text" id="condition" name="condition" value={newRecord.condition} onChange={handleInputChange} placeholder="VD: Stress, Lo âu..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.condition, true)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua} />
                 </div>
                 <div>
                   <label htmlFor="consultation_notes" className="block text-sm font-medium text-gray-700 mb-1">Ghi chú buổi tư vấn</label>
-                  <textarea id="consultation_notes" name="consultation_notes" value={newRecord.consultation_notes} onChange={handleInputChange} rows={4} placeholder="Chi tiết về buổi tư vấn..." className="w-full p-2 border border-gray-300 rounded-md text-sm"></textarea>
+                  <textarea id="consultation_notes" name="consultation_notes" value={newRecord.consultation_notes} onChange={handleInputChange} rows={4} placeholder="Chi tiết về buổi tư vấn..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.consultation_notes, false)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua}></textarea>
                 </div>
                 <div>
                   <label htmlFor="recommendations" className="block text-sm font-medium text-gray-700 mb-1">Khuyến nghị</label>
-                  <textarea id="recommendations" name="recommendations" value={newRecord.recommendations} onChange={handleInputChange} rows={3} placeholder="Các bước tiếp theo cho bệnh nhân..." className="w-full p-2 border border-gray-300 rounded-md text-sm"></textarea>
+                  <textarea id="recommendations" name="recommendations" value={newRecord.recommendations} onChange={handleInputChange} rows={3} placeholder="Các bước tiếp theo cho bệnh nhân..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.recommendations, false)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua}></textarea>
                 </div>
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Trạng thái ghi nhận</label>
-                  <select id="status" name="status" value={newRecord.status} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-md text-sm">
-                    <option value="completed">Đã hoàn thành</option>
-                    <option value="in-progress">Đang xử lý</option>
-                  </select>
-                </div>
-                <button type="submit" className="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-[#283593] text-white font-semibold hover:bg-[#3a4bb3]">
-                  <Save className="w-4 h-4" />
-                  Lưu Ghi Nhận
-                </button>
+                {daGhiNhan && !dangChinhSua ? (
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-yellow-500 text-white font-semibold hover:bg-yellow-600"
+                    onClick={() => {
+                      setDangChinhSua(true);
+                    }}
+                  >
+                    Chỉnh sửa ghi nhận
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    {dangChinhSua && (
+                      <button
+                        type="button"
+                        className="flex-1 flex items-center justify-center gap-2 p-2 rounded-lg bg-gray-500 text-white font-semibold hover:bg-gray-600"
+                        onClick={() => {
+                          setDangChinhSua(false);
+                          // Reset form về giá trị ban đầu nếu cần
+                        }}
+                      >
+                        Hủy
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      className="flex-1 flex items-center justify-center gap-2 p-2 rounded-lg bg-[#283593] text-white font-semibold hover:bg-[#3a4bb3]"
+                    >
+                      {dangChinhSua ? 'Cập nhật' : 'Lưu Ghi Nhận'}
+                    </button>
+                  </div>
+                )}
               </form>
             </div>
+            {daGhiNhan && <div className="text-green-600 font-semibold mb-2">Đã ghi nhận</div>}
           </div>
         </div>
       </div>
