@@ -82,7 +82,6 @@ const Consultant: React.FC = () => {
   const [consultants, setConsultants] = useState<IConsultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedConsultant, setSelectedConsultant] = useState<IConsultant | null>(null);
@@ -168,64 +167,6 @@ const Consultant: React.FC = () => {
       ...prev,
       [name]: value
     }));
-  };
-
-  const handleOpenCreateModal = () => {
-    setFormData({
-      accountId: '',
-      fullName: '',
-      email: '',
-      phone: '',
-      introduction: '',
-      contact: '',
-      startDateofWork: '',
-      status: 'active'
-    });
-    setIsCreateModalOpen(true);
-  };
-
-  const handleCloseCreateModal = () => {
-    setIsCreateModalOpen(false);
-    setFormData({
-      accountId: '',
-      fullName: '',
-      email: '',
-      phone: '',
-      introduction: '',
-      contact: '',
-      startDateofWork: '',
-      status: 'active'
-    });
-  };
-
-  const handleCreateConsultant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.accountId || !formData.introduction) {
-      toast.error('Vui lòng điền đầy đủ thông tin!');
-      return;
-    }
-
-    try {
-      const payload = {
-        accountId: formData.accountId,
-        introduction: formData.introduction,
-        contact: formData.contact,
-        startDateofWork: formData.startDateofWork,
-        status: formData.status,
-      };
-      
-      console.log('Creating consultant with data:', payload);
-      const response = await api.post('/consultants', payload);
-      console.log('Create response:', response.data);
-      
-      setConsultants(prev => [...prev, response.data]);
-      handleCloseCreateModal();
-      toast.success('Tạo tư vấn viên thành công!');
-    } catch (error) {
-      console.error('Error creating consultant:', error);
-      toast.error('Có lỗi xảy ra khi tạo tư vấn viên!');
-    }
   };
 
   const handleOpenUpdateModal = (consultant: IConsultant) => {
@@ -651,15 +592,6 @@ const Consultant: React.FC = () => {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Quản lý tư vấn viên</h1>
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Thêm tư vấn viên
-        </button>
       </div>
 
       {/* Phần tìm kiếm và lọc */}
