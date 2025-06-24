@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getCommentsApi, addCommentApi, deleteCommentApi } from '../../api';
+import { getCommentsApi, addCommentApi, deleteCommentApi, loginApi } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -79,6 +79,12 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
       toast.error('Vui lòng đăng nhập để bình luận');
       return;
     }
+    
+    if (!user || !user._id) {
+      toast.error('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại');
+      return;
+    }
+    
     if (!newComment.trim()) {
       toast.error('Vui lòng nhập nội dung bình luận');
       return;
@@ -86,18 +92,44 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
 
     setIsLoading(true);
     try {
+      // Kiểm tra dữ liệu đầu vào
+      if (!blog || !blog._id) {
+        toast.error('Không tìm thấy ID bài viết');
+        setIsLoading(false);
+        return;
+      }
+
       const commentData = {
-        userId: user?._id || '',
-        username: user?.username || '',
+        userId: user._id,
+        username: user.username || user.fullName || 'Người dùng',
         content: newComment.trim()
       };
-      await addCommentApi(blog._id, commentData);
-      setNewComment('');
-      await fetchComments();
-      toast.success('Đã thêm bình luận');
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      toast.error('Không thể thêm bình luận');
+      
+      console.log('Bài viết ID:', blog._id);
+      console.log('Dữ liệu bình luận:', commentData);
+      
+      try {
+        await addCommentApi(blog._id, commentData);
+        setNewComment('');
+        await fetchComments();
+        toast.success('Đã thêm bình luận');
+      } catch (error: any) {
+        if (error.response && error.response.status === 400) {
+          // Trường hợp lỗi dữ liệu
+          console.error('Lỗi dữ liệu:', error.response.data);
+          toast.error(error.response.data.message || 'Dữ liệu bình luận không hợp lệ');
+        } else if (error.response && error.response.status === 401) {
+          // Trường hợp token hết hạn
+          toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại');
+        } else {
+          // Lỗi khác
+          console.error('Lỗi thêm bình luận:', error);
+          toast.error('Không thể thêm bình luận. Vui lòng thử lại sau.');
+        }
+      }
+    } catch (error: any) {
+      console.error('Lỗi:', error);
+      toast.error('Có lỗi xảy ra');
     } finally {
       setIsLoading(false);
     }

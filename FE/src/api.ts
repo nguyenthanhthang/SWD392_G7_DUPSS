@@ -20,12 +20,31 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+    
+    // Kiểm tra token tồn tại
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      
+      // Log để debug
+      if (config.url?.includes('/comments')) {
+        console.log('Request to comments API with token:', token?.substring(0, 10) + '...');
+        console.log('User ID from localStorage:', userId);
+        console.log('Request URL:', config.url);
+        console.log('Request method:', config.method?.toUpperCase());
+        
+        if (config.data) {
+          console.log('Request payload:', config.data);
+        }
+      }
+    } else if (config.url?.includes('/comments') && config.method === 'post') {
+      console.warn('Attempting to post comment without authentication token!');
     }
+    
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -34,6 +53,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('API Response Error:', error.response?.status, error.response?.data);
+    
     if (error.response?.status === 401) {
       // Clear local storage on unauthorized
       localStorage.removeItem("token");
@@ -519,8 +540,14 @@ export const getCommentsApi = async (blogId: string) => {
 };
 
 export const addCommentApi = async (blogId: string, data: { userId: string; username: string; content: string }) => {
-  const res = await api.post(`/blogs/${blogId}/comments`, data);
-  return res.data;
+  try {
+    console.log('API Call - Adding comment to blog:', blogId, 'with data:', data);
+    const res = await api.post(`/blogs/${blogId}/comments`, data);
+    return res.data;
+  } catch (error) {
+    console.error('API Error - Adding comment failed:', error);
+    throw error;
+  }
 };
 
 export const deleteCommentApi = async (blogId: string, commentId: string, userId: string) => {
