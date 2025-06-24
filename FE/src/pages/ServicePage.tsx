@@ -1136,7 +1136,7 @@ export default function ServicePage() {
                               </div>
                               <div className="flex-1">
                                 <div className="mb-2 flex items-center gap-2">
-                                  <span className="font-medium text-gray-800 truncate max-w-[180px]">{service.name}</span>
+                                  <span className="font-medium text-gray-800" title={service.name}>{service.name}</span>
                                   {service.category === 'vip' && (
                                     <span className="px-2 py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-xs rounded-full font-medium shadow-sm">VIP</span>
                                   )}
