@@ -663,6 +663,9 @@ export const updateReportApi = async (reportId: string, data: {
   status?: string;
 }) => {
   const res = await api.put(`/reports/${reportId}`, data);
+  return res.data;
+};
+
 export const updateAppointmentStatusApi = async (id: string, status: string) => {
   const res = await api.put(`/appointments/status/${id}`, { status });
   return res.data;
