@@ -58,7 +58,14 @@ export const getAppointmentById = async (req: Request, res: Response) => {
 
 export const updateStatusAppointment = async (req: Request, res: Response) => {
     try {
-        const appointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const { status } = req.body;
+        if (!status) return res.status(400).json({ message: "Missing status" });
+        const appointment = await Appointment.findByIdAndUpdate(
+            req.params.id,
+            { status },
+            { new: true }
+        );
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
         res.status(200).json(appointment);
     } catch (err: any) {
         res.status(500).json({ message: err.message });
@@ -123,6 +130,26 @@ export const getAppointmentBySlotTimeId = async (req: Request, res: Response) =>
             })
             .populate("service_id");
         res.status(200).json(appointment);
+    } catch (err: any) {
+        res.status(500).json({ message: err.message });
+    }
+}
+
+export const deleteAppointment = async (req: Request, res: Response) => {
+    try {
+        const appointment = await Appointment.findById(req.params.id);
+        if (!appointment) {
+            return res.status(404).json({ message: "Appointment not found" });
+        }
+        if (appointment.status !== "pending") {
+            return res.status(400).json({ message: "Chỉ được xóa lịch hẹn ở trạng thái chờ xác nhận (pending)" });
+        }
+        // Trả slotTime về trạng thái 'available' nếu appointment đang giữ slot
+        if (appointment.slotTime_id) {
+            await SlotTime.findByIdAndUpdate(appointment.slotTime_id, { status: "available" });
+        }
+        await Appointment.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: "Appointment deleted successfully" });
     } catch (err: any) {
         res.status(500).json({ message: err.message });
     }

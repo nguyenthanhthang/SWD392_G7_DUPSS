@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Search, Eye, X, CheckCircle, ChevronRight, Star, MessageCircle } from 'lucide-react';
+import { Calendar, Clock, X, CheckCircle, Star, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAppointmentByUserIdApi, getFeedbackByAppointmentIdApi, getFeedbackByServiceIdApi } from '../api';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -43,7 +43,6 @@ const AppointmentsPage = () => {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterDate, setFilterDate] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -124,8 +123,16 @@ const AppointmentsPage = () => {
     }
   };
 
+  // Chuẩn hóa status từ BE sang FE
+  const normalizeStatus = (status?: string) => {
+    if (!status) return 'pending';
+    if (status === 'confirm') return 'confirmed';
+    if (status === 'complete') return 'completed';
+    return status;
+  };
+
   const filteredAppointments = appointments.filter((apt: Appointment) => {
-    const matchesStatus = filterStatus === 'all' || apt.status === filterStatus;
+    const matchesStatus = filterStatus === 'all' || normalizeStatus(apt.status) === filterStatus;
     const consultantName = apt.consultant_id?.accountId?.fullName || 
                           (typeof apt.consultant_id === 'object' && 'fullName' in apt.consultant_id 
                             ? (apt.consultant_id as { fullName?: string }).fullName 
@@ -141,7 +148,7 @@ const AppointmentsPage = () => {
     if (!dateString) return 'N/A';
     try {
       return formatInTimeZone(new Date(dateString), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy');
-    } catch (error) {
+    } catch {
       return 'Invalid Date';
     }
   };
@@ -160,14 +167,15 @@ const AppointmentsPage = () => {
       const startTime = formatInTimeZone(new Date(dateString), 'Asia/Ho_Chi_Minh', 'HH:mm');
       const endTime = getEndTime(startTime);
       return `${startTime} - ${endTime}`;
-    } catch (error) {
+    } catch {
       return 'Invalid Time';
     }
   };
 
   // Get status display information (text, color, bg)
   const getStatusInfo = (status?: string) => {
-    switch (status) {
+    const s = normalizeStatus(status);
+    switch (s) {
       case 'confirmed':
         return { text: 'Đã xác nhận', color: 'text-sky-700', bg: 'bg-sky-50', border: 'border-sky-200' };
       case 'completed':
@@ -182,7 +190,8 @@ const AppointmentsPage = () => {
 
   // Get gradient background for cards based on status
   const getCardGradient = (status?: string) => {
-    switch (status) {
+    const s = normalizeStatus(status);
+    switch (s) {
       case 'confirmed':
         return 'from-sky-50 via-cyan-50 to-white hover:from-sky-100';
       case 'completed':
@@ -235,7 +244,8 @@ const AppointmentsPage = () => {
           onChange={e => setSearchTerm(e.target.value)}
           placeholder="Tìm theo tên chuyên gia hoặc dịch vụ..."
           className="rounded-lg border border-sky-100 px-3 py-2 text-sm focus:ring-sky-500 focus:border-sky-500 w-full md:w-64"
-        />
+        >
+        </input>
         
         <div className="ml-auto">
           <button
@@ -258,7 +268,7 @@ const AppointmentsPage = () => {
             <Clock className="w-5 h-5 text-sky-600" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Chờ xác nhận</p>
-          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => a.status === 'pending').length}</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'pending').length}</p>
         </div>
         
         {/* Confirmed */}
@@ -270,7 +280,7 @@ const AppointmentsPage = () => {
             <CheckCircle className="w-5 h-5 text-sky-600" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã xác nhận</p>
-          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => a.status === 'confirmed').length}</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'confirmed').length}</p>
         </div>
         
         {/* Completed */}
@@ -282,7 +292,7 @@ const AppointmentsPage = () => {
             <CheckCircle className="w-5 h-5 text-sky-600" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã hoàn thành</p>
-          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => a.status === 'completed').length}</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'completed').length}</p>
         </div>
         
         {/* Cancelled */}
@@ -294,7 +304,7 @@ const AppointmentsPage = () => {
             <X className="w-5 h-5 text-sky-600" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã hủy</p>
-          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => a.status === 'cancelled').length}</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'cancelled').length}</p>
         </div>
       </div>
 
@@ -311,7 +321,7 @@ const AppointmentsPage = () => {
         ) : (
           <div className="space-y-3">
             {filteredAppointments.map(appointment => {
-              const isCompleted = appointment.status === 'completed';
+              const isCompleted = normalizeStatus(appointment.status) === 'completed';
               const hasFeedback = appointment.hasFeedback;
               const completionDate = appointment.dateBooking ? new Date(appointment.dateBooking) : new Date();
               const feedbackDeadline = new Date(completionDate);
@@ -467,7 +477,7 @@ const AppointmentsPage = () => {
               )}
 
               {/* Feedback Section cho lịch hẹn đã hoàn thành */}
-              {selectedAppointment.status === 'completed' && (
+              {normalizeStatus(selectedAppointment.status) === 'completed' && (
                 <div className="border-t pt-4 mt-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -475,7 +485,7 @@ const AppointmentsPage = () => {
                       Đánh giá dịch vụ
                     </h4>
                     {(() => {
-                        const isCompleted = selectedAppointment.status === 'completed';
+                        const isCompleted = normalizeStatus(selectedAppointment.status) === 'completed';
                         const hasFeedback = selectedAppointment.hasFeedback;
                         const completionDate = selectedAppointment.dateBooking ? new Date(selectedAppointment.dateBooking) : new Date();
                         const feedbackDeadline = new Date(completionDate);

@@ -610,4 +610,28 @@ export const createVnpayPaymentApi = async (data: { amount: number; orderInfo: s
   return res.data;
 };
 
+export const updateAppointmentStatusApi = async (id: string, status: string) => {
+  const res = await api.put(`/appointments/status/${id}`, { status });
+  return res.data;
+};
+
+export const createPaymentApi = async (data: {
+  accountId: string;
+  appointmentId: string;
+  date: string;
+  description: string;
+  paymentLinkId: string;
+  totalPrice: number;
+  status: 'pending' | 'completed' | 'failed';
+  paymentMethod: 'paypal' | 'momo' | 'vnpay' | 'cash' | 'other';
+}) => {
+  const res = await api.post('/payment', data);
+  return res.data;
+};
+
+export const deleteAppointmentApi = async (id: string) => {
+  const res = await api.delete(`/appointments/${id}`);
+  return res.data;
+};
+
 export default api;

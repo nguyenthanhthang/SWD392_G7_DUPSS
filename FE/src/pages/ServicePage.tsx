@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, createMomoPaymentApi, createVnpayPaymentApi } from '../api';
+import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, deleteAppointmentApi, createVnpayPaymentApi, createMomoPaymentApi } from '../api';
 import { ChevronLeft, ChevronRight, User, Sparkles, Calendar, Banknote, Star, MessageCircle, ChevronDown } from 'lucide-react';
 import { addDays, startOfWeek, isSameWeek } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
-import Confetti from 'react-confetti';
 import { useAuth } from '../contexts/AuthContext';
 import consultingImage from '../assets/images/consulting-intro.png'; // Import the consulting image
 import { motion, AnimatePresence } from 'framer-motion'; // Import for animations
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 const steps = [
   { title: 'Chọn dịch vụ', desc: 'Chọn gói dịch vụ phù hợp' },
@@ -69,24 +69,6 @@ interface AvailableConsultant {
   introduction?: string;
   experience?: number;
   contact?: string;
-}
-
-interface Bill {
-  slotTime_id: string;
-  user_id: string;
-  consultant_id: string;
-  service_id: string;
-  dateBooking: string;
-  reason: string;
-  note: string;
-  service?: Service;
-  consultant?: Consultant;
-  slot?: { day: string; time: string };
-  dateStr?: string;
-  price?: number;
-  fullName?: string;
-  phone?: string;
-  gender?: string;
 }
 
 // Interface cho feedback và rating
@@ -384,6 +366,9 @@ interface Appointment {
 
 type SlotStatus = 'available' | 'booked' | 'past' | 'no-consultant';
 
+// Update PayPal error type to match actual PayPal error structure
+type PayPalError = Record<string, unknown>;
+
 export default function ServicePage() {
   const navigate = useNavigate();
   const [showIntro, setShowIntro] = useState(true);
@@ -416,12 +401,14 @@ export default function ServicePage() {
   const [expandServices, setExpandServices] = useState(false);
   const [allSlotTimes, setAllSlotTimes] = useState<SlotTime[]>([]);
   const [availableConsultants, setAvailableConsultants] = useState<AvailableConsultant[]>([]);
-  const [bill, setBill] = useState<Bill | null>(null);
   const [showError, setShowError] = useState<string | null>(null);
   const { user } = useAuth();
   const [userAppointments, setUserAppointments] = useState<Appointment[]>([]);
   const [weekSchedule, setWeekSchedule] = useState<Record<string, { time: string; availableConsultants: AvailableConsultant[] }[]>>({});
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
+  const [countdownTime, setCountdownTime] = useState<number | null>(null);
+  const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
+  const countdownInterval = useRef<NodeJS.Timeout | null>(null);
 
   const handleStartConsulting = () => {
     if (!user) {
@@ -592,141 +579,72 @@ export default function ServicePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     // Validate form before submission
     if (!validateForm()) {
       setShowError('Vui lòng điền đầy đủ và chính xác thông tin cá nhân!');
       return;
     }
-    
     const userInfo = localStorage.getItem('userInfo');
     const user = userInfo ? JSON.parse(userInfo) : null;
     if (!user || !selectedConsultant || !selectedSlot || !form.serviceId) {
       setShowError('Thiếu thông tin đặt lịch!');
       return;
     }
-
     try {
-        const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-        const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
-        const slotDate = addDays(weekStart, dayIdx);
-        const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-        const slotHour = selectedSlot.time;
-        const slotTimeObj = allSlotTimes.find(st => {
-          if (st.status !== 'available') return false;
-          const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-          const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
-          return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
-        });
-
-        if (!slotTimeObj) {
-          setShowError('Không tìm thấy slot time phù hợp!');
-          return;
-        }
-
-        const payload = {
-          slotTime_id: slotTimeObj._id,
-          user_id: user._id,
-          consultant_id: selectedConsultant,
-          service_id: form.serviceId,
-          dateBooking: slotTimeObj.start_time,
-          reason: form.reason,
-          note: form.note,
-        };
-
-        const service = services.find(s => s._id === form.serviceId);
-        if (!service || !service.price) {
-          setShowError('Dịch vụ không hợp lệ hoặc không có giá!');
-          return;
-        }
-
-        // Luôn tạo lịch hẹn trước
-        const newAppointment = await createAppointmentApi(payload);
-        console.log("=== [FE] Created appointment ===", newAppointment);
-
-        const billData = {
-          ...payload,
-          service: service,
-          consultant: consultants.find(c => c._id === selectedConsultant),
-          slot: selectedSlot,
-          dateStr: getSelectedSlotDateStr(),
-          price: service.price,
-          fullName: form.name,
-          phone: form.phone,
-          gender: form.gender,
-        };
-
-        localStorage.setItem('pendingBill', JSON.stringify(billData));
-
-        // Xử lý thanh toán dựa trên phương thức được chọn
-        if (form.paymentMethod === 'momo') {
-          const paymentData = {
-            amount: service.price,
-            orderInfo: `Thanh toán cho lịch hẹn ${newAppointment._id}`,
-          };
-
-          try {
-            const momoResponse = await createMomoPaymentApi(paymentData);
-            console.log("=== [FE] MoMo payment response ===", momoResponse);
-            
-            if (momoResponse && momoResponse.payUrl) {
-              window.location.href = momoResponse.payUrl;
-            } else {
-              setShowError('Không thể tạo thanh toán MoMo. Vui lòng thử lại.');
-              localStorage.removeItem('pendingBill');
-            }
-          } catch (err) {
-            console.error("=== [FE] Error creating MoMo payment ===", err);
-            setShowError('Có lỗi xảy ra khi kết nối với MoMo. Vui lòng thử lại.');
-            localStorage.removeItem('pendingBill');
-          }
-        } else if (form.paymentMethod === 'vnpay') {
-          const paymentData = {
-            amount: service.price,
-            orderInfo: `Thanh toán cho lịch hẹn ${newAppointment._id}`,
-            orderId: newAppointment._id,
-          };
-
-          console.log("=== [FE] VNPay PaymentData to be sent to BE ===", paymentData);
-
-          try {
-            const vnpayResponse = await createVnpayPaymentApi(paymentData);
-            console.log("=== [FE] VNPay Response from BE ===", vnpayResponse);
-
-            if (vnpayResponse && vnpayResponse.payUrl) {
-              console.log("=== [FE] Redirecting to VNPay URL:", vnpayResponse.payUrl);
-              window.location.href = vnpayResponse.payUrl;
-            } else {
-              console.error("=== [FE] VNPay response from BE is invalid ===", vnpayResponse);
-              setShowError('Không thể tạo thanh toán VNPay. Phản hồi không hợp lệ.');
-              localStorage.removeItem('pendingBill');
-            }
-          } catch (err) {
-            const error = err as { response?: { data: { message?: string }, status: number }, request?: unknown, message?: string };
-            console.error('=== [FE] Error calling createVnpayPaymentApi ===', error);
-            if (error.response) {
-                console.error('[FE] Error Response Data:', error.response.data);
-                console.error('[FE] Error Response Status:', error.response.status);
-                setShowError(`Lỗi từ máy chủ: ${error.response.data.message || 'Vui lòng thử lại'}`);
-            } else if (error.request) {
-                console.error('[FE] Error Request:', error.request);
-                setShowError('Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối mạng.');
-            } else {
-                console.error('[FE] Error Message:', error.message);
-                setShowError('Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại.');
-            }
-            localStorage.removeItem('pendingBill');
-          }
-        } else {
-          // Thanh toán tại quầy
-          setBill(billData);
-          setCurrentStep(5);
-        }
+      const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+      const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
+      const slotDate = addDays(weekStart, dayIdx);
+      const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+      const slotHour = selectedSlot.time;
+      const slotTimeObj = allSlotTimes.find(st => {
+        if (st.status !== 'available') return false;
+        const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+        const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+        return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
+      });
+      if (!slotTimeObj) {
+        setShowError('Không tìm thấy slot time phù hợp!');
+        return;
+      }
+      const payload = {
+        slotTime_id: slotTimeObj._id,
+        user_id: user._id,
+        consultant_id: selectedConsultant,
+        service_id: form.serviceId,
+        dateBooking: slotTimeObj.start_time,
+        reason: form.reason,
+        note: form.note,
+      };
+      const service = services.find(s => s._id === form.serviceId);
+      if (!service || !service.price) {
+        setShowError('Dịch vụ không hợp lệ hoặc không có giá!');
+        return;
+      }
+      // Tạo appointment (status mặc định là pending)
+      const newAppointment = await createAppointmentApi(payload);
+      // Lưu thông tin vào localStorage để PaymentResultPage xử lý tiếp
+      const paymentData = {
+        ...payload,
+        appointmentId: newAppointment._id,
+        user_id: user._id,
+        service: service,
+        consultant: consultants.find(c => c._id === selectedConsultant),
+        slot: selectedSlot,
+        dateStr: getSelectedSlotDateStr(),
+        price: service.price,
+        fullName: form.name,
+        phone: form.phone,
+        gender: form.gender,
+        paymentMethod: form.paymentMethod,
+      };
+      localStorage.setItem('pendingBill', JSON.stringify(paymentData));
+      // Điều hướng sang trang kết quả/thanh toán (PaymentResultPage)
+      navigate('/payment/result');
     } catch (error) {
-        console.error("=== [FE] Error creating appointment ===", error);
-        setShowError('Đặt lịch thất bại! Vui lòng thử lại hoặc liên hệ hỗ trợ.');
+      console.error("=== [FE] Error creating appointment ===", error);
+      setShowError('Đặt lịch thất bại! Vui lòng thử lại hoặc liên hệ hỗ trợ.');
     }
-};
+  };
 
   const handleOpenConsultantDrawer = (slotDay: string, slotTime: string) => {
     setSelectedSlot({ day: slotDay, time: slotTime });
@@ -815,8 +733,169 @@ export default function ServicePage() {
     return 'no-consultant';
   };
 
+  // Add cleanup function for appointment
+  const cleanupPendingAppointment = async (showError = false) => {
+    if (pendingAppointmentId) {
+      try {
+        await deleteAppointmentApi(pendingAppointmentId);
+        setPendingAppointmentId(null);
+        if (showError) {
+          setShowError('Hết thời gian thanh toán. Vui lòng thử lại.');
+        }
+      } catch (error) {
+        console.error("Error cleaning up appointment:", error);
+      }
+    }
+  };
+
+  // Handle countdown timer
+  useEffect(() => {
+    if (countdownTime === null) return;
+
+    if (countdownTime > 0) {
+      countdownInterval.current = setInterval(() => {
+        setCountdownTime(prev => prev !== null ? prev - 1 : null);
+      }, 1000);
+    } else if (countdownTime === 0) {
+      void cleanupPendingAppointment(true);
+      setCountdownTime(null);
+    }
+
+    return () => {
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+      }
+    };
+  }, [countdownTime]);
+
+  // Cleanup on unmount or navigation
+  useEffect(() => {
+    return () => {
+      void cleanupPendingAppointment(false);
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+      }
+    };
+  }, []);
+
+  const handleStartPayment = async () => {
+    if (!validateForm()) {
+      setShowError('Vui lòng điền đầy đủ và chính xác thông tin cá nhân!');
+      return;
+    }
+
+    const userInfo = localStorage.getItem('userInfo');
+    const user = userInfo ? JSON.parse(userInfo) : null;
+    if (!user || !selectedConsultant || !selectedSlot || !form.serviceId) {
+      setShowError('Thiếu thông tin đặt lịch!');
+      return;
+    }
+
+    try {
+      const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+      const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
+      const slotDate = addDays(weekStart, dayIdx);
+      const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+      const slotHour = selectedSlot.time;
+      const slotTimeObj = allSlotTimes.find(st => {
+        if (st.status !== 'available') return false;
+        const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+        const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+        return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
+      });
+
+      if (!slotTimeObj) {
+        setShowError('Không tìm thấy slot time phù hợp!');
+        return;
+      }
+
+      const payload = {
+        slotTime_id: slotTimeObj._id,
+        user_id: user._id,
+        consultant_id: selectedConsultant,
+        service_id: form.serviceId,
+        dateBooking: slotTimeObj.start_time,
+        reason: form.reason,
+        note: form.note,
+      };
+
+      const service = services.find(s => s._id === form.serviceId);
+      if (!service || !service.price) {
+        setShowError('Dịch vụ không hợp lệ hoặc không có giá!');
+        return;
+      }
+
+      // Tạo appointment (status mặc định là pending)
+      const newAppointment = await createAppointmentApi(payload);
+      setPendingAppointmentId(newAppointment._id);
+      setCountdownTime(60); // Start 60 seconds countdown
+
+      // Store payment data
+      const paymentData = {
+        ...payload,
+        appointmentId: newAppointment._id,
+        service: service,
+        consultant: consultants.find(c => c._id === selectedConsultant),
+        slot: selectedSlot,
+        dateStr: getSelectedSlotDateStr(),
+        price: service.price,
+        fullName: form.name,
+        phone: form.phone,
+        gender: form.gender,
+        paymentMethod: form.paymentMethod,
+      };
+      localStorage.setItem('pendingBill', JSON.stringify(paymentData));
+
+      // Nếu chọn VNPay thì gọi API tạo link thanh toán và redirect
+      if (form.paymentMethod === 'vnpay') {
+        const vnpayRes = await createVnpayPaymentApi({
+          amount: service.price,
+          orderInfo: `Thanh toán cho lịch hẹn ${newAppointment._id}`,
+          orderId: newAppointment._id,
+        });
+        if (vnpayRes && vnpayRes.payUrl) {
+          window.location.href = vnpayRes.payUrl;
+          return;
+        } else {
+          setShowError('Không tạo được link thanh toán VNPay. Vui lòng thử lại!');
+          return;
+        }
+      }
+
+      // Nếu chọn MoMo thì gọi API tạo link thanh toán và redirect
+      if (form.paymentMethod === 'momo') {
+        const momoRes = await createMomoPaymentApi({
+          amount: service.price,
+          orderInfo: `Thanh toán cho lịch hẹn ${newAppointment._id}`,
+        });
+        if (momoRes && momoRes.payUrl) {
+          window.location.href = momoRes.payUrl;
+          return;
+        } else {
+          setShowError('Không tạo được link thanh toán MoMo. Vui lòng thử lại!');
+          return;
+        }
+      }
+
+      // Các phương thức khác (card) giữ nguyên flow cũ
+      if (form.paymentMethod === 'card') {
+        navigate('/payment/result');
+      }
+      // PayPal đã xử lý riêng
+    } catch (error) {
+      console.error("=== [FE] Error creating appointment ===", error);
+      setShowError('Đặt lịch thất bại! Vui lòng thử lại hoặc liên hệ hỗ trợ.');
+    }
+  };
+
   return (
     <div className="bg-gradient-to-b from-sky-50 to-[#f0f7fa] min-h-screen flex flex-col">
+      {/* Countdown timer always visible when active */}
+      {countdownTime !== null && (
+        <div className="fixed top-6 right-6 z-[9999] bg-red-100 text-red-800 px-6 py-3 rounded-xl font-semibold shadow-lg text-lg">
+          Thời gian giữ slot còn: {countdownTime}s
+        </div>
+      )}
       <Header />
       <div className="flex-1 w-full px-4 py-8 flex flex-col justify-center items-center">
         <AnimatePresence mode="wait">
@@ -1541,7 +1620,10 @@ export default function ServicePage() {
                 )}
                 {/* Step 5: Thanh toán */}
                 {currentStep === 4 && (
-                  <form onSubmit={handleSubmit} className="w-full max-w-2xl bg-white/70 backdrop-blur-xl rounded-3xl shadow-lg p-10 border border-cyan-100 flex flex-col gap-8 animate-fadeIn">
+                  <form onSubmit={(e: React.FormEvent) => {
+                    e.preventDefault();
+                    handleStartPayment();
+                  }} className="w-full max-w-2xl bg-white/70 backdrop-blur-xl rounded-3xl shadow-lg p-10 border border-cyan-100 flex flex-col gap-8 animate-fadeIn">
                     <div className="text-center mb-6">
                       <div className="inline-flex items-center gap-3 mb-4">
                         <div className="w-2 h-2 rounded-full bg-sky-500"></div>
@@ -1551,6 +1633,13 @@ export default function ServicePage() {
                       <h2 className="text-3xl font-semibold text-gray-800 mb-2 tracking-tight">Thanh toán & xác nhận</h2>
                       <p className="text-gray-600 text-lg">Kiểm tra lại thông tin và chọn phương thức thanh toán</p>
                     </div>
+
+                    {countdownTime !== null && (
+                      <div className="fixed top-4 right-4 bg-red-100 text-red-800 px-4 py-2 rounded-lg font-semibold shadow-lg">
+                        Thời gian thanh toán còn: {countdownTime}s
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-5">
                       <div className="flex justify-between items-center bg-sky-50/80 rounded-xl px-6 py-4 shadow-sm">
                         <span className="text-gray-600">Dịch vụ:</span>
@@ -1586,7 +1675,7 @@ export default function ServicePage() {
                       </div>
                       <div>
                         <label className="block text-gray-700 mb-3 text-base font-medium">Phương thức thanh toán</label>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <label className="flex items-center p-4 border border-sky-100 rounded-xl cursor-pointer hover:bg-sky-50/30 transition-all text-base hover:border-sky-300">
                             <input
                               type="radio"
@@ -1607,7 +1696,7 @@ export default function ServicePage() {
                               onChange={handleChange}
                               className="mr-3 w-5 h-5 text-fuchsia-600 focus:ring-fuchsia-500"
                             />
-                            <img src="https://developers.momo.vn/v3/assets/images/logo-e54a548.svg" alt="Ví MoMo" className="w-6 h-6 mr-2" />
+                            <img src="/logo-momo-png-2.png" alt="Ví MoMo" className="h-6 object-contain mr-2" />
                             <span>Ví điện tử MoMo</span>
                           </label>
                           <label className={`flex items-center p-4 border rounded-xl cursor-pointer hover:bg-blue-50/30 transition-all text-base hover:border-blue-300 ${form.paymentMethod === 'vnpay' ? 'border-blue-400' : 'border-sky-100'}`}>
@@ -1619,95 +1708,135 @@ export default function ServicePage() {
                               onChange={handleChange}
                               className="mr-3 w-5 h-5 text-blue-600 focus:ring-blue-500"
                             />
-                            <img src="https://vnpay.vn/assets/images/logo-icon.svg" alt="VNPay" className="w-7 h-7 mr-2" />
+                            <img src="/vnpay-logo-inkythuatso-01.png" alt="VNPay" className="h-6 object-contain mr-2" />
                             <span>VNPay (ATM/QR/Thẻ nội địa)</span>
                           </label>
+                          <div className={`p-4 border rounded-xl transition-all ${form.paymentMethod === 'paypal' ? 'border-blue-400 bg-blue-50/10' : 'border-sky-100'}`}>
+                            <label className="flex items-center cursor-pointer mb-4">
+                              <input
+                                type="radio"
+                                name="paymentMethod"
+                                value="paypal"
+                                checked={form.paymentMethod === 'paypal'}
+                                onChange={handleChange}
+                                className="mr-3 w-5 h-5 text-blue-600 focus:ring-blue-500"
+                              />
+                              <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg" alt="PayPal" className="h-6 mr-2" />
+                              <span>PayPal</span>
+                            </label>
+                            {form.paymentMethod === 'paypal' && form.serviceId && (
+                              <div className="mt-4 border-t border-gray-200 pt-4">
+                                <PayPalScriptProvider options={{
+                                  clientId: "Abu4SuFm2mL_XJskEZvPW3lstIPs9Bi4Ufb8FzxK1Mt4BVM13KPewpyEMDU_M_la4oQUJnHNy6vqV3pz",
+                                  currency: "USD"
+                                }}>
+                                  <PayPalButtons
+                                    style={{ layout: "vertical" }}
+                                    forceReRender={[form.serviceId, services]}
+                                    createOrder={(data, actions) => {
+                                      const priceUSD = (services.find(s => s._id === form.serviceId)?.price || 0) / 23000;
+                                      return actions.order.create({
+                                        intent: "CAPTURE",
+                                        purchase_units: [{
+                                          amount: {
+                                            value: priceUSD.toFixed(2),
+                                            currency_code: "USD"
+                                          }
+                                        }]
+                                      });
+                                    }}
+                                    onApprove={async (data, actions) => {
+                                      if (!actions.order) {
+                                        setShowError('Lỗi thanh toán PayPal. Vui lòng thử lại.');
+                                        return;
+                                      }
+                                      try {
+                                        await actions.order.capture();
+                                        // Lưu pendingBill vào localStorage và điều hướng sang PaymentResultPage
+                                        const userInfo = localStorage.getItem('userInfo');
+                                        const currentUser = userInfo ? JSON.parse(userInfo) : null;
+                                        if (!selectedSlot || !currentUser) {
+                                          setShowError('Thiếu thông tin đặt lịch!');
+                                          return;
+                                        }
+                                        const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+                                        const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
+                                        const slotDate = addDays(weekStart, dayIdx);
+                                        const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+                                        const slotHour = selectedSlot.time;
+                                        const slotTimeObj = allSlotTimes.find(st => {
+                                          if (st.status !== 'available') return false;
+                                          const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+                                          const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+                                          return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
+                                        });
+                                        if (!slotTimeObj) {
+                                          setShowError('Không tìm thấy slot time phù hợp!');
+                                          return;
+                                        }
+                                        const service = services.find(s => s._id === form.serviceId);
+                                        if (!service || !service.price) {
+                                          setShowError('Dịch vụ không hợp lệ hoặc không có giá!');
+                                          return;
+                                        }
+                                        const billData = {
+                                          slotTime_id: slotTimeObj._id,
+                                          user_id: currentUser._id,
+                                          consultant_id: selectedConsultant,
+                                          service_id: form.serviceId,
+                                          dateBooking: slotTimeObj.start_time,
+                                          reason: form.reason,
+                                          note: form.note,
+                                          service: service,
+                                          consultant: consultants.find(c => c._id === selectedConsultant),
+                                          slot: selectedSlot,
+                                          dateStr: getSelectedSlotDateStr(),
+                                          price: service.price,
+                                          fullName: form.name,
+                                          phone: form.phone,
+                                          gender: form.gender,
+                                          paymentMethod: form.paymentMethod,
+                                          paypalStatus: 'COMPLETED',
+                                        };
+                                        localStorage.setItem('pendingBill', JSON.stringify(billData));
+                                        navigate('/payment/result');
+                                      } catch {
+                                        setShowError('Thanh toán thất bại. Vui lòng thử lại.');
+                                      }
+                                    }}
+                                    onError={(err: PayPalError) => {
+                                      console.error("PayPal Error:", err);
+                                      setShowError("Có lỗi xảy ra trong quá trình thanh toán PayPal. Vui lòng thử lại.");
+                                    }}
+                                  />
+                                </PayPalScriptProvider>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex justify-between gap-4 mt-4">
+                        <button
+                          type="button"
+                          className="bg-gray-100 text-gray-700 py-3 px-8 rounded-xl font-semibold hover:bg-gray-200 transition-colors shadow-sm text-base border border-gray-200"
+                          onClick={handleBack}
+                        >
+                          Quay lại
+                        </button>
+                        {form.paymentMethod !== 'paypal' && (
+                          <button
+                            type="submit"
+                            className="bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white py-3 px-10 rounded-xl font-semibold transition-colors shadow-md text-base"
+                          >
+                            Xác nhận & Thanh toán
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 mt-2 text-center">
+                        Bằng cách nhấn nút xác nhận, bạn đồng ý với các điều khoản và điều kiện của chúng tôi
+                      </p>
                     </div>
-                    <div className="flex justify-between gap-4 mt-4">
-                      <button
-                        type="button"
-                        className="bg-gray-100 text-gray-700 py-3 px-8 rounded-xl font-semibold hover:bg-gray-200 transition-colors shadow-sm text-base border border-gray-200"
-                        onClick={handleBack}
-                      >
-                        Quay lại
-                      </button>
-                      <button
-                        type="submit"
-                        className="bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white py-3 px-10 rounded-xl font-semibold transition-colors shadow-md text-base"
-                      >
-                        Xác nhận & Thanh toán
-                      </button>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-2 text-center">
-                      Bằng cách nhấn nút xác nhận, bạn đồng ý với các điều khoản và điều kiện của chúng tôi
-                    </p>
                   </form>
-                )}
-                {/* Step 6: Bill */}
-                {currentStep === 5 && bill && (
-                  <>
-                    <Confetti
-                      width={window.innerWidth}
-                      height={window.innerHeight}
-                      recycle={false}
-                      numberOfPieces={500}
-                      tweenDuration={10000}
-                    />
-                    <div className="w-full max-w-2xl bg-white/70 backdrop-blur-xl rounded-3xl shadow-xl p-10 border border-cyan-100 flex flex-col gap-8 animate-fadeIn">
-                      <div className="text-center mb-6">
-                        <div className="flex justify-center mb-4">
-                          <svg className="w-20 h-20 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <h2 className="text-3xl font-bold text-emerald-700 mb-2 tracking-tight">Đặt lịch thành công!</h2>
-                        <p className="text-gray-600 text-lg">Cảm ơn bạn đã tin tưởng sử dụng dịch vụ của chúng tôi.</p>
-                      </div>
-                      <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 p-6 rounded-2xl border border-emerald-100 shadow-md">
-                        <div className="flex flex-col gap-4 text-base text-gray-700">
-                          <div className="flex justify-between border-b border-emerald-100 pb-3">
-                            <span className="text-gray-600">Dịch vụ:</span>
-                            <span className="font-semibold text-gray-800">{bill.service?.name}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-emerald-100 pb-3">
-                            <span className="text-gray-600">Chuyên viên:</span>
-                            <span className="font-semibold text-gray-800">{bill.consultant?.accountId?.fullName || "Không xác định"}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-emerald-100 pb-3">
-                            <span className="text-gray-600">Thời gian:</span>
-                            <span className="font-medium text-gray-800">
-                              {bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time} - ${getEndTime(bill.slot.time)}` : '--'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between border-b border-emerald-100 pb-3">
-                            <span className="text-gray-600">Khách hàng:</span>
-                            <span className="font-medium text-gray-800">{bill.fullName}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-emerald-100 pb-3">
-                            <span className="text-gray-600">SĐT:</span>
-                            <span className="font-medium text-gray-800">{bill.phone}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-emerald-100 pb-3">
-                            <span className="text-gray-600">Giới tính:</span>
-                            <span className="font-medium text-gray-800">{bill.gender === 'male' ? 'Nam' : 'Nữ'}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-emerald-100 pb-3">
-                            <span className="text-gray-600">Lý do tư vấn:</span>
-                            <span className="font-medium text-gray-800">{bill.reason}</span>
-                          </div>
-                          <div className="flex justify-between items-center pt-3 text-lg font-bold">
-                            <span>Tổng cộng:</span>
-                            <span className="text-emerald-700">{bill.price?.toLocaleString('vi-VN')}đ</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex justify-center mt-6">
-                        <button className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white px-10 py-4 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105" onClick={() => window.location.reload()}>Đặt lịch mới</button>
-                      </div>
-                    </div>
-                  </>
                 )}
               </div>
             </motion.div>

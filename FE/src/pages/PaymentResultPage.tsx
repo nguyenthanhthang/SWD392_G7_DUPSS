@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { createPaymentApi, createAppointmentApi, updateAppointmentStatusApi } from '../api';
 
-interface Bill {
+interface Payment {
   service?: {
     name: string;
     price: number;
@@ -23,12 +24,22 @@ interface Bill {
   phone?: string;
   gender?: string;
   reason?: string;
+  appointmentId?: string;
+  user_id?: string;
+  price?: number;
+  paymentMethod?: string;
+  slotTime_id?: string;
+  consultant_id?: string;
+  service_id?: string;
+  dateBooking?: string;
+  note?: string;
+  paypalStatus?: string;
 }
 
 export default function PaymentResultPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [bill, setBill] = useState<Bill | null>(null);
+  const [payment, setPayment] = useState<Payment | null>(null);
 
   // VNPay response parameters
   const vnp_ResponseCode = searchParams.get('vnp_ResponseCode');
@@ -38,13 +49,75 @@ export default function PaymentResultPage() {
     // Get pending bill from localStorage
     const pendingBill = localStorage.getItem('pendingBill');
     if (pendingBill) {
-      setBill(JSON.parse(pendingBill));
+      const paymentObj = JSON.parse(pendingBill);
+      setPayment(paymentObj);
+      
+      // PAYPAL FLOW
+      if (paymentObj.paymentMethod === 'paypal') {
+        // Tạo appointment với status mặc định (pending)
+        createAppointmentApi({
+          slotTime_id: paymentObj.slotTime_id,
+          user_id: paymentObj.user_id,
+          consultant_id: paymentObj.consultant_id,
+          service_id: paymentObj.service_id,
+          dateBooking: paymentObj.dateBooking,
+          reason: paymentObj.reason,
+          note: paymentObj.note,
+        })
+        .then((appointmentRes) => {
+          // Cập nhật status appointment thành confirm
+          updateAppointmentStatusApi(appointmentRes._id, 'confirm')
+            .then(() => {
+              // Tạo payment record độc lập
+              createPaymentApi({
+                accountId: paymentObj.user_id,
+                appointmentId: appointmentRes._id,
+                date: new Date().toISOString(),
+                description: `Thanh toán cho lịch hẹn ${appointmentRes._id}`,
+                paymentLinkId: appointmentRes._id,
+                totalPrice: paymentObj.price || 0,
+                status: 'completed',
+                paymentMethod: paymentObj.paymentMethod || 'paypal',
+              }).catch((err) => {
+                console.error('[FE] createPaymentApi error:', err);
+              });
+            })
+            .catch((err) => {
+              console.error('[FE] updateAppointmentStatusApi error:', err);
+            });
+        })
+        .catch((err) => {
+          console.error('[FE] createAppointmentApi error:', err);
+        });
+      } else {
+        // VNPay, momo, card giữ nguyên logic cũ
+        if ((vnp_ResponseCode === '00' && vnp_TransactionStatus === '00' || !vnp_ResponseCode) && paymentObj.appointmentId) {
+          // Tạo payment record
+          createPaymentApi({
+            accountId: paymentObj.user_id,
+            appointmentId: paymentObj.appointmentId,
+            date: new Date().toISOString(),
+            description: `Thanh toán cho lịch hẹn ${paymentObj.appointmentId}`,
+            paymentLinkId: paymentObj.appointmentId,
+            totalPrice: paymentObj.price || 0,
+            status: 'completed',
+            paymentMethod: paymentObj.paymentMethod || 'other',
+          })
+          .then(res => {
+            console.log('[FE] createPaymentApi response:', res);
+          })
+          .catch(err => {
+            console.error('[FE] createPaymentApi error:', err);
+          });
+        }
+      }
       // Clear pending bill after loading
       localStorage.removeItem('pendingBill');
     }
   }, []);
 
-  const isPaymentSuccess = vnp_ResponseCode === '00' && vnp_TransactionStatus === '00';
+  const isPaypalSuccess = payment?.paymentMethod === 'paypal' && payment?.paypalStatus === 'COMPLETED';
+  const isPaymentSuccess = isPaypalSuccess || (vnp_ResponseCode === '00' && vnp_TransactionStatus === '00');
 
   return (
     <div className="bg-gradient-to-b from-sky-50 to-[#f0f7fa] min-h-screen flex flex-col">
@@ -71,7 +144,7 @@ export default function PaymentResultPage() {
             </p>
           </div>
 
-          {bill && (
+          {payment && (
             <div className={`p-6 rounded-2xl border shadow-md ${
               isPaymentSuccess 
                 ? 'bg-gradient-to-r from-emerald-50 to-cyan-50 border-emerald-100'
@@ -80,42 +153,42 @@ export default function PaymentResultPage() {
               <div className="flex flex-col gap-4 text-base text-gray-700">
                 <div className="flex justify-between border-b border-emerald-100 pb-3">
                   <span className="text-gray-600">Dịch vụ:</span>
-                  <span className="font-semibold text-gray-800">{bill.service?.name}</span>
+                  <span className="font-semibold text-gray-800">{payment.service?.name}</span>
                 </div>
                 <div className="flex justify-between border-b border-emerald-100 pb-3">
                   <span className="text-gray-600">Chuyên viên:</span>
                   <span className="font-semibold text-gray-800">
-                    {bill.consultant?.accountId?.fullName || "Không xác định"}
+                    {payment.consultant?.accountId?.fullName || "Không xác định"}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-emerald-100 pb-3">
                   <span className="text-gray-600">Thời gian:</span>
                   <span className="font-medium text-gray-800">
-                    {bill.slot ? `${bill.slot.day}, ${bill.dateStr}, ${bill.slot.time}` : '--'}
+                    {payment.slot ? `${payment.slot.day}, ${payment.dateStr}, ${payment.slot.time}` : '--'}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-emerald-100 pb-3">
                   <span className="text-gray-600">Khách hàng:</span>
-                  <span className="font-medium text-gray-800">{bill.fullName}</span>
+                  <span className="font-medium text-gray-800">{payment.fullName}</span>
                 </div>
                 <div className="flex justify-between border-b border-emerald-100 pb-3">
                   <span className="text-gray-600">SĐT:</span>
-                  <span className="font-medium text-gray-800">{bill.phone}</span>
+                  <span className="font-medium text-gray-800">{payment.phone}</span>
                 </div>
                 <div className="flex justify-between border-b border-emerald-100 pb-3">
                   <span className="text-gray-600">Giới tính:</span>
                   <span className="font-medium text-gray-800">
-                    {bill.gender === 'male' ? 'Nam' : 'Nữ'}
+                    {payment.gender === 'male' ? 'Nam' : 'Nữ'}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-emerald-100 pb-3">
                   <span className="text-gray-600">Lý do tư vấn:</span>
-                  <span className="font-medium text-gray-800">{bill.reason}</span>
+                  <span className="font-medium text-gray-800">{payment.reason}</span>
                 </div>
                 <div className="flex justify-between items-center pt-3 text-lg font-bold">
                   <span>Tổng cộng:</span>
                   <span className={isPaymentSuccess ? 'text-emerald-700' : 'text-red-700'}>
-                    {bill.service?.price?.toLocaleString('vi-VN')}đ
+                    {payment.service?.price?.toLocaleString('vi-VN')}đ
                   </span>
                 </div>
               </div>
