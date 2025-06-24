@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import Appointment from '../models/Appointment';
 import { VNPay } from 'vnpay';
 import moment from 'moment';
+import Payment from '../models/Payment';
 
 dotenv.config();
 
@@ -118,19 +119,23 @@ export const createVnpayPayment = async (req: Request, res: Response) => {
 
         // Prepare payment data with proper validation
         const paymentData = {
-            vnp_Amount: Math.round(amount * 100), // Ensure integer amount
+            vnp_Amount: Math.round(amount * 100),
             vnp_TxnRef: orderId,
-            vnp_OrderInfo: orderInfo,
-            vnp_IpAddr: req.ip || '127.0.0.1',
-            vnp_ReturnUrl: process.env.VNPAY_RETURN_URL || `http://localhost:5173/payment/result`,
-            vnp_IpnUrl: process.env.VNPAY_IPN_URL || `http://localhost:5000/api/payment/vnpay/ipn`,
+            vnp_OrderInfo: encodeURIComponent(orderInfo),
+            vnp_IpAddr: '127.0.0.1',
+            vnp_ReturnUrl: process.env.VNPAY_RETURN_URL,
+            vnp_IpnUrl: process.env.VNPAY_IPN_URL,
             vnp_CreateDate: createDate,
             vnp_Locale: language,
             vnp_BankCode: bankCode,
             vnp_Command: 'pay',
             vnp_Version: '2.1.0',
             vnp_OrderType: 'other',
+            vnp_CurrCode: 'VND' 
         };
+        
+        // Log paymentData for debugging
+        console.log('[VNPay] paymentData:', JSON.stringify(paymentData, null, 2));
 
         // Build payment URL with error handling
         let payURL;
@@ -152,7 +157,7 @@ export const createVnpayPayment = async (req: Request, res: Response) => {
         console.log("VNPay CreateDate:", createDate);
         console.log("Return URL:", paymentData.vnp_ReturnUrl);
         console.log("IPN URL:", paymentData.vnp_IpnUrl);
-        console.log("Payment Data:", paymentData);
+        console.log("Payment Data:", JSON.stringify(paymentData, null, 2));
         console.log("Payment URL:", payURL);
         console.log("===============================\n");
 
@@ -331,4 +336,58 @@ export const handleVnpayIpn = async (req: Request, res: Response) => {
             Detail: error instanceof Error ? error.message : 'Unknown error'
         });
     }
+};
+
+// Tạo payment mới
+export const createPayment = async (req: Request, res: Response) => {
+  try {
+    const payment = new Payment(req.body);
+    const saved = await payment.save();
+    res.status(201).json(saved);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// Lấy tất cả payment
+export const getAllPayments = async (req: Request, res: Response) => {
+  try {
+    const payments = await Payment.find().populate('customerId').populate('appointmentId');
+    res.status(200).json(payments);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Lấy payment theo id
+export const getPaymentById = async (req: Request, res: Response) => {
+  try {
+    const payment = await Payment.findById(req.params.id).populate('customerId').populate('appointmentId');
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    res.status(200).json(payment);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Sửa payment
+export const updatePayment = async (req: Request, res: Response) => {
+  try {
+    const payment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    res.status(200).json(payment);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// Xóa payment
+export const deletePayment = async (req: Request, res: Response) => {
+  try {
+    const payment = await Payment.findByIdAndDelete(req.params.id);
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    res.status(200).json({ message: 'Payment deleted' });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
 }; 
