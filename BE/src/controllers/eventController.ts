@@ -25,14 +25,45 @@ export const createEvent = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { title, description, startDate, endDate, location, capacity } =
-      req.body;
+    const { 
+      title, 
+      description, 
+      startDate, 
+      endDate, 
+      registrationStartDate,
+      registrationEndDate,
+      location, 
+      capacity 
+    } = req.body;
+
+    // Validation
+    if (!title || !description || !startDate || !endDate || !registrationStartDate || !registrationEndDate || !location || !capacity) {
+      res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const regStart = new Date(registrationStartDate);
+    const regEnd = new Date(registrationEndDate);
+
+    // Validate dates logic
+    if (regEnd > regStart && regStart < start && regEnd <= start && end > start) {
+      // Valid: regStart < regEnd <= eventStart < eventEnd
+    } else {
+      res.status(400).json({ 
+        message: "Thời gian không hợp lệ. Đăng ký phải kết thúc trước khi sự kiện bắt đầu." 
+      });
+      return;
+    }
 
     const event = new Event({
       title,
       description,
-      startDate,
-      endDate,
+      startDate: start,
+      endDate: end,
+      registrationStartDate: regStart,
+      registrationEndDate: regEnd,
       location,
       capacity,
     });
