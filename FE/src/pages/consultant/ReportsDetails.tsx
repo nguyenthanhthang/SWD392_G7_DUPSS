@@ -242,6 +242,27 @@ const ReportsDetails = () => {
   useEffect(() => {
     let filtered = consultantReports;
 
+    // Filter by current user - chỉ hiển thị report của khách hàng hiện tại
+    if (appointment?.user_id?._id) {
+      const currentUserId = appointment.user_id._id;
+      console.log('Current user ID:', currentUserId); // Debug log
+      console.log('All consultant reports:', consultantReports); // Debug log
+      console.log('All consultant appointments:', consultantAppointments); // Debug log
+      
+      // Lọc reports theo user_id bằng cách check appointment_id
+      filtered = filtered.filter(report => {
+        const matchingAppointment = consultantAppointments.find(app => app._id === report.appointment_id);
+        const matches = matchingAppointment?.user_id?._id === currentUserId;
+        console.log(`Report ${report._id} for appointment ${report.appointment_id}: matches=${matches}`, {
+          reportUserId: matchingAppointment?.user_id?._id,
+          currentUserId
+        }); // Debug log
+        return matches;
+      });
+      
+      console.log('Filtered reports for current user:', filtered); // Debug log
+    }
+
     // Filter by search term (chỉ tìm theo tên)
     if (searchTerm) {
       filtered = filtered.filter(report => 
@@ -264,7 +285,7 @@ const ReportsDetails = () => {
     });
 
          setFilteredAppointments(filteredWithAppointmentData);
-  }, [consultantReports, consultantAppointments, searchTerm, filterStatus]);
+  }, [consultantReports, consultantAppointments, searchTerm, filterStatus, appointment?.user_id?._id]);
 
   // Thêm useEffect để reload reports khi cần
   useEffect(() => {
@@ -281,6 +302,12 @@ const ReportsDetails = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!appointment) return;
+    
+    // Kiểm tra xem có thể chỉnh sửa không
+    if (!canEditReport()) {
+      alert('Không thể chỉnh sửa báo cáo sau thời gian cuộc hẹn kết thúc!');
+      return;
+    }
     
     // Validation cho các trường bắt buộc
     const errors = [];
@@ -365,6 +392,57 @@ const ReportsDetails = () => {
 
   const ageDisplay = appointment?.user_id?.yearOfBirth ? `${calculateAge(appointment.user_id.yearOfBirth)} tuổi` : "Chưa rõ tuổi";
 
+  // Kiểm tra thời gian cuộc hẹn
+  const getAppointmentEndTime = () => {
+    // Thử nhiều cách để lấy thời gian kết thúc appointment
+    let endTime = null;
+    
+    // Cách 1: Từ slotTime_id.end_time
+    if (appointment?.slotTime_id?.end_time) {
+      endTime = new Date(appointment.slotTime_id.end_time);
+    }
+    // Cách 2: Từ dateBooking + 1 giờ
+    else if (appointment?.dateBooking) {
+      const startTime = new Date(appointment.dateBooking);
+      endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1 giờ
+    }
+    // Cách 3: Từ slotTime_id.start_time + 1 giờ
+    else if (appointment?.slotTime_id?.start_time) {
+      const startTime = new Date(appointment.slotTime_id.start_time);
+      endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1 giờ
+    }
+    
+    return endTime;
+  };
+
+  // Kiểm tra xem cuộc hẹn đã kết thúc chưa
+  const isAppointmentEnded = () => {
+    const endTime = getAppointmentEndTime();
+    if (!endTime) return false; // Nếu không có thông tin thời gian thì cho phép chỉnh sửa
+    
+    const now = new Date();
+    const isEnded = now > endTime;
+    
+    console.log('Appointment end check:', {
+      now: now.toISOString(),
+      endTime: endTime.toISOString(),
+      isEnded,
+      canEdit: !isEnded
+    });
+    
+    return isEnded;
+  };
+
+  // Kiểm tra xem có nên hiển thị lịch sử tư vấn không
+  const shouldShowHistory = () => {
+    return !isAppointmentEnded(); // Chỉ hiện khi appointment chưa kết thúc
+  };
+
+  // Kiểm tra có thể chỉnh sửa report không
+  const canEditReport = () => {
+    return !isAppointmentEnded(); // Chỉ cho chỉnh sửa khi appointment chưa kết thúc
+  };
+
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -378,7 +456,7 @@ const ReportsDetails = () => {
           <span className="font-medium">{appointment?.user_id?.fullName}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className={`grid grid-cols-1 ${shouldShowHistory() ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8`}>
           {/* --- LEFT COLUMN --- */}
           <div className="lg:col-span-1 space-y-8 flex flex-col">
             {/* Patient Info Card (Compacted) */}
@@ -403,11 +481,14 @@ const ReportsDetails = () => {
               </div>
             </div>
             {/* --- Lịch sử tư vấn (Redesigned & Compacted) --- */}
+            {shouldShowHistory() && (
             <div className="bg-white rounded-2xl shadow border border-[#DBE8FA] overflow-hidden">
               <div className="p-4 border-b border-[#DBE8FA]">
                 {/* Header */}
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                    <h2 className="text-lg font-semibold text-[#283593] pt-1">Lịch sử buổi tư vấn</h2>
+                    <h2 className="text-lg font-semibold text-[#283593] pt-1">
+                      Lịch sử tư vấn của {appointment?.user_id?.fullName}
+                    </h2>
                     <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[#E3EAFD] text-[#283593] font-semibold border border-[#DBE8FA] hover:bg-[#d1e0fa]">
                         <FileDown className="w-3 h-3" />
                         <span>Xuất báo cáo</span>
@@ -516,10 +597,11 @@ const ReportsDetails = () => {
                 )}
               </div>
             </div>
+            )}
           </div>
 
           {/* --- RIGHT COLUMN --- */}
-          <div className="lg:col-span-2 flex flex-col">
+          <div className={`${shouldShowHistory() ? 'lg:col-span-2' : 'lg:col-span-1'} flex flex-col`}>
             {/* --- Tạo Ghi Nhận Mới (Form) --- */}
             <div className="bg-white rounded-2xl shadow border border-[#DBE8FA] overflow-hidden">
               <div className="p-4 flex items-center gap-4 border-b border-[#DBE8FA]">
@@ -527,6 +609,18 @@ const ReportsDetails = () => {
                 <h2 className="text-lg font-semibold text-[#283593]">Tạo Ghi Nhận Mới</h2>
               </div>
               <form onSubmit={handleFormSubmit} className="p-4 space-y-4">
+                {!canEditReport() && (
+                  <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div className="flex items-center gap-3 text-amber-800">
+                      <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">!</span>
+                      </div>
+                      <p className="text-sm font-medium">
+                        Cuộc hẹn đã kết thúc. Không thể chỉnh sửa báo cáo.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Buổi tư vấn</label>
                   <div className="w-full p-2 border border-gray-300 rounded-md text-sm bg-gray-100">
@@ -540,13 +634,13 @@ const ReportsDetails = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tên bệnh nhân <span className="text-red-500">*</span>
                     </label>
-                    <input type="text" value={tenBenhNhan} onChange={e => setTenBenhNhan(e.target.value)} className={`w-full p-2 border ${getFieldErrorClass(tenBenhNhan, true)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua} />
+                    <input type="text" value={tenBenhNhan} onChange={e => setTenBenhNhan(e.target.value)} className={`w-full p-2 border ${getFieldErrorClass(tenBenhNhan, true)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tuổi bệnh nhân <span className="text-red-500">*</span>
                     </label>
-                    <input type="text" value={tuoiBenhNhan} onChange={e => setTuoiBenhNhan(e.target.value)} className={`w-full p-2 border ${getFieldErrorClass(tuoiBenhNhan, true)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua} />
+                    <input type="text" value={tuoiBenhNhan} onChange={e => setTuoiBenhNhan(e.target.value)} className={`w-full p-2 border ${getFieldErrorClass(tuoiBenhNhan, true)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -555,8 +649,8 @@ const ReportsDetails = () => {
                     <select
                       value={gioiTinhBenhNhan}
                       onChange={e => setGioiTinhBenhNhan(e.target.value)}
-                      className={`w-full p-2 border ${getFieldErrorClass(gioiTinhBenhNhan, true)} rounded-md text-sm`}
-                      disabled={daGhiNhan && !dangChinhSua}
+                      className={`w-full p-2 border ${getFieldErrorClass(gioiTinhBenhNhan, true)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                      disabled={daGhiNhan && !dangChinhSua || !canEditReport()}
                     >
                       <option value="">Chọn giới tính</option>
                       <option value="Nam">Nam</option>
@@ -569,17 +663,17 @@ const ReportsDetails = () => {
                   <label htmlFor="condition" className="block text-sm font-medium text-gray-700 mb-1">
                     Tình trạng / Chủ đề <span className="text-red-500">*</span>
                   </label>
-                  <input type="text" id="condition" name="condition" value={newRecord.condition} onChange={handleInputChange} placeholder="VD: Stress, Lo âu..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.condition, true)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua} />
+                  <input type="text" id="condition" name="condition" value={newRecord.condition} onChange={handleInputChange} placeholder="VD: Stress, Lo âu..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.condition, true)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()} />
                 </div>
                 <div>
                   <label htmlFor="consultation_notes" className="block text-sm font-medium text-gray-700 mb-1">Ghi chú buổi tư vấn</label>
-                  <textarea id="consultation_notes" name="consultation_notes" value={newRecord.consultation_notes} onChange={handleInputChange} rows={4} placeholder="Chi tiết về buổi tư vấn..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.consultation_notes, false)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua}></textarea>
+                  <textarea id="consultation_notes" name="consultation_notes" value={newRecord.consultation_notes} onChange={handleInputChange} rows={4} placeholder="Chi tiết về buổi tư vấn..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.consultation_notes, false)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()}></textarea>
                 </div>
                 <div>
                   <label htmlFor="recommendations" className="block text-sm font-medium text-gray-700 mb-1">Khuyến nghị</label>
-                  <textarea id="recommendations" name="recommendations" value={newRecord.recommendations} onChange={handleInputChange} rows={3} placeholder="Các bước tiếp theo cho bệnh nhân..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.recommendations, false)} rounded-md text-sm`} readOnly={daGhiNhan && !dangChinhSua}></textarea>
+                  <textarea id="recommendations" name="recommendations" value={newRecord.recommendations} onChange={handleInputChange} rows={3} placeholder="Các bước tiếp theo cho bệnh nhân..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.recommendations, false)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()}></textarea>
                 </div>
-                {daGhiNhan && !dangChinhSua ? (
+                {canEditReport() && daGhiNhan && !dangChinhSua ? (
                   <button
                     type="button"
                     className="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-yellow-500 text-white font-semibold hover:bg-yellow-600"
@@ -589,7 +683,7 @@ const ReportsDetails = () => {
                   >
                     Chỉnh sửa ghi nhận
                   </button>
-                ) : (
+                ) : canEditReport() ? (
                   <div className="flex gap-2">
                     {dangChinhSua && (
                       <button
@@ -609,6 +703,10 @@ const ReportsDetails = () => {
                     >
                       {dangChinhSua ? 'Cập nhật' : 'Lưu Ghi Nhận'}
                     </button>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 py-4">
+                    <p className="text-sm">Không thể chỉnh sửa sau thời gian cuộc hẹn kết thúc</p>
                   </div>
                 )}
               </form>

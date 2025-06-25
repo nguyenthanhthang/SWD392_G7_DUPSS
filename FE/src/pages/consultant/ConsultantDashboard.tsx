@@ -15,7 +15,7 @@ interface ApiAppointment {
     name: string;
   } | null;
   dateBooking: string;
-  status: 'scheduled' | 'completed' | 'cancelled' | 'noshow';
+  status: 'confirmed' | 'completed' | 'cancelled' | 'noshow';
 }
 
 interface SlotTime {
@@ -90,7 +90,9 @@ const ConsultantDashboard = () => {
 
     const todays = appointments.filter(app => {
       const appDate = new Date(app.dateBooking);
-      return appDate >= todayStart && appDate <= todayEnd;
+      const isToday = appDate >= todayStart && appDate <= todayEnd;
+      const isValidStatus = app.status === 'confirmed' || app.status === 'completed';
+      return isToday && isValidStatus;
     });
 
     const formattedTodayAppointments = todays.map(app => {
@@ -104,7 +106,7 @@ const ConsultantDashboard = () => {
         patientName: app.user_id.fullName,
         patientAvatar: app.user_id.photoUrl || `https://ui-avatars.com/api/?name=${app.user_id.fullName}`,
         serviceType: app.service_id ? app.service_id.name : 'Dịch vụ không xác định',
-        status: (app.status === 'scheduled' ? 'upcoming' : app.status) as TodayAppointment['status'],
+        status: (app.status === 'confirmed' ? 'upcoming' : app.status) as TodayAppointment['status'],
       };
     });
     setTodayAppointments(formattedTodayAppointments);
@@ -126,7 +128,11 @@ const ConsultantDashboard = () => {
       return slotDate >= firstDayOfWeek && slotDate <= lastDayOfWeek;
     }).length;
 
-    const patientIds = new Set(appointments.map(app => app.user_id._id));
+    // Chỉ tính những bệnh nhân có appointments với status hợp lệ
+    const validAppointments = appointments.filter(app => 
+      app.status === 'confirmed' || app.status === 'completed'
+    );
+    const patientIds = new Set(validAppointments.map(app => app.user_id._id));
     const totalPatientsCount = patientIds.size;
 
     const completedCount = appointments.filter(app => app.status === 'completed').length;
@@ -152,7 +158,9 @@ const ConsultantDashboard = () => {
 
     const nextWeekAppointments = appointments.filter(app => {
       const appDate = new Date(app.dateBooking);
-      return appDate >= nextMonday && appDate <= nextSunday;
+      const isNextWeek = appDate >= nextMonday && appDate <= nextSunday;
+      const isValidStatus = app.status === 'confirmed' || app.status === 'completed';
+      return isNextWeek && isValidStatus;
     });
 
     const weekDays = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];

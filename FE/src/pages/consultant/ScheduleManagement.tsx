@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Clock, ChevronLeft, ChevronRight, MoreHorizontal, Plus, X, Edit, Trash2 } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, MoreHorizontal, Plus, X, Edit, Trash2, FileText, Eye } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Link } from 'react-router-dom';
 import { createSlotTimeApi, getAllSlotTimeApi, deleteSlotTimeApi, getConsultantByAccountIdApi, getAppointmentByConsultantIdApi, getSlotTimeByConsultantIdApi } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -808,21 +809,64 @@ export default function ScheduleManagement() {
                             || appointment.user_id?.username
                             || appointment.user_id?.displayName
                             || 'Không rõ tên';
+                          // Kiểm tra logic hiển thị nút
+                          const now = new Date();
+                          const slotDateTime = new Date(date);
+                          const slotEndTime = new Date(slotDateTime.getTime() + 60 * 60 * 1000); // +1 giờ
+                          const isSlotPassed = now > slotEndTime;
+                          const isCompleted = appointment.status === 'completed';
+                          const isConfirmed = appointment.status === 'confirmed' || appointment.status === 'scheduled';
+                          
+                          // Debug log
+                          console.log('Appointment:', appointment._id, {
+                            status: appointment.status,
+                            slotDateTime: slotDateTime.toISOString(),
+                            slotEndTime: slotEndTime.toISOString(),
+                            now: now.toISOString(),
+                            isSlotPassed,
+                            isCompleted,
+                            isConfirmed
+                          });
+                          
                           return (
                             <div key={slot + slotIdx} className={`rounded-xl p-3 shadow-sm border border-gray-100 bg-
                               ${appointment.service_id?.name === "Khám khẩn cấp" ? "red-50" :
                                 appointment.service_id?.name === "Khám trực tuyến" ? "blue-50" :
-                                appointment.status === "đang tiến hành" ? "yellow-50" :
-                                appointment.status === "hoàn thành" ? "green-50" : "yellow-50"
-                              } flex flex-col gap-2 relative min-h-[120px] flex-1`}>
+                                appointment.status === "completed" ? "green-50" :
+                                appointment.status === "confirmed" || appointment.status === "scheduled" ? "blue-50" :
+                                appointment.status === "pending" ? "yellow-50" : "gray-50"
+                              } flex flex-col gap-2 relative min-h-[120px] flex-1 group hover:shadow-lg transition-all duration-200`}>
                               <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center gap-1 text-[#283593] text-sm font-medium">
                                   <Clock size={16} className="mr-1 text-gray-400" />
                                   <span>{hour}</span>
                                 </div>
-                                <button className="text-gray-400 hover:text-gray-600">
-                                  <MoreHorizontal size={16} />
-                                </button>
+                                {/* Hiển thị nút theo logic */}
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                  {isCompleted ? (
+                                    <Link 
+                                      to={`/consultants/reports/${appointment._id}`}
+                                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium bg-white px-2 py-1 rounded-md shadow-sm border border-blue-200 hover:bg-blue-50 transition-all duration-150"
+                                      title="Xem chi tiết báo cáo"
+                                    >
+                                      <Eye size={10} />
+                                      <span className="hidden sm:inline">Chi tiết</span>
+                                    </Link>
+                                  ) : (isSlotPassed && isConfirmed) ? (
+                                    <Link 
+                                      to={`/consultants/reports/${appointment._id}`}
+                                      className="flex items-center gap-1 text-green-600 hover:text-green-800 text-xs font-medium bg-white px-2 py-1 rounded-md shadow-sm border border-green-200 hover:bg-green-50 transition-all duration-150"
+                                      title="Viết báo cáo"
+                                    >
+                                      <FileText size={10} />
+                                      <span className="hidden sm:inline">Báo cáo</span>
+                                    </Link>
+                                  ) : (
+                                    <button className="text-gray-400 hover:text-gray-600 opacity-50 transition-opacity duration-150">
+                                      <MoreHorizontal size={14} />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-center mb-1">
                                 <img src={appointment.user_id?.photoUrl || 'https://i.pravatar.cc/150?img=3'} alt={customerName} className="w-8 h-8 rounded-full mr-2 border-2 border-white" />

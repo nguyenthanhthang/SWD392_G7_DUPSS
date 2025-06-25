@@ -70,11 +70,11 @@ const ReportsAndUpdates = () => {
       try {
         setLoading(true);
         
-        const accountId = localStorage.getItem('accountId') || 
-                         localStorage.getItem('userId') || 
+        const accountId = localStorage.getItem('userId') || 
+                         localStorage.getItem('accountId') || 
                          localStorage.getItem('id') ||
-                         sessionStorage.getItem('accountId') ||
-                         sessionStorage.getItem('userId');
+                         sessionStorage.getItem('userId') ||
+                         sessionStorage.getItem('accountId');
         
         if (!accountId) {
           setReports([]);
@@ -87,11 +87,15 @@ const ReportsAndUpdates = () => {
         const consultantData = await getConsultantByAccountIdApi(accountId);
         const consultantId = consultantData._id;
 
-        // Lấy reports và appointments
+        console.log('Current consultant ID:', consultantId); // Debug log
+
+        // Lấy reports và appointments - chỉ của consultant hiện tại
         const [reportsData, appointmentsData] = await Promise.all([
-          getReportByConsultantIdApi(consultantId),
+          getReportByConsultantIdApi(consultantId), // Chỉ lấy reports do consultant này viết
           getAppointmentByConsultantIdApi(consultantId)
         ]);
+
+        console.log('Reports data:', reportsData); // Debug log
 
         // Kiểm tra format data
         if (!Array.isArray(reportsData)) {
@@ -106,8 +110,15 @@ const ReportsAndUpdates = () => {
           return;
         }
 
+        // Filter để đảm bảo chỉ lấy reports do consultant hiện tại viết
+        const filteredReportsData = reportsData.filter((apiReport: ApiReport) => 
+          apiReport.consultant_id === consultantId
+        );
+
+        console.log('Filtered reports by consultant ID:', filteredReportsData); // Debug log
+
         // Convert API data to component format
-        const formattedReports: Report[] = reportsData.map((apiReport: ApiReport) => {
+        const formattedReports: Report[] = filteredReportsData.map((apiReport: ApiReport) => {
           const matchingAppointment = appointmentsData.find((app: Appointment) => app._id === apiReport.appointment_id);
           
           const formattedReport = {
