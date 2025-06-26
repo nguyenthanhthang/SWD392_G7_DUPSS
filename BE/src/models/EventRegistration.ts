@@ -6,6 +6,7 @@ export interface IEventRegistration extends Document {
   token: string;
   qrString: string;
   checkedInAt?: Date;
+  status: "active" | "cancelled";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +34,11 @@ const eventRegistrationSchema = new Schema<IEventRegistration>(
     checkedInAt: {
       type: Date,
       default: null,
+    },
+    status: {
+      type: String,
+      enum: ["active", "cancelled"],
+      default: "active",
     },
   },
   { timestamps: true }

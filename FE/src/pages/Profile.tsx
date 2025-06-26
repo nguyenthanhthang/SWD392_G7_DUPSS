@@ -80,7 +80,6 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user: authUser } = useAuth();
   const [registeredEvents, setRegisteredEvents] = useState<any[]>([]);
-  const [cancelledEvents, setCancelledEvents] = useState<any[]>([]);
   const [showRegisteredModal, setShowRegisteredModal] = useState(false);
   const [showUnregisterConfirm, setShowUnregisterConfirm] = useState(false);
   const [eventToUnregister, setEventToUnregister] = useState<string | null>(null);
@@ -300,15 +299,7 @@ export default function Profile() {
     if (!authUser || !eventToUnregister) return;
     try {
       await unregisterEventApi(eventToUnregister, authUser._id);
-      const cancelledEvent = registeredEvents.find(event => event._id === eventToUnregister);
-      if (cancelledEvent) {
-        setCancelledEvents(prev => {
-          const updated = [...prev, cancelledEvent];
-          localStorage.setItem('cancelledEvents', JSON.stringify(updated));
-          return updated;
-        });
-        setRegisteredEvents(prev => prev.map(event => event._id === eventToUnregister ? { ...event, isCancelled: true } : event));
-      }
+      setRegisteredEvents(prev => prev.map(event => event._id === eventToUnregister ? { ...event, isCancelled: true } : event));
       setShowUnregisterSuccess(true);
       setShowUnregisterConfirm(false);
       setEventToUnregister(null);
@@ -717,9 +708,9 @@ export default function Profile() {
                   <div className="mb-6">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">Sự kiện đã đăng ký</h2>
                     {/* Registered Events */}
-                    {registeredEvents.length > 0 && (
+                    {registeredEvents.length > 0 ? (
                       <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Đã đăng ký</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Sự kiện đã đăng ký</h3>
                         <div className="space-y-4">
                           {registeredEvents.map((event) => (
                             <div
@@ -735,17 +726,17 @@ export default function Profile() {
                               </h3>
                               <div className="text-sm text-gray-600 space-y-1">
                                 <p>
-                                  <span className="font-medium">Thời gian:</span>{" "}
-                                  {format(new Date(event.startDate), "dd/MM/yyyy HH:mm")}
+                                  <span className="font-medium">Thời gian:</span>{' '}
+                                  {format(new Date(event.startDate), 'dd/MM/yyyy HH:mm')}
                                 </p>
                                 <p>
-                                  <span className="font-medium">Địa điểm:</span>{" "}
+                                  <span className="font-medium">Địa điểm:</span>{' '}
                                   {event.location}
                                 </p>
                                 <p>
-                                  <span className="font-medium">Trạng thái:</span>{" "}
-                                  <span className={event.isCancelled ? "text-red-600" : "text-green-600"}>
-                                    {event.isCancelled ? "Đã hủy" : "Đã đăng ký"}
+                                  <span className="font-medium">Trạng thái:</span>{' '}
+                                  <span className={event.isCancelled ? 'text-red-600' : 'text-green-600'}>
+                                    {event.isCancelled ? 'Đã hủy' : 'Đã đăng ký'}
                                   </span>
                                 </p>
                               </div>
@@ -763,40 +754,7 @@ export default function Profile() {
                           ))}
                         </div>
                       </div>
-                    )}
-                    {/* Cancelled Events */}
-                    {cancelledEvents.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Đã hủy đăng ký</h3>
-                        <div className="space-y-4">
-                          {cancelledEvents.map((event) => (
-                            <div
-                              key={event._id}
-                              className="bg-red-50 border border-red-200 rounded-xl p-4"
-                            >
-                              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                                {event.title}
-                              </h3>
-                              <div className="text-sm text-gray-600 space-y-1">
-                                <p>
-                                  <span className="font-medium">Thời gian:</span>{' '}
-                                  {format(new Date(event.startDate), 'dd/MM/yyyy HH:mm')}
-                                </p>
-                                <p>
-                                  <span className="font-medium">Địa điểm:</span>{' '}
-                                  {event.location}
-                                </p>
-                                <p>
-                                  <span className="font-medium">Trạng thái:</span>{' '}
-                                  <span className="text-red-600">Đã hủy đăng ký</span>
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {registeredEvents.length === 0 && cancelledEvents.length === 0 && (
+                    ) : (
                       <p className="text-gray-500 text-center py-4">
                         Bạn chưa đăng ký sự kiện nào
                       </p>

@@ -5,6 +5,8 @@ export interface IEvent extends Document {
   description: string;
   startDate: Date;
   endDate: Date;
+  registrationStartDate: Date;
+  registrationEndDate: Date;
   location: string;
   capacity: number;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
@@ -18,6 +20,8 @@ const eventSchema = new Schema<IEvent>(
     description: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
+    registrationStartDate: { type: Date, required: true },
+    registrationEndDate: { type: Date, required: true },
     location: { type: String, required: true },
     capacity: { type: Number, required: true },
     status: {
