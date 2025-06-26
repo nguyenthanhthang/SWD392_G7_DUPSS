@@ -36,6 +36,8 @@ interface Event {
   registeredUsers: RegisteredUser[];
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   image?: string;
+  registeredCount?: number;
+  isCancelled?: boolean;
 }
 
 export default function EventsPage() {
@@ -478,35 +480,35 @@ export default function EventsPage() {
                 <div className="flex-1"></div>
                 <div className="flex items-end justify-between mt-6">
                   <div className="text-sm text-gray-500">
-                    {event.registeredUsers?.length || 0}/{event.capacity} người tham gia
+                    {event.registeredCount || 0}/{event.capacity} người tham gia
                   </div>
                   <button
                     onClick={() => handleRegister(event._id)}
                     disabled={
-                      (event.registeredUsers?.length || 0) >= event.capacity ||
+                      (event.registeredCount || 0) >= event.capacity ||
                       event.status !== "upcoming" ||
-                      registeredEvents.some(regEvent => regEvent._id === event._id) ||
-                      cancelledEvents.some(cancelledEvent => cancelledEvent._id === event._id)
+                      registeredEvents.some(regEvent => regEvent._id === event._id)
                     }
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all min-w-[120px] text-center
                       ${
-                        (event.registeredUsers?.length || 0) >= event.capacity ||
-                        event.status !== "upcoming" ||
-                        cancelledEvents.some(cancelledEvent => cancelledEvent._id === event._id)
+                        (event.registeredCount || 0) >= event.capacity ||
+                        event.status !== "upcoming"
                           ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          : registeredEvents.some(regEvent => regEvent._id === event._id)
+                          : registeredEvents.some(regEvent => regEvent._id === event._id && regEvent.isCancelled === true)
+                          ? "bg-red-600 text-white cursor-not-allowed"
+                          : registeredEvents.some(regEvent => regEvent._id === event._id && regEvent.isCancelled !== true)
                           ? "bg-green-600 text-white cursor-not-allowed"
                           : "bg-blue-600 text-white hover:bg-blue-700"
                       }`}
                   >
-                    {(event.registeredUsers?.length || 0) >= event.capacity
+                    {(event.registeredCount || 0) >= event.capacity
                       ? "Đã đầy"
                       : event.status !== "upcoming"
                       ? "Không thể đăng ký"
-                      : registeredEvents.some(regEvent => regEvent._id === event._id)
-                      ? "Đã đăng ký"
-                      : cancelledEvents.some(cancelledEvent => cancelledEvent._id === event._id)
+                      : registeredEvents.some(regEvent => regEvent._id === event._id && regEvent.isCancelled === true)
                       ? "Đã hủy"
+                      : registeredEvents.some(regEvent => regEvent._id === event._id && regEvent.isCancelled !== true)
+                      ? "Đã đăng ký"
                       : "Đăng ký"}
                   </button>
                 </div>

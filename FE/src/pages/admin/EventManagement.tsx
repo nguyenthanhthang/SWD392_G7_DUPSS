@@ -34,6 +34,7 @@ interface Event {
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   image?: string;
   participants?: number;
+  registeredCount?: number;
 }
 
 // Add interface for check-in history
@@ -57,11 +58,12 @@ interface EventFormData {
 }
 
 // Event Card Component
-const EventCard = ({ event, onSelect, onEdit, onDelete }: { 
+const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: { 
   event: Event; 
   onSelect: (e: Event) => void;
   onEdit: (e: Event) => void;
   onDelete: (e: Event) => void;
+  onCancel: (e: Event) => void;
 }) => (
   <motion.div
     whileHover={{ scale: 1.03 }}
@@ -108,7 +110,7 @@ const EventCard = ({ event, onSelect, onEdit, onDelete }: {
       </div>
       <div className="flex items-center text-gray-400 text-xs mb-2">
         <FiUsers className="mr-1" />
-        {event.participants ?? 0} người tham gia
+        {event.registeredCount ?? 0}/{event.capacity} người đã đăng ký
       </div>
       <div className="flex-1"></div>
       <div className="flex gap-2 mt-2">
@@ -125,12 +127,22 @@ const EventCard = ({ event, onSelect, onEdit, onDelete }: {
         >
           <FiEdit className="text-gray-600" />
         </button>
-        <button
-          onClick={() => onDelete(event)}
-          className="p-2 rounded-xl bg-red-100 hover:bg-red-200 transition-all"
-        >
-          <FiTrash2 className="text-red-600" />
-        </button>
+        {event.status === "cancelled" ? (
+          <button
+            onClick={() => onDelete(event)}
+            className="p-2 rounded-xl bg-red-100 hover:bg-red-200 transition-all"
+          >
+            <FiTrash2 className="text-red-600" />
+          </button>
+        ) : (
+          <button
+            onClick={() => onCancel(event)}
+            className="p-2 rounded-xl bg-orange-100 hover:bg-orange-200 transition-all"
+            title="Hủy sự kiện"
+          >
+            <FiXCircle className="text-orange-600" />
+          </button>
+        )}
       </div>
     </div>
   </motion.div>
@@ -426,6 +438,55 @@ const DeleteConfirmModal = ({
   );
 };
 
+// Cancel Confirmation Modal
+const CancelConfirmModal = ({ 
+  open, 
+  onClose, 
+  onConfirm, 
+  eventTitle 
+}: { 
+  open: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void; 
+  eventTitle: string; 
+}) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <div className="text-center">
+          <div className="text-orange-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Xác nhận hủy sự kiện
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Bạn có chắc chắn muốn hủy sự kiện <strong>"{eventTitle}"</strong> không?
+            <br />
+            <span className="text-sm text-orange-600">
+              Sự kiện sẽ được chuyển sang trạng thái "Đã hủy" và không thể hoàn tác.
+            </span>
+          </p>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={onConfirm}
+              className="px-6 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors"
+            >
+              Xác nhận hủy
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Pagination Component
 const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (p: number) => void }) => (
   <div className="flex justify-center items-center gap-2 mt-8">
@@ -511,6 +572,8 @@ const AdminEventManagement = () => {
   const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 6;
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancellingEvent, setCancellingEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -587,6 +650,26 @@ const AdminEventManagement = () => {
       fetchEvents();
     } catch (error) {
       toast.error("Không thể xóa sự kiện");
+    }
+  };
+
+  const handleCancelEvent = async (event: Event) => {
+    setCancellingEvent(event);
+    setShowCancelConfirm(true);
+  };
+
+  const confirmCancelEvent = async () => {
+    if (!cancellingEvent) return;
+    try {
+      await updateEventApi(cancellingEvent._id, { status: "cancelled" });
+      toast.success("Hủy sự kiện thành công!");
+      setShowCancelConfirm(false);
+      setCancellingEvent(null);
+      fetchEvents();
+    } catch (error) {
+      toast.error("Không thể hủy sự kiện");
+      setShowCancelConfirm(false);
+      setCancellingEvent(null);
     }
   };
 
@@ -700,6 +783,7 @@ const AdminEventManagement = () => {
                   onSelect={handleEventSelect}
                   onEdit={handleEditEvent}
                   onDelete={handleDeleteClick}
+                  onCancel={handleCancelEvent}
                 />
               ))}
             </div>
@@ -738,6 +822,13 @@ const AdminEventManagement = () => {
         }}
         onConfirm={handleDeleteEvent}
         eventTitle={deletingEvent?.title || ""}
+      />
+
+      <CancelConfirmModal
+        open={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={confirmCancelEvent}
+        eventTitle={cancellingEvent?.title || ""}
       />
 
       <QRScannerModal 
