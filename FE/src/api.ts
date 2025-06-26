@@ -7,6 +7,7 @@ export interface BlogData {
   published: 'draft' | 'published' | 'rejected';
   topics?: string[];
   image?: File | string; // Có thể là File khi upload hoặc URL string khi hiển thị
+  anDanh?: boolean;
 }
 
 const api = axios.create({
@@ -370,6 +371,7 @@ export const createBlogApi = async (data: BlogData) => {
     form.append("author", data.author);
     form.append("published", data.published.toString());
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
+    if (data.anDanh !== undefined) form.append("anDanh", String(data.anDanh));
     form.append("image", data.image);
     const res = await api.post("/blogs", form, {
       headers: { "Content-Type": "multipart/form-data" },
@@ -392,6 +394,7 @@ export const updateBlogApi = async (id: string, data: BlogData) => {
     form.append("author", data.author);
     form.append("published", data.published.toString());
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
+    if (data.anDanh !== undefined) form.append("anDanh", String(data.anDanh));
     form.append("image", data.image);
     
     console.log('Sending FormData with published:', data.published); // Debug log

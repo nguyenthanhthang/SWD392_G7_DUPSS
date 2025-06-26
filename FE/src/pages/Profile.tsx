@@ -999,6 +999,7 @@ export default function Profile() {
                 topics: blogDangSua.topics?.join(', ') || '',
                 image: blogDangSua.image || '',
                 published: blogDangSua.published,
+                anDanh: blogDangSua.anDanh
               }}
               onCancel={() => setModalEdit(false)}
               onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(authUser?._id) getBlogsByUserIdApi(authUser._id).then(setBlogs); }}

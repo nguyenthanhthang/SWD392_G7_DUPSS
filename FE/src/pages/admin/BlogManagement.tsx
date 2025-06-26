@@ -20,6 +20,7 @@ interface Blog {
   comments: any[];
   createdAt: string;
   updatedAt: string;
+  anDanh?: boolean;
 }
 
 const BlogManagement: React.FC = () => {
@@ -185,7 +186,7 @@ const BlogManagement: React.FC = () => {
               });
               
               // Cập nhật formData với cả ảnh gốc và thumbnail
-              setFormData(prev => ({
+              setFormData((prev: any) => ({
                 ...prev,
                 image: f,
                 thumbnail: thumbnailFile
@@ -252,9 +253,14 @@ const BlogManagement: React.FC = () => {
   // Handle duyệt blog
   const handleDuyetBlog = async (blog: Blog) => {
     try {
+      // Đảm bảo giữ nguyên giá trị anDanh khi cập nhật trạng thái
       await updateBlogApi(blog._id, {
-        ...blog,
-        published: 'published'
+        title: blog.title,
+        content: blog.content,
+        author: blog.author,
+        topics: blog.topics,
+        published: 'published',
+        anDanh: blog.anDanh // Giữ nguyên trạng thái ẩn danh
       });
       setNotification({type: 'success', message: 'Đã duyệt bài viết thành công'});
       fetchBlogs();
@@ -272,9 +278,14 @@ const BlogManagement: React.FC = () => {
   // Handle ngừng xuất bản blog
   const handleNgungXuatBan = async (blog: Blog) => {
     try {
+      // Đảm bảo giữ nguyên giá trị anDanh khi cập nhật trạng thái
       await updateBlogApi(blog._id, {
-        ...blog,
-        published: 'draft'
+        title: blog.title,
+        content: blog.content,
+        author: blog.author,
+        topics: blog.topics,
+        published: 'draft',
+        anDanh: blog.anDanh // Giữ nguyên trạng thái ẩn danh
       });
       setNotification({type: 'success', message: 'Đã ngừng xuất bản bài viết'});
       fetchBlogs();
@@ -382,9 +393,18 @@ const BlogManagement: React.FC = () => {
               className="w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
             >
               <option value="">Tất cả tác giả</option>
-              {[...new Set(blogs.map(b => b.author))].map(author => (
-                <option key={author} value={author}>{author}</option>
-              ))}
+              {blogs
+                .map(blog => blog.author)
+                .filter((author, index, array) => array.indexOf(author) === index)
+                .map(author => {
+                  const hasAnonymous = blogs.some(blog => blog.author === author && blog.anDanh);
+                  return (
+                    <option key={author} value={author}>
+                      {author} {hasAnonymous ? '[Có bài ẩn danh]' : ''}
+                    </option>
+                  );
+                })
+              }
             </select>
           </div>
         </div>
@@ -398,20 +418,39 @@ const BlogManagement: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
-        <table className="min-w-full bg-white table-fixed">
-          <thead>
-            <tr className="bg-sky-50 text-gray-600 text-left text-sm font-semibold uppercase tracking-wider">
-              <th className="px-4 py-3 rounded-tl-lg w-1/5">Tiêu đề</th>
-              {/* <th className="px-4 py-3 w-1/6">Ảnh đại diện</th> */}
-              <th className="px-4 py-3 w-1/6">Tác giả</th>
-              {/* <th className="px-4 py-3 w-1/6">Topics</th> */}
-              <th className="px-4 py-3 w-1/6">Trạng thái</th>
-              <th className="px-4 py-3 w-1/6">Ngày tạo</th>
-              <th className="px-4 py-3 rounded-tr-lg w-1/6">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
+      <div className="overflow-hidden shadow-md ring-1 ring-black ring-opacity-5 bg-white rounded-xl">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tiêu đề
+                </th>
+                {/*
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ảnh
+                </th>
+                */}
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tác giả
+                </th>
+                {/*
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Chủ đề
+                </th>
+                */}
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Trạng thái
+                </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Thời gian tạo
+                </th>
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Thao tác
+                </th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
             {paginatedBlogs.length > 0 ? (
               paginatedBlogs.map(blog => (
                 <tr key={blog._id} className="border-b border-gray-200 hover:bg-sky-50/50">
@@ -425,7 +464,9 @@ const BlogManagement: React.FC = () => {
                     )}
                   </td>
                   */}
-                  <td className="px-4 py-3 whitespace-nowrap">{blog.author}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {blog.anDanh ? <span className="text-cyan-600 italic">(Ẩn danh)</span> : blog.author}
+                  </td>
                   {/*
                   <td className="px-4 py-3 whitespace-nowrap">
                     {blog.topics && blog.topics.length > 0 ? (
@@ -487,8 +528,9 @@ const BlogManagement: React.FC = () => {
                 </td>
               </tr>
             )}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
@@ -530,6 +572,7 @@ const BlogManagement: React.FC = () => {
                 topics: editingBlog.topics?.join(', ') || '',
                 image: editingBlog.image || '',
                 published: editingBlog.published,
+                anDanh: editingBlog.anDanh
               } : undefined}
               isAdmin={true}
               onCancel={handleCloseModal}

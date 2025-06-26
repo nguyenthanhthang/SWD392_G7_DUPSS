@@ -50,7 +50,7 @@ export const getBlogById = async (req: Request, res: Response) => {
 
 export const createBlog = async (req: MulterRequest, res: Response) => {
   try {
-    const { title, content, author, topics, published } = req.body;
+    const { title, content, author, topics, published, anDanh } = req.body;
     let imageUrl = req.body.image;
     if (req.file && req.file.path) {
       imageUrl = req.file.path;
@@ -73,13 +73,17 @@ export const createBlog = async (req: MulterRequest, res: Response) => {
       }
     }
     
+    // Xử lý trường anDanh
+    const isAnonymous = anDanh === 'true' || anDanh === true;
+    
     const newBlog = new Blog({ 
       title, 
       content, 
       author, 
       topics: topicsArr, 
       published: publishedStatus, 
-      image: imageUrl 
+      image: imageUrl,
+      anDanh: isAnonymous
     });
     await newBlog.save();
     res.status(201).json(newBlog);
@@ -102,7 +106,7 @@ export const updateBlog = async (req: MulterRequest, res: Response) => {
       return res.status(403).json({ message: 'Không thể sửa bài viết đã bị từ chối' });
     }
 
-    const { title, content, author, topics, published } = req.body;
+    const { title, content, author, topics, published, anDanh } = req.body;
     console.log('Update blog request body:', req.body); // Debug log
     
     let updateData: any = { title, content, author };
@@ -137,6 +141,11 @@ export const updateBlog = async (req: MulterRequest, res: Response) => {
         });
       }
       updateData.published = published;
+    }
+    
+    // Xử lý trường anDanh
+    if (anDanh !== undefined) {
+      updateData.anDanh = anDanh === 'true' || anDanh === true;
     }
     
     // Xử lý image

@@ -19,6 +19,7 @@ export interface IBlog extends Document {
   comments: IComment[];
   createdAt: Date;
   updatedAt: Date;
+  anDanh?: boolean;
 }
 
 const CommentSchema = new Schema({
@@ -41,7 +42,8 @@ const BlogSchema: Schema = new Schema(
       enum: ['draft', 'published', 'rejected'], 
       default: 'draft' 
     },
-    comments: [CommentSchema]
+    comments: [CommentSchema],
+    anDanh: { type: Boolean, default: false }
   },
   {
     timestamps: true,

@@ -23,6 +23,7 @@ interface Blog {
   comments: IComment[];
   createdAt: string;
   updatedAt: string;
+  anDanh?: boolean;
 }
 
 interface BlogDetailViewProps {
@@ -182,7 +183,7 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
                 {dinhDangNgay(blog.createdAt)}
               </span>
               <span className="mx-3 text-white/70">•</span>
-              <span className="text-white/90">Tác giả: <span className="font-medium">{blog.author}</span></span>
+              <span className="text-white/90">Tác giả: <span className="font-medium">{blog.anDanh ? 'Ẩn danh' : blog.author}</span></span>
             </div>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 drop-shadow-sm">{blog.title}</h1>
           </div>

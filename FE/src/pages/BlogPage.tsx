@@ -17,6 +17,7 @@ interface Blog {
   published: boolean;
   createdAt: string;
   updatedAt: string;
+  anDanh?: boolean;
 }
 
 function BlogPage() {
@@ -292,7 +293,7 @@ function BlogPage() {
                     <div className="flex items-center mb-4">
                       <span className="text-sm text-blue-500 bg-blue-50 px-3 py-1 rounded-full">{formatDate(newestBlog.createdAt)}</span>
                       <span className="mx-2 text-blue-200">•</span>
-                      <span className="text-sm text-blue-700 font-medium">{newestBlog.author}</span>
+                      <span className="text-sm text-blue-700 font-medium">{newestBlog.anDanh ? 'Ẩn danh' : newestBlog.author}</span>
                     </div>
                     <h3 className="text-2xl md:text-3xl font-bold mb-4 text-blue-900 group-hover:text-cyan-700 transition-colors">{newestBlog.title}</h3>
                     <p className="text-blue-700 mb-6 text-base">{truncateContent(newestBlog.content, 300)}</p>
@@ -353,7 +354,7 @@ function BlogPage() {
                     <div className="flex items-center mb-3">
                       <span className="text-xs text-blue-500 bg-blue-50 px-3 py-1 rounded-full">{formatDate(blog.createdAt)}</span>
                       <span className="mx-2 text-blue-200">•</span>
-                      <span className="text-xs text-cyan-700 font-medium">{blog.author}</span>
+                      <span className="text-xs text-cyan-700 font-medium">{blog.anDanh ? 'Ẩn danh' : blog.author}</span>
                     </div>
                     <h3 className="text-xl font-bold mb-3 text-blue-900 group-hover:text-cyan-700 transition-colors">{blog.title}</h3>
                     <p className="text-blue-700 mb-4 text-sm flex-grow">{truncateContent(blog.content)}</p>

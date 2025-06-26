@@ -19,6 +19,7 @@ interface CreateBlogFormProps {
     topics?: string;
     image?: string;
     published?: 'draft' | 'published' | 'rejected';
+    anDanh?: boolean;
   };
   onSubmit?: (data: BlogData) => Promise<void>;
   isAdmin?: boolean;
@@ -60,7 +61,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
-  const [anDanh, setAnDanh] = useState(false);
+  const [anDanh, setAnDanh] = useState(initialData?.anDanh || false);
   const [trangThai, setTrangThai] = useState<'draft' | 'published' | 'rejected'>(
     initialData?.published || 'draft'
   );
@@ -118,13 +119,18 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
     } else if (tieuDe.trim().length > 150) {
       errors.tieuDe = "Tiêu đề không được quá 150 ký tự";
     }
-    if (!tacGia.trim()) {
-      errors.tacGia = "Tác giả không được để trống";
-    } else if (tacGia.trim().length < 3) {
-      errors.tacGia = "Tên tác giả phải có ít nhất 3 ký tự";
-    } else if (tacGia.trim().length > 50) {
-      errors.tacGia = "Tên tác giả không được quá 50 ký tự";
+    
+    // Chỉ validate tác giả nếu không phải ẩn danh
+    if (!anDanh) {
+      if (!tacGia.trim()) {
+        errors.tacGia = "Tác giả không được để trống";
+      } else if (tacGia.trim().length < 3) {
+        errors.tacGia = "Tên tác giả phải có ít nhất 3 ký tự";
+      } else if (tacGia.trim().length > 50) {
+        errors.tacGia = "Tên tác giả không được quá 50 ký tự";
+      }
     }
+    
     // Validate nội dung: loại bỏ tag html để đếm ký tự thực
     const plainText = noiDung.replace(/<[^>]*>/g, "").trim();
     if (!plainText) {
@@ -172,12 +178,22 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
     if (!validateAll()) return;
     setDangTai(true);
     try {
+      // Lưu tên tác giả thật trong trường hợp ẩn danh
+      let realAuthor = tacGia;
+      
+      // Nếu đang trong chế độ ẩn danh và trường tacGia đã bị thay đổi thành "Ẩn danh"
+      // thì phục hồi lại giá trị ban đầu từ initialData hoặc userInfo
+      if (anDanh && tacGia === "Ẩn danh") {
+        realAuthor = initialData?.author || userInfo?.fullName || userInfo?.username || "";
+      }
+      
       const blogData: BlogData = {
         title: tieuDe,
         content: noiDung,
-        author: tacGia,
+        author: realAuthor,
         topics: topics.split(",").map((topic: string) => topic.trim()),
         published: isAdmin ? trangThai : 'draft',
+        anDanh: anDanh
       };
       if (hinhAnh) {
         blogData.image = hinhAnh;
@@ -269,15 +285,33 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               <label className="block text-sm font-medium text-blue-800">
                 Tác giả
               </label>
+              <div className="flex items-center gap-3 mb-2">
+                <input
+                  id="anDanhAdmin"
+                  type="checkbox"
+                  checked={anDanh}
+                  onChange={(e) => setAnDanh(e.target.checked)}
+                  className="h-4 w-4 text-cyan-600 border-blue-200 rounded focus:ring-cyan-500"
+                />
+                <label
+                  htmlFor="anDanhAdmin"
+                  className="text-sm text-blue-800 select-none cursor-pointer"
+                >
+                  Đăng ẩn danh
+                </label>
+              </div>
               <input
                 type="text"
                 className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 bg-blue-50 text-blue-900 placeholder-blue-400"
-                value={tacGia}
+                value={anDanh ? "Ẩn danh" : tacGia}
                 onChange={(e) => {
-                  setTacGia(e.target.value);
+                  if (!anDanh) {
+                    setTacGia(e.target.value);
+                  }
                 }}
                 onBlur={() => handleBlur("tacGia")}
                 required
+                disabled={anDanh}
                 style={{
                   borderColor:
                     touched.tacGia && formErrors.tacGia ? "#f56565" : "#bae6fd",
@@ -286,6 +320,11 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               {touched.tacGia && formErrors.tacGia && (
                 <p className="mt-1 text-sm text-red-600 font-medium">
                   {formErrors.tacGia}
+                </p>
+              )}
+              {anDanh && (
+                <p className="mt-1 text-xs text-cyan-600">
+                  Tên tác giả thực sẽ được lưu trong hệ thống nhưng hiển thị là "Ẩn danh" cho người đọc.
                 </p>
               )}
             </div>
