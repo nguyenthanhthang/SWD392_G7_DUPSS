@@ -16,7 +16,9 @@ interface Event {
   startDate: string;
   endDate: string;
   location: string;
-  status: string;
+  capacity: number;
+  status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  registeredCount?: number;
 }
 
 interface CheckInResponse {
@@ -38,7 +40,7 @@ interface QuizHistoryItem {
 }
 
 // API functions
-export const getAllEventsApi = async (): Promise<ApiResponse<Event[]>> => {
+export const getAllEventsApi = async (): Promise<Event[]> => {
   const response = await axios.get(`${API_URL}/events`, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,

@@ -208,9 +208,10 @@ export const createEventApi = async (data: {
   description: string;
   startDate: Date;
   endDate: Date;
+  registrationStartDate: Date;
+  registrationEndDate: Date;
   location: string;
   capacity: number;
-  consultantId: string;
 }) => {
   const res = await api.post("/events", data);
   return res.data;
@@ -223,6 +224,8 @@ export const updateEventApi = async (
     description: string;
     startDate: Date;
     endDate: Date;
+    registrationStartDate: Date;
+    registrationEndDate: Date;
     location: string;
     capacity: number;
     status: "upcoming" | "ongoing" | "completed" | "cancelled";

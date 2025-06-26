@@ -25,14 +25,45 @@ export const createEvent = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { title, description, startDate, endDate, location, capacity } =
-      req.body;
+    const { 
+      title, 
+      description, 
+      startDate, 
+      endDate, 
+      registrationStartDate,
+      registrationEndDate,
+      location, 
+      capacity 
+    } = req.body;
+
+    // Validation
+    if (!title || !description || !startDate || !endDate || !registrationStartDate || !registrationEndDate || !location || !capacity) {
+      res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const regStart = new Date(registrationStartDate);
+    const regEnd = new Date(registrationEndDate);
+
+    // Validate dates logic
+    if (regEnd > regStart && regStart < start && regEnd <= start && end > start) {
+      // Valid: regStart < regEnd <= eventStart < eventEnd
+    } else {
+      res.status(400).json({ 
+        message: "Thời gian không hợp lệ. Đăng ký phải kết thúc trước khi sự kiện bắt đầu." 
+      });
+      return;
+    }
 
     const event = new Event({
       title,
       description,
-      startDate,
-      endDate,
+      startDate: start,
+      endDate: end,
+      registrationStartDate: regStart,
+      registrationEndDate: regEnd,
       location,
       capacity,
     });
@@ -203,16 +234,14 @@ export const unregisterEvent = async (
   res: Response
 ): Promise<void> => {
   try {
-    const deleted = await EventRegistration.findOneAndDelete({
-      eventId: req.params.id,
-      userId: req.body.userId,
-    });
-
-    if (!deleted) {
+    const updated = await EventRegistration.findOneAndUpdate(
+      { eventId: req.params.id, userId: req.body.userId, status: "active" },
+      { status: "cancelled" }
+    );
+    if (!updated) {
       res.status(404).json({ message: "Không tìm thấy đăng ký để hủy" });
       return;
     }
-
     res.status(200).json({ message: "Hủy đăng ký thành công" });
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi hủy đăng ký", error });
@@ -340,7 +369,17 @@ export const getRegisteredEvents = async (
       userId: req.params.userId,
     }).populate("eventId");
 
-    const events = registrations.map((reg) => reg.eventId);
+    // Trả về cả status
+    const events = registrations.map((reg) => {
+      let eventObj = reg.eventId;
+      if (typeof reg.eventId === 'object' && reg.eventId !== null && typeof (reg.eventId as any).toObject === 'function') {
+        eventObj = (reg.eventId as any).toObject();
+      }
+      return {
+        ...eventObj,
+        isCancelled: reg.status === "cancelled"
+      };
+    });
     res.status(200).json(events);
   } catch (error) {
     res
