@@ -1,8 +1,178 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { getAllAccountsApi, getAllConsultantsApi } from "../../api";
+import { Users, UserPlus, UserCheck } from "lucide-react";
+
+interface ThongKeNguoiDung {
+  tongSoNguoiDung: number;
+  tongSoTuVanVien: number;
+  tongSoKhachHang: number;
+  nguoiDungMoiThangNay: number;
+  nguoiDungHoatDong: number;
+  nguoiDungKhongHoatDong: number;
+  nguoiDungTheoVaiTro: {
+    customer: number;
+    consultant: number;
+  };
+  dangTai: boolean;
+}
 
 const Dashboard = () => {
+  const [thongKeNguoiDung, setThongKeNguoiDung] = useState<ThongKeNguoiDung>({
+    tongSoNguoiDung: 0,
+    tongSoTuVanVien: 0,
+    tongSoKhachHang: 0,
+    nguoiDungMoiThangNay: 0,
+    nguoiDungHoatDong: 0,
+    nguoiDungKhongHoatDong: 0,
+    nguoiDungTheoVaiTro: {
+      customer: 0,
+      consultant: 0,
+    },
+    dangTai: true,
+  });
+
+  // Fetch user statistics
+  useEffect(() => {
+    const layThongKeNguoiDung = async () => {
+      try {
+        // Fetch all accounts
+        const taiKhoan = await getAllAccountsApi();
+        
+        // Calculate statistics
+        const tongSoNguoiDung = taiKhoan.length;
+        
+        // Count active and inactive users
+        const nguoiDungHoatDong = taiKhoan.filter((tk: any) => !tk.isDisabled).length;
+        const nguoiDungKhongHoatDong = taiKhoan.filter((tk: any) => tk.isDisabled).length;
+        
+        // Count users by role
+        const nguoiDungTheoVaiTro = taiKhoan.reduce((acc: any, nguoiDung: any) => {
+          acc[nguoiDung.role] = (acc[nguoiDung.role] || 0) + 1;
+          return acc;
+        }, { customer: 0, consultant: 0 });
+        
+        // Đảm bảo có giá trị cho cả hai vai trò
+        if (!nguoiDungTheoVaiTro.customer) nguoiDungTheoVaiTro.customer = 0;
+        if (!nguoiDungTheoVaiTro.consultant) nguoiDungTheoVaiTro.consultant = 0;
+        
+        // Lấy số lượng tư vấn viên và khách hàng từ vai trò
+        const tongSoTuVanVien = nguoiDungTheoVaiTro.consultant;
+        const tongSoKhachHang = nguoiDungTheoVaiTro.customer;
+        
+        // Count new users this month
+        const homNay = new Date();
+        const ngayDauThang = new Date(homNay.getFullYear(), homNay.getMonth(), 1);
+        const nguoiDungMoiThangNay = taiKhoan.filter((tk: any) => {
+          const ngayTao = new Date(tk.createdAt);
+          return ngayTao >= ngayDauThang;
+        }).length;
+        
+        setThongKeNguoiDung({
+          tongSoNguoiDung,
+          tongSoTuVanVien,
+          tongSoKhachHang,
+          nguoiDungMoiThangNay,
+          nguoiDungHoatDong,
+          nguoiDungKhongHoatDong,
+          nguoiDungTheoVaiTro,
+          dangTai: false,
+        });
+      } catch (error) {
+        console.error("Lỗi khi lấy thống kê người dùng:", error);
+        setThongKeNguoiDung(prev => ({ ...prev, dangTai: false }));
+      }
+    };
+    
+    layThongKeNguoiDung();
+  }, []);
+
+  // Tính toán phần trăm tư vấn viên và khách hàng một cách an toàn
+  const phanTramTuVanVien = thongKeNguoiDung.tongSoNguoiDung > 0 
+    ? (thongKeNguoiDung.tongSoTuVanVien / thongKeNguoiDung.tongSoNguoiDung) * 100 
+    : 0;
+    
+  const phanTramKhachHang = thongKeNguoiDung.tongSoNguoiDung > 0 
+    ? (thongKeNguoiDung.tongSoKhachHang / thongKeNguoiDung.tongSoNguoiDung) * 100 
+    : 0;
+
   return (
     <div className="space-y-6 mt-4">
+      {/* User Statistics Section */}
+      <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold">Thống kê người dùng</h2>
+        </div>
+
+        {thongKeNguoiDung.dangTai ? (
+          <div className="flex justify-center items-center h-60">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Total Users */}
+            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500">Tổng số người dùng</p>
+                  <h3 className="text-2xl font-bold text-sky-500">{thongKeNguoiDung.tongSoNguoiDung}</h3>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-sky-500" />
+                </div>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Hoạt động: <span className="font-medium text-green-600">{thongKeNguoiDung.nguoiDungHoatDong}</span></span>
+                <span className="text-gray-500">Không hoạt động: <span className="font-medium text-red-500">{thongKeNguoiDung.nguoiDungKhongHoatDong}</span></span>
+              </div>
+            </div>
+
+            {/* User Roles - Consultant */}
+            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500">Tư vấn viên</p>
+                  <h3 className="text-2xl font-bold text-cyan-400">{thongKeNguoiDung.tongSoTuVanVien}</h3>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center">
+                  <UserCheck className="w-6 h-6 text-cyan-400" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-cyan-400 h-2.5 rounded-full" style={{ width: `${phanTramTuVanVien}%` }}></div>
+                </div>
+                <div className="flex justify-between mt-1 text-xs text-gray-500">
+                  <span>{phanTramTuVanVien.toFixed(1)}%</span>
+                  <span>của tổng số người dùng</span>
+                </div>
+              </div>
+            </div>
+
+            {/* User Roles - Customer */}
+            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500">Khách hàng</p>
+                  <h3 className="text-2xl font-bold text-sky-500">{thongKeNguoiDung.tongSoKhachHang}</h3>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center">
+                  <UserPlus className="w-6 h-6 text-sky-500" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-sky-500 h-2.5 rounded-full" style={{ width: `${phanTramKhachHang}%` }}></div>
+                </div>
+                <div className="flex justify-between mt-1 text-xs text-gray-500">
+                  <span>{phanTramKhachHang.toFixed(1)}%</span>
+                  <span>của tổng số người dùng</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Revenue Forecast */}
       <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
         <div className="flex justify-between items-center mb-6">
