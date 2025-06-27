@@ -706,7 +706,7 @@ const Service: React.FC = () => {
       <div className="overflow-x-auto shadow-md rounded-lg max-h-[70vh] overflow-y-auto">
         <table className="min-w-full bg-white">
           <thead>
-            <tr className="bg-gradient-to-r from-sky-50 to-cyan-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
+            <tr className="bg-sky-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
               <th className="px-4 py-3 rounded-tl-lg">Tên dịch vụ</th>
               <th className="px-4 py-3">Mô tả</th>
               <th className="px-4 py-3">Giá</th>

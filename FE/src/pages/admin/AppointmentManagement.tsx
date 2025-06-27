@@ -644,7 +644,7 @@ const AppointmentManagement = () => {
           <div className="w-full">
             <div className="appointment-grid">
               {/* Time column header */}
-              <div className="py-2 px-2 text-center font-medium bg-gray-100 rounded-tl-lg sticky left-0 shadow-sm z-10 appointment-cell">
+              <div className="py-2 px-2 text-center font-medium bg-sky-50 rounded-tl-lg sticky left-0 shadow-sm z-10 appointment-cell">
                 <span className="text-gray-600 uppercase text-sm tracking-wide">Giờ</span>
               </div>
               
@@ -652,7 +652,7 @@ const AppointmentManagement = () => {
               {weekDays.map((day) => (
                 <div 
                   key={day.formattedDate} 
-                  className={`py-2 px-2 text-center font-medium appointment-cell ${day.isToday ? 'bg-blue-50' : 'bg-gray-50'} ${day.date.getDay() === 0 ? 'rounded-tr-lg' : ''}`}
+                  className={`py-2 px-2 text-center font-medium appointment-cell ${day.isToday ? 'bg-blue-50' : 'bg-sky-50'} ${day.date.getDay() === 0 ? 'rounded-tr-lg' : ''}`}
                 >
                   <div className="uppercase text-xs tracking-wide text-gray-500">{day.dayName.substring(0, 3)}</div>
                   <div className={`text-sm font-bold ${day.isToday ? 'text-blue-700' : 'text-gray-800'}`}>{day.formattedDate}</div>
@@ -663,7 +663,7 @@ const AppointmentManagement = () => {
               {timeSlots.map((timeSlot, timeIndex) => (
                 <React.Fragment key={timeSlot}>
                   {/* Time slot */}
-                  <div className={`py-2 px-2 text-center bg-gray-50 border-t border-gray-100 sticky left-0 shadow-sm z-10 appointment-cell ${timeIndex % 2 === 0 ? 'bg-gray-50' : 'bg-gray-100'}`}>
+                  <div className={`py-2 px-2 text-center bg-sky-50 border-t border-gray-100 sticky left-0 shadow-sm z-10 appointment-cell ${timeIndex % 2 === 0 ? 'bg-sky-50' : 'bg-sky-100'}`}>
                     <div className="font-medium text-sm text-gray-700">{timeSlot}</div>
                   </div>
                   
