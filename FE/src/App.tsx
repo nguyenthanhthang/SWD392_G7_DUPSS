@@ -33,6 +33,7 @@ import ReportsAndUpdates from "./pages/consultant/Reports&Updates";
 import ConsultantProfile from "./pages/consultant/ConsultantProfile";
 import ReportsDetails from "./pages/consultant/ReportsDetails";
 import PaymentResultPage from "./pages/PaymentResultPage";
+import AppointmentManagement from "./pages/admin/AppointmentManagement";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -154,6 +155,7 @@ function AppContent() {
                   <Route path="events" element={<EventManagement />} />
                   <Route path="consultants" element={<Consultant />} />
                   <Route path="blogs" element={<BlogManagement />} />
+                  <Route path="appointments" element={<AppointmentManagement />} />
                 </Routes>
               </AdminLayout>
             </AdminRoute>

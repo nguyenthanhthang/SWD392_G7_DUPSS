@@ -654,6 +654,11 @@ export const getAppointmentByIdApi = async (id: string) => {
   return res.data;
 };
 
+export const getAllAppointmentsApi = async () => {
+  const res = await api.get('/appointments');
+  return res.data;
+};
+
 // ===== REPORT APIs =====
 export const createReportApi = async (data: {
   account_id: string;
