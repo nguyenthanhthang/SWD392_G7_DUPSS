@@ -66,7 +66,7 @@ export default function PaymentResultPage() {
         })
         .then((appointmentRes) => {
           // Cập nhật status appointment thành confirm
-          updateAppointmentStatusApi(appointmentRes._id, 'confirm')
+          updateAppointmentStatusApi(appointmentRes._id, 'confirmed')
             .then(() => {
               // Tạo payment record độc lập
               createPaymentApi({

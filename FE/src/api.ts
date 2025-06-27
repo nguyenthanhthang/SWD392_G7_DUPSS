@@ -734,4 +734,9 @@ export const deleteAppointmentApi = async (id: string) => {
   return res.data;
 };
 
+export const rescheduleAppointmentApi = async (appointmentId: string, newSlotTimeId: string, newConsultantId?: string) => {
+  const res = await api.put(`/appointments/reschedule/${appointmentId}`, { newSlotTimeId, newConsultantId });
+  return res.data;
+};
+
 export default api;

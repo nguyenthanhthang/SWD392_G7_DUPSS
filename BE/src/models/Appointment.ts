@@ -17,7 +17,8 @@ export interface IAppointment {
     dateBooking: Date;
     reason: string;
     note: string;
-    status: "pending" | "confirmed" | "cancelled" | "completed";
+    status: "pending" | "confirmed" | "cancelled" | "completed"|"rescheduled";
+    isRescheduled?: boolean; // true nếu đây là appointment được tạo từ đổi lịch
     paymentDetails?: PaymentDetails;
 }
 
@@ -29,7 +30,8 @@ export const AppointmentSchema: Schema = new Schema({
     dateBooking: { type: Date, required: true },
     reason: { type: String, required: false },
     note: { type: String, required: false },
-    status: { type: String, required: true, default: "pending", enum: ["pending", "confirmed", "cancelled", "completed"] },
+    status: { type: String, required: true, default: "pending", enum: ["pending", "confirmed", "cancelled", "completed", "rescheduled"] },
+    isRescheduled: { type: Boolean, default: false },
     paymentDetails: {
         type: {
             transactionNo: String,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, X, CheckCircle, Star, MessageCircle } from 'lucide-react';
+import { Calendar, Clock, X, CheckCircle, Star, MessageCircle, RefreshCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAppointmentByUserIdApi, getFeedbackByAppointmentIdApi, getFeedbackByServiceIdApi } from '../api';
+import { getAppointmentByUserIdApi, getFeedbackByAppointmentIdApi, getFeedbackByServiceIdApi, getSlotTimeByConsultantIdApi, rescheduleAppointmentApi, getAllConsultantsApi } from '../api';
 import { formatInTimeZone } from 'date-fns-tz';
 import FeedbackForm from '../components/FeedbackForm';
 import FeedbackDisplay from '../components/FeedbackDisplay';
@@ -28,6 +28,7 @@ const AppointmentsPage = () => {
     reason?: string;
     note?: string;
     hasFeedback?: boolean;
+    isRescheduled?: boolean;
   }
 
   interface Feedback {
@@ -41,6 +42,24 @@ const AppointmentsPage = () => {
     };
   }
 
+  interface SlotTime {
+    _id: string;
+    consultant_id: string;
+    start_time: string;
+    end_time: string;
+    status: string;
+  }
+
+  interface Consultant {
+    _id: string;
+    accountId: {
+      fullName: string;
+      photoUrl?: string;
+    };
+    introduction?: string;
+    experience?: string;
+  }
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,6 +69,16 @@ const AppointmentsPage = () => {
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+  
+  // States cho reschedule
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<SlotTime[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedNewSlot, setSelectedNewSlot] = useState<string>('');
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  const [consultants, setConsultants] = useState<Consultant[]>([]);
+  const [selectedConsultant, setSelectedConsultant] = useState<string>('');
+  const [loadingConsultants, setLoadingConsultants] = useState(false);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -123,6 +152,115 @@ const AppointmentsPage = () => {
     }
   };
 
+  // Kiểm tra có thể reschedule không (trước 3 tiếng và chưa từng đổi lịch)
+  const canReschedule = (appointment: Appointment): boolean => {
+    if (!appointment.dateBooking) return false;
+    const appointmentTime = new Date(appointment.dateBooking);
+    const currentTime = new Date();
+    const timeDifference = appointmentTime.getTime() - currentTime.getTime();
+    const hoursDifference = timeDifference / (1000 * 60 * 60);
+    
+    // Chỉ cho đổi lịch nếu: trước 3 tiếng, status = "confirmed", và chưa từng đổi lịch
+    const hasValidStatus = normalizeStatus(appointment.status) === 'confirmed';
+    const notRescheduledBefore = !appointment.isRescheduled;
+    
+    return hoursDifference >= 3 && hasValidStatus && notRescheduledBefore;
+  };
+
+  // Load danh sách consultants
+  const loadConsultants = async () => {
+    setLoadingConsultants(true);
+    try {
+      const data = await getAllConsultantsApi();
+      setConsultants(data || []);
+    } catch (error) {
+      console.error('Error loading consultants:', error);
+      setConsultants([]);
+    }
+    setLoadingConsultants(false);
+  };
+
+  // Load available slots cho consultant
+  const loadAvailableSlots = async (consultantId: string) => {
+    setLoadingSlots(true);
+    try {
+      const slots = await getSlotTimeByConsultantIdApi(consultantId);
+      // Lọc chỉ lấy available slots trong tương lai
+      const now = new Date();
+      const availableSlots = slots.filter((slot: SlotTime) => 
+        slot.status === 'available' && new Date(slot.start_time) > now
+      );
+      setAvailableSlots(availableSlots);
+    } catch (error) {
+      console.error('Error loading slots:', error);
+      setAvailableSlots([]);
+    }
+    setLoadingSlots(false);
+  };
+
+  // Handle mở modal reschedule
+  const handleRescheduleClick = async (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setShowRescheduleModal(true);
+    setSelectedNewSlot('');
+    setSelectedConsultant('');
+    setAvailableSlots([]);
+    
+    // Load danh sách consultants
+    await loadConsultants();
+  };
+
+  // Handle chọn consultant mới
+  const handleConsultantChange = async (consultantId: string) => {
+    setSelectedConsultant(consultantId);
+    setSelectedNewSlot('');
+    if (consultantId) {
+      await loadAvailableSlots(consultantId);
+    } else {
+      setAvailableSlots([]);
+    }
+  };
+
+  // Handle reschedule appointment
+  const handleReschedule = async () => {
+    if (!selectedAppointment || !selectedNewSlot) return;
+
+    setRescheduleLoading(true);
+    try {
+      await rescheduleAppointmentApi(
+        selectedAppointment._id, 
+        selectedNewSlot, 
+        selectedConsultant || undefined
+      );
+      
+      // Refresh lại danh sách appointments để lấy cả appointment cũ và mới
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        const data = await getAppointmentByUserIdApi(userId);
+        setAppointments(data || []);
+      }
+
+      // Đóng modal và reset state
+      setShowRescheduleModal(false);
+      setSelectedNewSlot('');
+      setSelectedConsultant('');
+      setSelectedAppointment(null);
+      
+      alert('Đổi lịch hẹn thành công!');
+      
+    } catch (error: unknown) {
+      console.error('Error rescheduling:', error);
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'message' in error.response.data
+        ? String(error.response.data.message)
+        : 'Có lỗi xảy ra khi đổi lịch hẹn';
+      alert(errorMessage);
+    }
+    setRescheduleLoading(false);
+  };
+
   // Chuẩn hóa status từ BE sang FE
   const normalizeStatus = (status?: string) => {
     if (!status) return 'pending';
@@ -182,6 +320,8 @@ const AppointmentsPage = () => {
         return { text: 'Đã hoàn thành', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' };
       case 'cancelled':
         return { text: 'Đã hủy', color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' };
+      case 'rescheduled':
+        return { text: 'Đã đổi lịch', color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200' };
       case 'pending':
       default:
         return { text: 'Chờ xác nhận', color: 'text-sky-700', bg: 'bg-sky-50', border: 'border-sky-200' };
@@ -198,6 +338,8 @@ const AppointmentsPage = () => {
         return 'from-blue-50 via-sky-50 to-white hover:from-blue-100';
       case 'cancelled':
         return 'from-red-50 via-pink-50 to-white hover:from-red-100';
+      case 'rescheduled':
+        return 'from-gray-50 via-gray-50 to-white hover:from-gray-100';
       case 'pending':
       default:
         return 'from-sky-50 via-cyan-50 to-white hover:from-sky-100';
@@ -213,6 +355,8 @@ const AppointmentsPage = () => {
         return 'Lịch hẹn đã hoàn thành';
       case 'cancelled':
         return 'Lịch hẹn đã hủy';
+      case 'rescheduled':
+        return 'Lịch hẹn đã đổi lịch';
       case 'pending':
         return 'Lịch hẹn chờ xác nhận';
       default:
@@ -236,6 +380,7 @@ const AppointmentsPage = () => {
           <option value="confirmed">Đã xác nhận</option>
           <option value="completed">Đã hoàn thành</option>
           <option value="cancelled">Đã hủy</option>
+          <option value="rescheduled">Đã đổi lịch</option>
         </select>
         
         <input
@@ -258,7 +403,7 @@ const AppointmentsPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {/* Pending */}
         <div
           className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
@@ -305,6 +450,18 @@ const AppointmentsPage = () => {
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã hủy</p>
           <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'cancelled').length}</p>
+        </div>
+
+        {/* Rescheduled */}
+        <div
+          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'rescheduled' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+          onClick={() => setFilterStatus('rescheduled')}
+        >
+          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+            <RefreshCcw className="w-5 h-5 text-sky-600" />
+          </div>
+          <p className="text-sm text-gray-600 mb-1">Đã đổi lịch</p>
+          <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'rescheduled').length}</p>
         </div>
       </div>
 
@@ -363,6 +520,16 @@ const AppointmentsPage = () => {
                     <div className="text-lg font-semibold text-sky-700">
                       {appointment.service_id?.price?.toLocaleString('vi-VN')}đ
                     </div>
+                    
+                    {canReschedule(appointment) && (
+                      <button
+                        onClick={() => handleRescheduleClick(appointment)}
+                        className="px-3 py-1 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-1"
+                      >
+                        <RefreshCcw className="w-3.5 h-3.5" />
+                        Đổi lịch
+                      </button>
+                    )}
                     
                     {canReview && (
                       <button
@@ -545,6 +712,101 @@ const AppointmentsPage = () => {
           onClose={() => setShowFeedbackForm(false)}
           onSuccess={handleFeedbackSuccess}
         />
+      )}
+
+      {/* Modal Reschedule */}
+      {showRescheduleModal && selectedAppointment && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto relative p-6">
+            <button
+              onClick={() => setShowRescheduleModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Đổi lịch hẹn</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Lịch hẹn hiện tại</div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="font-medium">{selectedAppointment.service_id?.name}</div>
+                  <div className="text-sm text-gray-600">
+                    {formatDate(selectedAppointment.dateBooking)} - {formatTime(selectedAppointment.dateBooking)}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500 mb-2">Chọn chuyên gia</div>
+                {loadingConsultants ? (
+                  <div className="text-center py-4 text-gray-500">Đang tải chuyên gia...</div>
+                ) : (
+                  <select 
+                    value={selectedConsultant} 
+                    onChange={(e) => handleConsultantChange(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">-- Chọn chuyên gia --</option>
+                    {consultants.map((consultant) => (
+                      <option key={consultant._id} value={consultant._id}>
+                        {consultant.accountId.fullName}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {selectedConsultant && (
+                <div>
+                  <div className="text-sm text-gray-500 mb-2">Chọn thời gian mới</div>
+                  {loadingSlots ? (
+                    <div className="text-center py-4 text-gray-500">Đang tải slot...</div>
+                  ) : availableSlots.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">Chuyên gia này không có slot trống</div>
+                  ) : (
+                    <div className="max-h-60 overflow-y-auto space-y-2">
+                      {availableSlots.map((slot) => (
+                        <label key={slot._id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="newSlot"
+                            value={slot._id}
+                            checked={selectedNewSlot === slot._id}
+                            onChange={(e) => setSelectedNewSlot(e.target.value)}
+                            className="mr-3"
+                          />
+                          <div>
+                            <div className="font-medium">
+                              {formatDate(slot.start_time)} - {formatTime(slot.start_time)}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowRescheduleModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleReschedule}
+                disabled={!selectedConsultant || !selectedNewSlot || rescheduleLoading}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-white rounded-lg font-medium"
+              >
+                {rescheduleLoading ? 'Đang xử lý...' : 'Xác nhận đổi lịch'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
