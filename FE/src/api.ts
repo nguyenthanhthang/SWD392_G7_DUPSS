@@ -735,7 +735,27 @@ export const deleteAppointmentApi = async (id: string) => {
 };
 
 export const rescheduleAppointmentApi = async (appointmentId: string, newSlotTimeId: string, newConsultantId?: string) => {
-  const res = await api.put(`/appointments/reschedule/${appointmentId}`, { newSlotTimeId, newConsultantId });
+  const res = await api.put(`/appointments/${appointmentId}/reschedule`, { newSlotTimeId, newConsultantId });
+  return res.data;
+};
+
+// Thêm các API thống kê doanh thu
+export const getTotalRevenueApi = async () => {
+  const res = await api.get('/payment/statistics/total');
+  return res.data;
+};
+
+export const getWeeklyRevenueApi = async () => {
+  const res = await api.get('/payment/statistics/weekly');
+  return res.data;
+};
+
+export const getMonthlyRevenueApi = async (month?: number, year?: number) => {
+  const params = new URLSearchParams();
+  if (month) params.append('month', month.toString());
+  if (year) params.append('year', year.toString());
+  
+  const res = await api.get(`/payment/statistics/monthly?${params.toString()}`);
   return res.data;
 };
 

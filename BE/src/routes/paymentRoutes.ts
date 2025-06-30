@@ -1,5 +1,5 @@
 import express from 'express';
-import { createMomoPayment, handleMomoCallback, createVnpayPayment, handleVnpayIpn, createPayment, getAllPayments, getPaymentById, updatePayment, deletePayment } from '../controllers/paymentController';
+import { createMomoPayment, handleMomoCallback, createVnpayPayment, handleVnpayIpn, createPayment, getAllPayments, getPaymentById, updatePayment, deletePayment, getTotalRevenue, getWeeklyRevenue, getMonthlyRevenue } from '../controllers/paymentController';
 
 const router = express.Router();
 
@@ -15,5 +15,10 @@ router.get('/', getAllPayments);
 router.get('/:id', getPaymentById);
 router.put('/:id', updatePayment);
 router.delete('/:id', deletePayment);
+
+// Thêm các routes thống kê doanh thu
+router.get('/statistics/total', getTotalRevenue);
+router.get('/statistics/weekly', getWeeklyRevenue);
+router.get('/statistics/monthly', getMonthlyRevenue);
 
 export default router; 

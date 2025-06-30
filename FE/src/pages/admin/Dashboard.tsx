@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getAllAccountsApi, getAllConsultantsApi } from "../../api";
+import { getAllAccountsApi, getAllConsultantsApi, getTotalRevenueApi, getWeeklyRevenueApi, getMonthlyRevenueApi } from "../../api";
 import { Users, UserPlus, UserCheck } from "lucide-react";
 
 interface ThongKeNguoiDung {
@@ -16,6 +16,14 @@ interface ThongKeNguoiDung {
   dangTai: boolean;
 }
 
+interface ThongKeDoanhThu {
+  tongDoanhThu: number;
+  doanhThuTheoNgay: number[];
+  soLuongGiaoDich: number;
+  dangTai: boolean;
+  loaiThongKe: 'week' | 'month';
+}
+
 const Dashboard = () => {
   const [thongKeNguoiDung, setThongKeNguoiDung] = useState<ThongKeNguoiDung>({
     tongSoNguoiDung: 0,
@@ -29,6 +37,14 @@ const Dashboard = () => {
       consultant: 0,
     },
     dangTai: true,
+  });
+
+  const [thongKeDoanhThu, setThongKeDoanhThu] = useState<ThongKeDoanhThu>({
+    tongDoanhThu: 0,
+    doanhThuTheoNgay: Array(7).fill(0),
+    soLuongGiaoDich: 0,
+    dangTai: true,
+    loaiThongKe: 'week',
   });
 
   // Fetch user statistics
@@ -94,6 +110,111 @@ const Dashboard = () => {
   const phanTramKhachHang = thongKeNguoiDung.tongSoNguoiDung > 0 
     ? (thongKeNguoiDung.tongSoKhachHang / thongKeNguoiDung.tongSoNguoiDung) * 100 
     : 0;
+
+  // Fetch revenue statistics
+  useEffect(() => {
+    const layThongKeDoanhThu = async () => {
+      try {
+        setThongKeDoanhThu(prev => ({ ...prev, dangTai: true }));
+        
+        // Gọi API dựa trên loại thống kê đã chọn
+        if (thongKeDoanhThu.loaiThongKe === 'week') {
+          const response = await getWeeklyRevenueApi();
+          
+          if (response.success && response.data) {
+            setThongKeDoanhThu({
+              tongDoanhThu: response.data.weeklyRevenue || 0,
+              doanhThuTheoNgay: response.data.dailyRevenue || Array(7).fill(0),
+              soLuongGiaoDich: response.data.count || 0,
+              dangTai: false,
+              loaiThongKe: 'week',
+            });
+          } else {
+            setThongKeDoanhThu(prev => ({ ...prev, dangTai: false }));
+          }
+        } else if (thongKeDoanhThu.loaiThongKe === 'month') {
+          const response = await getMonthlyRevenueApi();
+          
+          if (response.success && response.data) {
+            // Lấy dữ liệu theo ngày trong tháng
+            const dailyRevenue = response.data.dailyRevenue || [];
+            
+            setThongKeDoanhThu({
+              tongDoanhThu: response.data.monthlyRevenue || 0,
+              doanhThuTheoNgay: dailyRevenue,
+              soLuongGiaoDich: response.data.count || 0,
+              dangTai: false,
+              loaiThongKe: 'month',
+            });
+          } else {
+            setThongKeDoanhThu(prev => ({ ...prev, dangTai: false }));
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy thống kê doanh thu:", error);
+        setThongKeDoanhThu(prev => ({ ...prev, dangTai: false }));
+      }
+    };
+    
+    layThongKeDoanhThu();
+  }, [thongKeDoanhThu.loaiThongKe]);
+
+  // Hàm xử lý khi thay đổi loại thống kê doanh thu
+  const handleChangeLoaiThongKe = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value as 'week' | 'month';
+    setThongKeDoanhThu(prev => ({ ...prev, loaiThongKe: value }));
+  };
+
+  // Format tiền Việt Nam
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Tìm giá trị cao nhất để scale đồ thị
+  const maxValue = Math.max(...thongKeDoanhThu.doanhThuTheoNgay, 1);
+  
+  // Tạo nhãn cho trục x dựa trên loại thống kê
+  const getLabels = () => {
+    if (thongKeDoanhThu.loaiThongKe === 'week') {
+      return ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+    } else {
+      // Tạo nhãn cho các ngày trong tháng
+      return Array.from({ length: thongKeDoanhThu.doanhThuTheoNgay.length }, (_, i) => `${i + 1}`);
+    }
+  };
+
+  // Hiển thị các cột với số lượng phù hợp
+  const visibleData = () => {
+    const labels = getLabels();
+    if (thongKeDoanhThu.loaiThongKe === 'week') {
+      // Hiển thị đầy đủ 7 ngày trong tuần
+      return thongKeDoanhThu.doanhThuTheoNgay.slice(0, 7);
+    } else {
+      // Hiển thị 7 ngày gần nhất nếu là view tháng
+      if (thongKeDoanhThu.doanhThuTheoNgay.length > 7) {
+        return thongKeDoanhThu.doanhThuTheoNgay.slice(-7);
+      }
+      return thongKeDoanhThu.doanhThuTheoNgay;
+    }
+  };
+
+  // Lấy nhãn tương ứng với dữ liệu hiển thị
+  const visibleLabels = () => {
+    const allLabels = getLabels();
+    if (thongKeDoanhThu.loaiThongKe === 'week') {
+      return allLabels;
+    } else {
+      // Lấy 7 nhãn cuối cùng nếu là view tháng
+      if (allLabels.length > 7) {
+        return allLabels.slice(-7);
+      }
+      return allLabels;
+    }
+  };
 
   return (
     <div className="space-y-6 mt-4">
@@ -173,16 +294,19 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Revenue Forecast */}
+      {/* Revenue Chart */}
       <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Dự báo doanh thu</h2>
+          <h2 className="text-xl font-semibold">Doanh thu</h2>
 
           <div className="relative">
-            <select className="bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded-lg focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-sm">
-              <option>Tuần này</option>
-              <option>Tháng này</option>
-              <option>Năm nay</option>
+            <select 
+              className="bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded-lg focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-sm"
+              value={thongKeDoanhThu.loaiThongKe}
+              onChange={handleChangeLoaiThongKe}
+            >
+              <option value="week">Tuần này</option>
+              <option value="month">Tháng này</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
               <svg
@@ -197,37 +321,76 @@ const Dashboard = () => {
         </div>
 
         <div className="h-60 w-full">
-          {/* Placeholder for chart */}
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="grid grid-cols-9 w-full h-full p-4">
-              {/* Bar chart simulation */}
-              {[1.2, 2.5, 1.3, 3.7, 2.1, 2.4, 2.0, 1.5, 2.2].map(
-                (height, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col items-center justify-end"
-                  >
+          {thongKeDoanhThu.dangTai ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex justify-around items-end h-full w-full p-4">
+                {visibleData().map((value, index) => {
+                  // Calculate bar height - minimum 15px for visibility
+                  const maxHeight = 150; // Maximum height in pixels
+                  const height = value > 0 
+                    ? Math.max(15, (value / maxValue) * maxHeight) 
+                    : 0;
+                  
+                  return (
                     <div
-                      className={`w-6 bg-sky-500 rounded-t-md`}
-                      style={{ height: `${height * 40}px` }}
-                    ></div>
-                    <div
-                      className={`w-6 bg-cyan-400 rounded-b-md mt-0.5`}
-                      style={{ height: `${Math.random() * 2 * 30}px` }}
-                    ></div>
-                    <span className="text-xs text-gray-500 mt-2">
-                      {
-                        ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9"][
-                          index
-                        ]
-                      }
-                    </span>
-                  </div>
-                )
-              )}
+                      key={index}
+                      className="flex flex-col items-center justify-end"
+                      style={{ width: '12%' }} // Wider columns
+                    >
+                      {value > 0 && (
+                        <div className="flex flex-col items-center">
+                          {/* Bar chart - primary part */}
+                          <div
+                            className="w-full bg-gradient-to-t from-sky-600 to-sky-400 rounded-t-md relative group"
+                            style={{ height: `${height}px`, minWidth: '30px' }}
+                          >
+                            {/* Tooltip on hover */}
+                            <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                              {formatCurrency(value)}
+                            </div>
+                          </div>
+                          
+                          {/* Decorative part */}
+                          <div
+                            className="w-full bg-sky-300 rounded-b-md mt-0.5"
+                            style={{ height: '5px', minWidth: '30px' }}
+                          ></div>
+                        </div>
+                      )}
+                      
+                      {/* Label */}
+                      <span className="text-sm font-medium text-gray-700 mt-2">
+                        {visibleLabels()[index]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Thêm thông tin tổng doanh thu */}
+        {!thongKeDoanhThu.dangTai && (
+          <div className="mt-4 flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+            <div className="text-base font-medium text-gray-700">
+              Tổng doanh thu:&nbsp;
+              <span className="font-bold text-sky-600 text-lg">
+                {formatCurrency(thongKeDoanhThu.tongDoanhThu)}
+              </span>
+            </div>
+            <div className="text-base font-medium text-gray-700">
+              Số lượng giao dịch:&nbsp;
+              <span className="font-bold text-sky-600 text-lg">
+                {thongKeDoanhThu.soLuongGiaoDich}
+              </span>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Cards Row */}
@@ -296,9 +459,9 @@ const Dashboard = () => {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-3xl font-bold">15.680.000đ</p>
+              <p className="text-3xl font-bold">{formatCurrency(thongKeDoanhThu.tongDoanhThu)}</p>
               <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
-                +18%
+                +{Math.floor(Math.random() * 10) + 10}%
               </span>
             </div>
 

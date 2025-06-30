@@ -390,4 +390,146 @@ export const deletePayment = async (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
+};
+
+// API tổng doanh thu
+export const getTotalRevenue = async (req: Request, res: Response) => {
+  try {
+    // Tìm tất cả thanh toán có trạng thái "completed"
+    const completedPayments = await Payment.find({ status: "completed" });
+
+    // Tính tổng doanh thu
+    let totalRevenue = 0;
+    completedPayments.forEach(payment => {
+      totalRevenue += payment.totalPrice;
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalRevenue,
+        currency: 'VND',
+        count: completedPayments.length
+      }
+    });
+  } catch (err: any) {
+    console.error('Lỗi khi tính tổng doanh thu:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể tính tổng doanh thu',
+      error: err.message
+    });
+  }
+};
+
+// API tổng doanh thu theo tuần hiện tại
+export const getWeeklyRevenue = async (req: Request, res: Response) => {
+  try {
+    // Xác định ngày bắt đầu và kết thúc của tuần hiện tại
+    const startOfWeek = moment().startOf('week').toDate();
+    const endOfWeek = moment().endOf('week').toDate();
+
+    // Tìm tất cả thanh toán hoàn thành trong tuần hiện tại
+    const weeklyPayments = await Payment.find({
+      status: "completed",
+      date: {
+        $gte: startOfWeek,
+        $lte: endOfWeek
+      }
+    });
+
+    // Tính tổng doanh thu tuần này
+    let weeklyRevenue = 0;
+    weeklyPayments.forEach(payment => {
+      weeklyRevenue += payment.totalPrice;
+    });
+
+    // Tạo mảng doanh thu theo từng ngày trong tuần
+    const dailyRevenue = Array(7).fill(0);
+    weeklyPayments.forEach(payment => {
+      const dayOfWeek = moment(payment.date).day(); // 0 = Chủ Nhật, 1 = Thứ Hai, ...
+      dailyRevenue[dayOfWeek] += payment.totalPrice;
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        weeklyRevenue,
+        dailyRevenue,
+        currency: 'VND',
+        count: weeklyPayments.length,
+        period: {
+          start: startOfWeek,
+          end: endOfWeek
+        }
+      }
+    });
+  } catch (err: any) {
+    console.error('Lỗi khi tính doanh thu tuần:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể tính doanh thu tuần',
+      error: err.message
+    });
+  }
+};
+
+// API tổng doanh thu theo tháng hiện tại
+export const getMonthlyRevenue = async (req: Request, res: Response) => {
+  try {
+    // Lấy tháng từ query parameters hoặc sử dụng tháng hiện tại
+    const month = parseInt(req.query.month as string) || moment().month() + 1; // moment months are 0-indexed
+    const year = parseInt(req.query.year as string) || moment().year();
+
+    // Xác định ngày bắt đầu và kết thúc của tháng
+    const startOfMonth = moment({ year, month: month - 1 }).startOf('month').toDate();
+    const endOfMonth = moment({ year, month: month - 1 }).endOf('month').toDate();
+
+    // Tìm tất cả thanh toán hoàn thành trong tháng
+    const monthlyPayments = await Payment.find({
+      status: "completed", // Đảm bảo chỉ lấy các giao dịch đã hoàn thành
+      date: {
+        $gte: startOfMonth,
+        $lte: endOfMonth
+      }
+    });
+
+    // Tính tổng doanh thu tháng này
+    let monthlyRevenue = 0;
+    monthlyPayments.forEach(payment => {
+      monthlyRevenue += payment.totalPrice;
+    });
+
+    // Tạo mảng doanh thu theo từng ngày trong tháng
+    const daysInMonth = moment({ year, month: month - 1 }).daysInMonth();
+    const dailyRevenue = Array(daysInMonth).fill(0);
+    
+    monthlyPayments.forEach(payment => {
+      const dayOfMonth = moment(payment.date).date() - 1; // Convert to 0-indexed
+      dailyRevenue[dayOfMonth] += payment.totalPrice;
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        monthlyRevenue,
+        dailyRevenue,
+        currency: 'VND',
+        count: monthlyPayments.length,
+        period: {
+          month,
+          year,
+          start: startOfMonth,
+          end: endOfMonth
+        }
+      }
+    });
+  } catch (err: any) {
+    console.error('Lỗi khi tính doanh thu tháng:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể tính doanh thu tháng',
+      error: err.message
+    });
+  }
 }; 
