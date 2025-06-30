@@ -260,3 +260,67 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
         res.status(500).json({ message: err.message });
     }
 }
+
+export const capNhatLinkMeet = async (req: Request, res: Response) => {
+    try {
+        const appointmentId = req.params.id;
+        const { meetLink } = req.body;
+
+        // Kiểm tra appointment tồn tại
+        const appointment = await Appointment.findById(appointmentId)
+            .populate("user_id")
+            .populate({
+                path: "consultant_id",
+                populate: {
+                    path: "accountId"
+                }
+            });
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Không tìm thấy lịch hẹn" });
+        }
+
+        // Chỉ cho phép cập nhật Meet link khi appointment đã confirmed
+        if (appointment.status !== "confirmed") {
+            return res.status(400).json({ 
+                message: "Chỉ có thể tạo Meet link cho lịch hẹn đã xác nhận" 
+            });
+        }
+
+        // Bỏ validation thời gian để test
+        // const currentTime = new Date();
+        // const appointmentTime = new Date(appointment.dateBooking);
+        // const timeDifference = appointmentTime.getTime() - currentTime.getTime();
+        // const minutesDifference = timeDifference / (1000 * 60);
+
+        // Validate Meet link format (cơ bản)
+        if (meetLink && !meetLink.includes('meet.google.com')) {
+            return res.status(400).json({ 
+                message: "Link Meet không hợp lệ. Vui lòng sử dụng link từ Google Meet" 
+            });
+        }
+
+        // Cập nhật Meet link
+        const updatedAppointment = await Appointment.findByIdAndUpdate(
+            appointmentId,
+            { meetLink },
+            { new: true }
+        ).populate("user_id")
+        .populate({
+            path: "consultant_id",
+            populate: {
+                path: "accountId"
+            }
+        })
+        .populate("slotTime_id")
+        .populate("service_id");
+
+        res.status(200).json({
+            message: "Cập nhật Meet link thành công",
+            appointment: updatedAppointment
+        });
+
+    } catch (err: any) {
+        res.status(500).json({ message: err.message });
+    }
+}

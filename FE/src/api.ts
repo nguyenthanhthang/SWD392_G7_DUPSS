@@ -759,4 +759,10 @@ export const getMonthlyRevenueApi = async (month?: number, year?: number) => {
   return res.data;
 };
 
+// ===== MEET LINK APIs =====
+export const capNhatLinkMeetApi = async (appointmentId: string, meetLink: string) => {
+  const res = await api.put(`/appointments/meet-link/${appointmentId}`, { meetLink });
+  return res.data;
+};
+
 export default api;

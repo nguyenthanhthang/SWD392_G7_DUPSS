@@ -20,6 +20,7 @@ export interface IAppointment {
     status: "pending" | "confirmed" | "cancelled" | "completed"|"rescheduled";
     isRescheduled?: boolean; // true nếu đây là appointment được tạo từ đổi lịch
     paymentDetails?: PaymentDetails;
+    meetLink?: string; // Google Meet link do consultant tạo
 }
 
 export const AppointmentSchema: Schema = new Schema({
@@ -44,7 +45,8 @@ export const AppointmentSchema: Schema = new Schema({
             failureReason: String
         },
         required: false
-    }
+    },
+    meetLink: { type: String, required: false } // Google Meet link
 });
 
 const Appointment = model<IAppointment>("Appointment", AppointmentSchema);
