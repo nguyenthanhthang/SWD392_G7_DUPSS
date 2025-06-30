@@ -77,7 +77,7 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
       />
       <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${
         event.status === "upcoming"
-          ? "bg-blue-600 text-white"
+          ? "bg-sky-600 text-white"
           : event.status === "ongoing"
           ? "bg-green-500 text-white"
           : event.status === "completed"
@@ -116,7 +116,7 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
       <div className="flex gap-2 mt-2">
         <button
           onClick={() => onSelect(event)}
-          className="flex-1 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all text-sm"
+          className="flex-1 py-2 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-all text-sm"
           disabled={event.status !== "ongoing"}
         >
           Quét QR
@@ -270,7 +270,7 @@ const EventFormModal = ({
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
               placeholder="Nhập tiêu đề sự kiện"
               required
             />
@@ -281,7 +281,7 @@ const EventFormModal = ({
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 h-24"
               placeholder="Nhập mô tả sự kiện"
               required
             />
@@ -294,7 +294,7 @@ const EventFormModal = ({
                 type="datetime-local"
                 value={formData.registrationStartDate}
                 onChange={(e) => setFormData({ ...formData, registrationStartDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
             </div>
@@ -305,7 +305,7 @@ const EventFormModal = ({
                 type="datetime-local"
                 value={formData.registrationEndDate}
                 onChange={(e) => setFormData({ ...formData, registrationEndDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
             </div>
@@ -318,7 +318,7 @@ const EventFormModal = ({
                 type="datetime-local"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
             </div>
@@ -329,7 +329,7 @@ const EventFormModal = ({
                 type="datetime-local"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
             </div>
@@ -341,7 +341,7 @@ const EventFormModal = ({
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
               placeholder="Nhập địa điểm tổ chức"
               required
             />
@@ -354,7 +354,7 @@ const EventFormModal = ({
               min="1"
               value={formData.capacity}
               onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
               placeholder="Số lượng người tham gia tối đa"
               required
             />
@@ -366,7 +366,7 @@ const EventFormModal = ({
               type="url"
               value={formData.image}
               onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
               placeholder="https://example.com/image.jpg"
             />
           </div>
@@ -381,7 +381,7 @@ const EventFormModal = ({
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-all"
+              className="flex-1 py-3 px-4 rounded-xl bg-sky-600 text-white font-medium hover:bg-sky-700 transition-all"
             >
               {isEditing ? "Cập nhật" : "Tạo sự kiện"}
             </button>
@@ -542,7 +542,7 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle }: { open: boolean; 
           <FiXCircle size={24} />
         </button>
         <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">Quét mã QR check-in</h3>
-        <p className="text-gray-500 text-center mb-4">Sự kiện: <span className="font-semibold text-blue-600">{eventTitle}</span></p>
+        <p className="text-gray-500 text-center mb-4">Sự kiện: <span className="font-semibold text-sky-600">{eventTitle}</span></p>
         <div className="rounded-xl overflow-hidden border border-gray-200 mb-4">
           <QrReader
             constraints={{ facingMode: "environment" }}
@@ -717,7 +717,7 @@ const AdminEventManagement = () => {
   const paginatedFilteredEvents = filteredEvents.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-[#f6f8fb] pb-10">
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-[#f6f8fb] pb-10">
       <ToastContainer position="top-right" autoClose={2000} />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="container mx-auto px-4 py-8">
         
@@ -729,7 +729,7 @@ const AdminEventManagement = () => {
               setEditingEvent(null);
               setShowEventForm(true);
             }}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-medium"
+            className="flex items-center gap-2 px-6 py-3 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition-all font-medium"
           >
             <FiPlus /> Tạo sự kiện mới
           </button>
@@ -749,7 +749,7 @@ const AdminEventManagement = () => {
                 key={cat.id}
                 onClick={() => setFilter(cat.id)}
                 className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                  filter === cat.id ? "bg-blue-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-blue-50"
+                  filter === cat.id ? "bg-sky-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-sky-50"
                 }`}
               >
                 {cat.name}
@@ -763,7 +763,7 @@ const AdminEventManagement = () => {
               placeholder="Tìm kiếm sự kiện..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm"
             />
           </div>
         </div>
@@ -771,7 +771,7 @@ const AdminEventManagement = () => {
         {/* Events Grid */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-sky-500"></div>
           </div>
         ) : (
           <>
