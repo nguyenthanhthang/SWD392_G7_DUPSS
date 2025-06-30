@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Phone, Mail, MapPin, Clipboard, ArrowLeft, User, FileDown, Clock, CheckCircle } from 'lucide-react';
-import { getAppointmentByIdApi, createReportApi, getReportByAppointmentIdApi, getAppointmentByConsultantIdApi, getReportByConsultantIdApi, updateReportApi } from '../../api';
+import { Phone, Mail, MapPin, Clipboard, ArrowLeft, User, FileDown, Clock, CheckCircle, Video, X, Check } from 'lucide-react';
+import { getAppointmentByIdApi, createReportApi, getReportByAppointmentIdApi, getAppointmentByConsultantIdApi, getReportByConsultantIdApi, updateReportApi, capNhatLinkMeetApi } from '../../api';
 
 // Định nghĩa type cho appointment dựa trên response thực tế
 interface Appointment {
@@ -40,6 +40,7 @@ interface Appointment {
   reason: string;
   note?: string;
   status: string;
+  meetLink?: string;
 }
 
 interface ConsultantAppointment {
@@ -97,6 +98,11 @@ const ReportsDetails = () => {
   const [daGhiNhan, setDaGhiNhan] = useState(false);
   const [dangChinhSua, setDangChinhSua] = useState(false);
   const [currentReportId, setCurrentReportId] = useState<string | null>(null);
+
+  // Meet Link states
+  const [showMeetModal, setShowMeetModal] = useState(false);
+  const [meetLinkInput, setMeetLinkInput] = useState('');
+  const [meetLinkLoading, setMeetLinkLoading] = useState(false);
 
   // Thêm state để trigger reload lịch sử
   const [shouldReloadHistory, setShouldReloadHistory] = useState(0);
@@ -443,6 +449,56 @@ const ReportsDetails = () => {
     return !isAppointmentEnded(); // Chỉ cho chỉnh sửa khi appointment chưa kết thúc
   };
 
+  // Hàm mở modal tạo Meet link
+  const handleCreateMeetLink = () => {
+    setMeetLinkInput(appointment?.meetLink || '');
+    setShowMeetModal(true);
+  };
+
+  // Hàm cập nhật Meet link
+  const handleUpdateMeetLink = async () => {
+    if (!appointment || !meetLinkInput.trim()) {
+      alert('Vui lòng nhập Meet link');
+      return;
+    }
+
+    // Validate Meet link
+    if (!meetLinkInput.includes('meet.google.com')) {
+      alert('Vui lòng nhập Meet link hợp lệ từ Google Meet');
+      return;
+    }
+
+    setMeetLinkLoading(true);
+    try {
+      await capNhatLinkMeetApi(appointment._id, meetLinkInput.trim());
+      
+      // Cập nhật appointment trong state
+      setAppointment(prev => prev ? { ...prev, meetLink: meetLinkInput.trim() } : null);
+
+      setShowMeetModal(false);
+      setMeetLinkInput('');
+      
+      alert('Cập nhật Meet link thành công!');
+      
+    } catch (error: unknown) {
+      console.error('Error updating Meet link:', error);
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'message' in error.response.data
+        ? String(error.response.data.message)
+        : 'Có lỗi xảy ra khi cập nhật Meet link';
+      alert(errorMessage);
+    }
+    setMeetLinkLoading(false);
+  };
+
+  // Kiểm tra có thể tạo Meet link hay không
+  const canCreateMeetLink = (): boolean => {
+    if (!appointment) return false;
+    return appointment.status === 'confirmed';
+  };
+
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -480,6 +536,74 @@ const ReportsDetails = () => {
                 </div>
               </div>
             </div>
+
+            {/* Google Meet Link Section */}
+            {canCreateMeetLink() && (
+              <div className="bg-white rounded-2xl shadow border border-[#DBE8FA] overflow-hidden">
+                <div className="p-4 flex items-center gap-4 border-b border-[#DBE8FA]">
+                  <Video className="w-6 h-6 text-[#283593]" />
+                  <h2 className="text-lg font-semibold text-[#283593]">Google Meet</h2>
+                </div>
+                <div className="p-4 space-y-4">
+                  {/* Thông tin cuộc hẹn */}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-800 mb-2">Thông tin buổi tư vấn:</h4>
+                    <div className="space-y-1 text-sm text-blue-700">
+                      <p><strong>Bệnh nhân:</strong> {appointment?.user_id?.fullName}</p>
+                      <p><strong>Email:</strong> {appointment?.user_id?.email || 'Chưa có email'}</p>
+                      <p><strong>Dịch vụ:</strong> {appointment?.service_id?.name || 'N/A'}</p>
+                      <p><strong>Thời gian:</strong> {appointment?.dateBooking ? new Date(appointment.dateBooking).toLocaleString('vi-VN') : 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  {/* Hướng dẫn */}
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-start gap-2">
+                      <Video className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800 mb-2">Hướng dẫn tạo Google Meet:</p>
+                        <ol className="text-xs text-green-700 list-decimal list-inside space-y-1">
+                          <li>Mở Google Meet và tạo cuộc họp mới</li>
+                          <li>Thêm email bệnh nhân: <strong>{appointment?.user_id?.email}</strong></li>
+                          <li>Sao chép link Meet và dán vào ô bên dưới</li>
+                          <li>Gửi link cho bệnh nhân qua email riêng</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Meet Link Status */}
+                  {appointment?.meetLink ? (
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Check className="w-5 h-5 text-green-600" />
+                          <span className="text-green-700 font-medium">Meet đã tạo thành công</span>
+                        </div>
+                        <button
+                          onClick={handleCreateMeetLink}
+                          className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          Cập nhật
+                        </button>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-xs text-green-600 break-all">{appointment.meetLink}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleCreateMeetLink}
+                      className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Video className="w-5 h-5" />
+                      Tạo Google Meet Link
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* --- Lịch sử tư vấn (Redesigned & Compacted) --- */}
             {shouldShowHistory() && (
             <div className="bg-white rounded-2xl shadow border border-[#DBE8FA] overflow-hidden">
@@ -715,6 +839,68 @@ const ReportsDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Meet Link Modal */}
+      {showMeetModal && appointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-[#283593]">
+                  {appointment.meetLink ? 'Cập nhật' : 'Tạo'} Google Meet Link
+                </h3>
+                <button
+                  onClick={() => setShowMeetModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Input Meet Link */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Google Meet Link:
+                </label>
+                <input
+                  type="url"
+                  value={meetLinkInput}
+                  onChange={(e) => setMeetLinkInput(e.target.value)}
+                  placeholder="https://meet.google.com/abc-def-ghi"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#283593] focus:border-[#283593] text-sm"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowMeetModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleUpdateMeetLink}
+                  disabled={meetLinkLoading}
+                  className="flex-1 px-4 py-2 bg-[#283593] text-white rounded-lg hover:bg-[#3a4bb3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {meetLinkLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Đang lưu...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      {appointment.meetLink ? 'Cập nhật' : 'Tạo'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

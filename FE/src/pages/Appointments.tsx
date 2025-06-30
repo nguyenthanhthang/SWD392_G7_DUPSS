@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, X, CheckCircle, Star, MessageCircle, RefreshCcw } from 'lucide-react';
+import { Calendar, Clock, X, CheckCircle, Star, MessageCircle, RefreshCcw, Video, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAppointmentByUserIdApi, getFeedbackByAppointmentIdApi, getFeedbackByServiceIdApi, getSlotTimeByConsultantIdApi, rescheduleAppointmentApi, getAllConsultantsApi } from '../api';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -29,6 +29,7 @@ const AppointmentsPage = () => {
     note?: string;
     hasFeedback?: boolean;
     isRescheduled?: boolean;
+    meetLink?: string;
   }
 
   interface Feedback {
@@ -521,6 +522,20 @@ const AppointmentsPage = () => {
                       {appointment.service_id?.price?.toLocaleString('vi-VN')}đ
                     </div>
                     
+                    {/* Meet Link Button cho lịch hẹn đã xác nhận - Bỏ validation thời gian để test */}
+                    {normalizeStatus(appointment.status) === 'confirmed' && appointment.meetLink && (
+                      <a
+                        href={appointment.meetLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600 transition-colors flex items-center gap-1"
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        Tham gia Meet
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    
                     {canReschedule(appointment) && (
                       <button
                         onClick={() => handleRescheduleClick(appointment)}
@@ -640,6 +655,34 @@ const AppointmentsPage = () => {
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Ghi chú</div>
                   <div className="bg-sky-50 p-3 rounded-lg text-gray-700">{selectedAppointment.note}</div>
+                </div>
+              )}
+
+              {/* Meet Link Section - Bỏ validation thời gian để test */}
+              {normalizeStatus(selectedAppointment.status) === 'confirmed' && selectedAppointment.meetLink && (
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Google Meet</div>
+                  <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Video className="w-4 h-4 text-green-600" />
+                        <span className="text-green-700 font-medium">Cuộc họp đã sẵn sàng</span>
+                      </div>
+                      <a
+                        href={selectedAppointment.meetLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1"
+                      >
+                        <Video className="w-4 h-4" />
+                        Tham gia Meet
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <div className="mt-2 text-xs text-green-600">
+                      Có thể tham gia ngay bây giờ
+                    </div>
+                  </div>
                 </div>
               )}
 

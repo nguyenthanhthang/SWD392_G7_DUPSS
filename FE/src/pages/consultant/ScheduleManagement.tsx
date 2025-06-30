@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Clock, ChevronLeft, ChevronRight, MoreHorizontal, Plus, X, Edit, Trash2, FileText, Eye } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createSlotTimeApi, getAllSlotTimeApi, deleteSlotTimeApi, getConsultantByAccountIdApi, getAppointmentByConsultantIdApi, getSlotTimeByConsultantIdApi } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -198,6 +198,7 @@ export default function ScheduleManagement() {
   const [modalWeekIndex, setModalWeekIndex] = useState(0);
   const [selectedSlots, setSelectedSlots] = useState<{[key: string]: boolean}>({});
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [consultant, setConsultant] = useState<Consultant | null>(null);
   // Thêm state cho popup sửa/xóa slot trong modal đăng ký ca làm
   const [selectedSlotEdit, setSelectedSlotEdit] = useState<{dayIdx: number, slotIdx: number} | null>(null);
@@ -565,6 +566,11 @@ export default function ScheduleManagement() {
     });
   };
 
+  // Hàm xử lý click vào appointment để chuyển đến report
+  const handleAppointmentClick = (appointmentId: string) => {
+    navigate(`/consultants/reports/${appointmentId}`);
+  };
+
   return (
     <div className="min-h-screen bg-[#F7F9FB] px-0 md:px-8 py-0 md:py-8">
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
@@ -829,13 +835,18 @@ export default function ScheduleManagement() {
                           });
                           
                           return (
-                            <div key={slot + slotIdx} className={`rounded-xl p-3 shadow-sm border border-gray-100 bg-
-                              ${appointment.service_id?.name === "Khám khẩn cấp" ? "red-50" :
-                                appointment.service_id?.name === "Khám trực tuyến" ? "blue-50" :
-                                appointment.status === "completed" ? "green-50" :
-                                appointment.status === "confirmed" || appointment.status === "scheduled" ? "blue-50" :
-                                appointment.status === "pending" ? "yellow-50" : "gray-50"
-                              } flex flex-col gap-2 relative min-h-[120px] flex-1 group hover:shadow-lg transition-all duration-200`}>
+                            <div 
+                              key={slot + slotIdx} 
+                              className={`rounded-xl p-3 shadow-sm border border-gray-100 bg-
+                                ${appointment.service_id?.name === "Khám khẩn cấp" ? "red-50" :
+                                  appointment.service_id?.name === "Khám trực tuyến" ? "blue-50" :
+                                  appointment.status === "completed" ? "green-50" :
+                                  appointment.status === "confirmed" || appointment.status === "scheduled" ? "blue-50" :
+                                  appointment.status === "pending" ? "yellow-50" : "gray-50"
+                                } flex flex-col gap-2 relative min-h-[120px] flex-1 group hover:shadow-lg transition-all duration-200 cursor-pointer`}
+                              onClick={() => handleAppointmentClick(appointment._id)}
+                              title="Click để xem/tạo báo cáo"
+                            >
                               <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center gap-1 text-[#283593] text-sm font-medium">
                                   <Clock size={16} className="mr-1 text-gray-400" />
@@ -848,6 +859,7 @@ export default function ScheduleManagement() {
                                       to={`/consultants/reports/${appointment._id}`}
                                       className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium bg-white px-2 py-1 rounded-md shadow-sm border border-blue-200 hover:bg-blue-50 transition-all duration-150"
                                       title="Xem chi tiết báo cáo"
+                                      onClick={(e) => e.stopPropagation()}
                                     >
                                       <Eye size={10} />
                                       <span className="hidden sm:inline">Chi tiết</span>
@@ -857,12 +869,16 @@ export default function ScheduleManagement() {
                                       to={`/consultants/reports/${appointment._id}`}
                                       className="flex items-center gap-1 text-green-600 hover:text-green-800 text-xs font-medium bg-white px-2 py-1 rounded-md shadow-sm border border-green-200 hover:bg-green-50 transition-all duration-150"
                                       title="Viết báo cáo"
+                                      onClick={(e) => e.stopPropagation()}
                                     >
                                       <FileText size={10} />
                                       <span className="hidden sm:inline">Báo cáo</span>
                                     </Link>
                                   ) : (
-                                    <button className="text-gray-400 hover:text-gray-600 opacity-50 transition-opacity duration-150">
+                                    <button 
+                                      className="text-gray-400 hover:text-gray-600 opacity-50 transition-opacity duration-150"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
                                       <MoreHorizontal size={14} />
                                     </button>
                                   )}
