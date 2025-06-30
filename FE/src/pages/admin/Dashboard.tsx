@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { getAllAccountsApi, getAllConsultantsApi, getTotalRevenueApi, getWeeklyRevenueApi, getMonthlyRevenueApi } from "../../api";
+import { getAllAccountsApi, getAllConsultantsApi, getTotalRevenueApi, getWeeklyRevenueApi, getMonthlyRevenueApi, getRevenueByServiceApi } from "../../api";
 import { Users, UserPlus, UserCheck } from "lucide-react";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
+
+// Đăng ký các thành phần cần thiết cho Chart.js
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
 interface ThongKeNguoiDung {
   tongSoNguoiDung: number;
@@ -24,6 +29,17 @@ interface ThongKeDoanhThu {
   loaiThongKe: 'week' | 'month';
 }
 
+interface ThongKeDichVu {
+  services: {
+    serviceId: string;
+    serviceName: string;
+    totalRevenue: number;
+    transactionCount: number;
+    dailyRevenue?: number[];
+  }[];
+  dangTai: boolean;
+}
+
 const Dashboard = () => {
   const [thongKeNguoiDung, setThongKeNguoiDung] = useState<ThongKeNguoiDung>({
     tongSoNguoiDung: 0,
@@ -45,6 +61,11 @@ const Dashboard = () => {
     soLuongGiaoDich: 0,
     dangTai: true,
     loaiThongKe: 'week',
+  });
+
+  const [thongKeDichVu, setThongKeDichVu] = useState<ThongKeDichVu>({
+    services: [],
+    dangTai: true
   });
 
   // Fetch user statistics
@@ -159,6 +180,32 @@ const Dashboard = () => {
     layThongKeDoanhThu();
   }, [thongKeDoanhThu.loaiThongKe]);
 
+  // Fetch service revenue statistics
+  useEffect(() => {
+    const layThongKeDichVu = async () => {
+      try {
+        setThongKeDichVu(prev => ({ ...prev, dangTai: true }));
+        
+        // Lấy doanh thu theo dịch vụ
+        const response = await getRevenueByServiceApi();
+        
+        if (response.success && response.data) {
+          setThongKeDichVu({
+            services: response.data.services || [],
+            dangTai: false
+          });
+        } else {
+          setThongKeDichVu(prev => ({ ...prev, dangTai: false }));
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy thống kê doanh thu theo dịch vụ:", error);
+        setThongKeDichVu(prev => ({ ...prev, dangTai: false }));
+      }
+    };
+    
+    layThongKeDichVu();
+  }, []);
+
   // Hàm xử lý khi thay đổi loại thống kê doanh thu
   const handleChangeLoaiThongKe = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value as 'week' | 'month';
@@ -213,6 +260,85 @@ const Dashboard = () => {
         return allLabels.slice(-7);
       }
       return allLabels;
+    }
+  };
+
+  // Dữ liệu cho biểu đồ tròn
+  const pieChartData = {
+    labels: thongKeDichVu.services.map(service => service.serviceName),
+    datasets: [
+      {
+        data: thongKeDichVu.services.map(service => service.totalRevenue),
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.8)',   // Xanh dương
+          'rgba(75, 192, 192, 0.8)',   // Xanh ngọc
+          'rgba(153, 102, 255, 0.8)',  // Tím
+          'rgba(255, 159, 64, 0.8)',   // Cam
+          'rgba(255, 206, 86, 0.8)',   // Vàng
+          'rgba(111, 183, 214, 0.8)',  // Xanh nhạt
+          'rgba(43, 108, 176, 0.8)',   // Xanh đậm
+          'rgba(255, 99, 132, 0.8)',   // Đỏ hồng
+          'rgba(144, 238, 144, 0.8)',  // Xanh lá nhạt
+        ],
+        borderColor: [
+          'rgba(54, 162, 235, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)',
+          'rgba(255, 159, 64, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(111, 183, 214, 1)',
+          'rgba(43, 108, 176, 1)',
+          'rgba(255, 99, 132, 1)',
+          'rgba(144, 238, 144, 1)',
+        ],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  // Tùy chọn cho biểu đồ tròn
+  const pieChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+        align: 'start' as const,
+        labels: {
+          font: {
+            family: 'Arial',
+            size: 13
+          },
+          padding: 15,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 10
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleFont: {
+          family: 'Arial',
+          size: 16,
+          weight: 'bold' as const
+        },
+        bodyFont: {
+          family: 'Arial',
+          size: 14
+        },
+        padding: 12,
+        cornerRadius: 6,
+        callbacks: {
+          label: function(context: any) {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            const dataset = context.dataset;
+            const total = dataset.data.reduce((acc: number, data: number) => acc + data, 0);
+            const percentage = Math.round((value / total) * 100);
+            return `${label}: ${formatCurrency(value)} (${percentage}%)`;
+          }
+        }
+      }
     }
   };
 
@@ -393,144 +519,43 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Cards Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* New Customers */}
+      {/* Service Revenue Charts */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Pie Chart - Revenue by Service */}
         <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
-          <div className="flex space-x-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-sky-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
+          <h2 className="text-xl font-semibold mb-6">Tỷ lệ doanh thu theo dịch vụ</h2>
+          
+          {thongKeDichVu.dangTai ? (
+            <div className="flex justify-center items-center h-80">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-1">Thành viên mới</h3>
+          ) : (
+            <div className="h-80">
+              {thongKeDichVu.services.length > 0 ? (
+                <Pie data={pieChartData} options={pieChartOptions} />
+              ) : (
+                <div className="flex justify-center items-center h-full">
+                  <p className="text-gray-500">Không có dữ liệu doanh thu theo dịch vụ</p>
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="mt-4">
-            <p className="text-sm text-gray-500 mb-2">Mục tiêu mới</p>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="bg-sky-500 h-full rounded-full"
-                style={{ width: "83%" }}
-              ></div>
+          )}
+          
+          {!thongKeDichVu.dangTai && thongKeDichVu.services.length > 0 && (
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {thongKeDichVu.services.map((service, index) => (
+                <div key={service.serviceId} className="p-3 bg-gray-50 rounded-lg border border-gray-100 shadow-sm">
+                  <p className="text-sm font-medium text-gray-800">{service.serviceName}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {formatCurrency(service.totalRevenue)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {service.transactionCount} giao dịch
+                  </p>
+                </div>
+              ))}
             </div>
-            <div className="flex justify-end mt-1">
-              <span className="text-sm font-medium text-gray-700">83%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Total Income */}
-        <div className="col-span-2 bg-white dark:bg-darkgray p-6 rounded-lg">
-          <div className="flex space-x-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-cyan-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-1">Tổng thu nhập</h3>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold">{formatCurrency(thongKeDoanhThu.tongDoanhThu)}</p>
-              <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
-                +{Math.floor(Math.random() * 10) + 10}%
-              </span>
-            </div>
-
-            <div className="w-40 h-16">
-              {/* Placeholder for mini chart */}
-              <svg viewBox="0 0 100 30" className="w-full h-full">
-                <path
-                  d="M0,15 Q10,5 20,15 T40,15 T60,15 T80,5 T100,15"
-                  fill="none"
-                  stroke="#0EA5E9"
-                  strokeWidth="2"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Daily Activities */}
-      <div className="bg-white dark:bg-darkgray p-6 rounded-lg">
-        <h2 className="text-xl font-semibold mb-6">Hoạt động hàng ngày</h2>
-
-        <div className="space-y-6">
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3">
-              <div className="w-10 text-right text-sm text-gray-500">09:46</div>
-            </div>
-            <div className="relative flex items-center">
-              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-sky-500 z-10"></div>
-              <div className="flex-shrink-0 w-0.5 h-full bg-gray-200 absolute top-3 bottom-0 left-1.5 -z-10"></div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm">
-                <span className="font-medium">Đã nhận thanh toán</span> từ
-                Nguyễn Văn A <span className="font-medium">385.900đ</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3">
-              <div className="w-10 text-right text-sm text-gray-500">08:12</div>
-            </div>
-            <div className="relative flex items-center">
-              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-sky-500 z-10"></div>
-              <div className="flex-shrink-0 w-0.5 h-full bg-gray-200 absolute top-3 bottom-0 left-1.5 -z-10"></div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm">
-                <span className="font-medium">Đơn hàng mới</span> đã đặt
-                #XF-2356
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3">
-              <div className="w-10 text-right text-sm text-gray-500">07:25</div>
-            </div>
-            <div className="relative flex items-center">
-              <div className="flex-shrink-0 w-3 h-3 rounded-full bg-sky-500 z-10"></div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm">
-                <span className="font-medium">Chiến dịch đã gửi</span> tới Khách
-                hàng #4
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

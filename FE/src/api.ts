@@ -759,4 +759,10 @@ export const getMonthlyRevenueApi = async (month?: number, year?: number) => {
   return res.data;
 };
 
+// Thêm API thống kê doanh thu theo dịch vụ
+export const getRevenueByServiceApi = async () => {
+  const res = await api.get('/payment/statistics/by-service');
+  return res.data;
+};
+
 export default api;

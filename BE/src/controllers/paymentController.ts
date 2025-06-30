@@ -532,4 +532,72 @@ export const getMonthlyRevenue = async (req: Request, res: Response) => {
       error: err.message
     });
   }
+};
+
+// API tổng hợp doanh thu theo dịch vụ
+export const getRevenueByService = async (req: Request, res: Response) => {
+  try {
+    // Tìm tất cả thanh toán đã hoàn thành
+    const completedPayments = await Payment.find({ 
+      status: "completed" 
+    }).populate({
+      path: 'appointmentId',
+      select: 'service_id',
+      populate: {
+        path: 'service_id',
+        select: 'name price'
+      }
+    });
+
+    // Tạo map để theo dõi doanh thu và số lượng giao dịch theo dịch vụ
+    const revenueByService = new Map<string, { 
+      serviceId: string,
+      serviceName: string, 
+      totalRevenue: number, 
+      transactionCount: number 
+    }>();
+
+    // Tính tổng doanh thu và số lượng giao dịch cho mỗi dịch vụ
+    completedPayments.forEach(payment => {
+      if (!payment.appointmentId) return;
+      
+      const appointment = payment.appointmentId as any;
+      if (!appointment.service_id) return;
+      
+      const service = appointment.service_id;
+      const serviceId = service._id.toString();
+      const serviceName = service.name;
+      
+      if (revenueByService.has(serviceId)) {
+        const serviceData = revenueByService.get(serviceId)!;
+        serviceData.totalRevenue += payment.totalPrice;
+        serviceData.transactionCount += 1;
+      } else {
+        revenueByService.set(serviceId, {
+          serviceId,
+          serviceName,
+          totalRevenue: payment.totalPrice,
+          transactionCount: 1
+        });
+      }
+    });
+
+    // Chuyển đổi map thành mảng để trả về
+    const result = Array.from(revenueByService.values());
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        services: result,
+        currency: 'VND'
+      }
+    });
+  } catch (err: any) {
+    console.error('Lỗi khi tính doanh thu theo dịch vụ:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể tính doanh thu theo dịch vụ',
+      error: err.message
+    });
+  }
 }; 
