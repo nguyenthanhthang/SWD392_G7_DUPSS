@@ -739,6 +739,13 @@ export const rescheduleAppointmentApi = async (appointmentId: string, newSlotTim
   return res.data;
 };
 
+export const capNhatLinkMeetApi = async (appointmentId: string, meetLink: string) => {
+  const res = await api.put(`/appointments/meet-link/${appointmentId}`, {
+    meetLink,
+  });
+  return res.data;
+};
+
 // Thêm các API thống kê doanh thu
 export const getTotalRevenueApi = async () => {
   const res = await api.get('/payment/statistics/total');
