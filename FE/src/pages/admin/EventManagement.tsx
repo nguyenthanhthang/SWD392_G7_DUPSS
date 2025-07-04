@@ -35,6 +35,8 @@ interface Event {
   image?: string;
   participants?: number;
   registeredCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Add interface for check-in history
@@ -64,7 +66,11 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
   onEdit: (e: Event) => void;
   onDelete: (e: Event) => void;
   onCancel: (e: Event) => void;
-}) => (
+}) => {
+  const isFull = event.registeredCount && event.registeredCount >= event.capacity;
+  const isNearFull = event.registeredCount && event.registeredCount >= event.capacity * 0.8;
+  
+  return (
   <motion.div
     whileHover={{ scale: 1.03 }}
     className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col h-full min-h-[380px] border border-gray-100"
@@ -98,7 +104,7 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
       <p className="text-gray-500 text-sm mb-2 line-clamp-2">{event.description}</p>
       <div className="flex items-center text-gray-400 text-xs mb-1">
         <FiCalendar className="mr-1" />
-        {new Date(event.startDate).toLocaleString("vi-VN")}
+        {new Date(event.startDate).toLocaleDateString("vi-VN")}
       </div>
       <div className="flex items-center text-gray-400 text-xs mb-1">
         <FiMapPin className="mr-1" />
@@ -110,7 +116,29 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
       </div>
       <div className="flex items-center text-gray-400 text-xs mb-2">
         <FiUsers className="mr-1" />
-        {event.registeredCount ?? 0}/{event.capacity} người đã đăng ký
+        <span className={event.registeredCount && event.registeredCount >= event.capacity ? "text-red-500 font-semibold" : ""}>
+          {event.registeredCount ?? 0}/{event.capacity} người đã đăng ký
+        </span>
+        {event.registeredCount && event.registeredCount >= event.capacity && (
+          <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full font-medium">
+            Đã đầy
+          </span>
+        )}
+      </div>
+      {/* Progress bar cho mức độ đăng ký */}
+      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+        <div 
+          className={`h-2 rounded-full transition-all duration-300 ${
+            event.registeredCount && event.registeredCount >= event.capacity 
+              ? 'bg-red-500' 
+              : event.registeredCount && event.registeredCount >= event.capacity * 0.8
+              ? 'bg-yellow-500'
+              : 'bg-green-500'
+          }`}
+          style={{ 
+            width: `${Math.min(((event.registeredCount ?? 0) / event.capacity) * 100, 100)}%` 
+          }}
+        ></div>
       </div>
       <div className="flex-1"></div>
       <div className="flex gap-2 mt-2">
@@ -146,7 +174,8 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 // Event Form Modal
 const EventFormModal = ({ 
@@ -181,20 +210,25 @@ const EventFormModal = ({
         description: event.description,
         startDate: new Date(event.startDate).toISOString().slice(0, 16),
         endDate: new Date(event.endDate).toISOString().slice(0, 16),
-        registrationStartDate: event.registrationStartDate ? new Date(event.registrationStartDate).toISOString().slice(0, 16) : "",
-        registrationEndDate: event.registrationEndDate ? new Date(event.registrationEndDate).toISOString().slice(0, 16) : "",
+        registrationStartDate: event.registrationStartDate ? new Date(event.registrationStartDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+        registrationEndDate: event.registrationEndDate ? new Date(event.registrationEndDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
         location: event.location,
         capacity: event.capacity,
         image: event.image || ""
       });
     } else {
+      // Set default times for new events
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
       setFormData({
         title: "",
         description: "",
-        startDate: "",
-        endDate: "",
-        registrationStartDate: "",
-        registrationEndDate: "",
+        startDate: tomorrow.toISOString().slice(0, 16),
+        endDate: tomorrow.toISOString().slice(0, 16),
+        registrationStartDate: now.toISOString().slice(0, 16),
+        registrationEndDate: tomorrow.toISOString().slice(0, 16),
         location: "",
         capacity: 50,
         image: ""
@@ -214,6 +248,15 @@ const EventFormModal = ({
     if (formData.capacity <= 0) {
       toast.error("Sức chứa phải lớn hơn 0");
       return;
+    }
+    
+    // Kiểm tra sức chứa khi cập nhật event
+    if (isEditing && event) {
+      const currentRegisteredCount = event.registeredCount || 0;
+      if (formData.capacity < currentRegisteredCount) {
+        toast.error(`Không thể giảm sức chứa xuống ${formData.capacity} vì đã có ${currentRegisteredCount} người đăng ký`);
+        return;
+      }
     }
     
     const startDate = new Date(formData.startDate);
@@ -289,49 +332,69 @@ const EventFormModal = ({
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian bắt đầu đăng ký *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ngày bắt đầu đăng ký *</label>
               <input
-                type="datetime-local"
-                value={formData.registrationStartDate}
-                onChange={(e) => setFormData({ ...formData, registrationStartDate: e.target.value })}
+                type="date"
+                value={formData.registrationStartDate.split('T')[0]}
+                onChange={(e) => {
+                  const date = e.target.value;
+                  const time = formData.registrationStartDate.split('T')[1] || '00:00';
+                  setFormData({ ...formData, registrationStartDate: `${date}T${time}` });
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
+
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian kết thúc đăng ký *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ngày kết thúc đăng ký *</label>
               <input
-                type="datetime-local"
-                value={formData.registrationEndDate}
-                onChange={(e) => setFormData({ ...formData, registrationEndDate: e.target.value })}
+                type="date"
+                value={formData.registrationEndDate.split('T')[0]}
+                onChange={(e) => {
+                  const date = e.target.value;
+                  const time = formData.registrationEndDate.split('T')[1] || '23:59';
+                  setFormData({ ...formData, registrationEndDate: `${date}T${time}` });
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
+
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian bắt đầu sự kiện *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ngày bắt đầu sự kiện *</label>
               <input
-                type="datetime-local"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                type="date"
+                value={formData.startDate.split('T')[0]}
+                onChange={(e) => {
+                  const date = e.target.value;
+                  const time = formData.startDate.split('T')[1] || '09:00';
+                  setFormData({ ...formData, startDate: `${date}T${time}` });
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
+
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian kết thúc sự kiện *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ngày kết thúc sự kiện *</label>
               <input
-                type="datetime-local"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                type="date"
+                value={formData.endDate.split('T')[0]}
+                onChange={(e) => {
+                  const date = e.target.value;
+                  const time = formData.endDate.split('T')[1] || '17:00';
+                  setFormData({ ...formData, endDate: `${date}T${time}` });
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
+
             </div>
           </div>
           
@@ -358,6 +421,23 @@ const EventFormModal = ({
               placeholder="Số lượng người tham gia tối đa"
               required
             />
+            {isEditing && event && event.registeredCount && (
+              <div className="mt-2 text-sm">
+                <span className="text-gray-600">
+                  Hiện tại đã có <span className="font-semibold">{event.registeredCount}</span> người đăng ký
+                </span>
+                {event.registeredCount >= event.capacity && (
+                  <div className="mt-1 text-red-600 font-medium">
+                    ⚠️ Sự kiện đã đầy! Không thể giảm sức chứa.
+                  </div>
+                )}
+                {event.registeredCount >= event.capacity * 0.8 && event.registeredCount < event.capacity && (
+                  <div className="mt-1 text-yellow-600 font-medium">
+                    ⚠️ Sự kiện gần đầy! ({Math.round((event.registeredCount / event.capacity) * 100)}% đã đăng ký)
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <div>
@@ -572,6 +652,7 @@ const AdminEventManagement = () => {
   const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 6;
+  const [sortBy, setSortBy] = useState("newest");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancellingEvent, setCancellingEvent] = useState<Event | null>(null);
 
@@ -583,7 +664,16 @@ const AdminEventManagement = () => {
     try {
       setLoading(true);
       const data = await getAllEventsApi();
-      setEvents(Array.isArray(data) ? data : []);
+      
+      // Sắp xếp sự kiện theo thời gian mới nhất (createdAt hoặc startDate)
+      const sortedEvents = (Array.isArray(data) ? data : []).sort((a: Event, b: Event) => {
+        // Ưu tiên sắp xếp theo ngày tạo mới nhất
+        const dateA = new Date(a.createdAt || a.startDate);
+        const dateB = new Date(b.createdAt || b.startDate);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      setEvents(sortedEvents);
     } catch (error) {
       toast.error("Không thể tải danh sách sự kiện");
     } finally {
@@ -698,6 +788,9 @@ const AdminEventManagement = () => {
         ...prev
       ].slice(0, 10));
       toast.success("Check-in thành công!");
+      
+      // Refresh events để cập nhật số liệu
+      await fetchEvents();
     } catch (error) {
       setCheckInHistory((prev) => [
         { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date(), status: "error" as const },
@@ -707,14 +800,41 @@ const AdminEventManagement = () => {
     }
   };
 
-  // Filter + search
+  // Filter + search + sort
   const filteredEvents = events.filter(event => {
     if (filter !== "all" && event.status !== filter) return false;
     if (search && !event.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
-  const totalPages = Math.ceil(filteredEvents.length / rowsPerPage);
-  const paginatedFilteredEvents = filteredEvents.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  // Sắp xếp sự kiện
+  const sortedEvents = [...filteredEvents].sort((a: Event, b: Event) => {
+    switch (sortBy) {
+      case "newest":
+        const dateA = new Date(a.createdAt || a.startDate);
+        const dateB = new Date(b.createdAt || b.startDate);
+        return dateB.getTime() - dateA.getTime();
+      case "oldest":
+        const dateAOld = new Date(a.createdAt || a.startDate);
+        const dateBOld = new Date(b.createdAt || b.startDate);
+        return dateAOld.getTime() - dateBOld.getTime();
+      case "startDate":
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      case "startDateDesc":
+        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      case "capacity":
+        return b.capacity - a.capacity;
+      case "registered":
+        return (b.registeredCount || 0) - (a.registeredCount || 0);
+      case "status":
+        return a.status.localeCompare(b.status);
+      default:
+        return 0;
+    }
+  });
+
+  const totalPages = Math.ceil(sortedEvents.length / rowsPerPage);
+  const paginatedFilteredEvents = sortedEvents.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-[#f6f8fb] pb-10">
@@ -723,7 +843,21 @@ const AdminEventManagement = () => {
         
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Quản lý sự kiện</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Quản lý sự kiện</h1>
+            {events.length > 0 && (
+              <div className="flex gap-4 text-sm text-gray-600">
+                <span>📊 Tổng cộng: {events.length} sự kiện</span>
+                <span>👥 Đã đăng ký: {events.reduce((sum, event) => sum + (event.registeredCount || 0), 0)} người</span>
+                <span className="text-red-600 font-medium">
+                  ⚠️ Đầy: {events.filter(event => event.registeredCount && event.registeredCount >= event.capacity).length} sự kiện
+                </span>
+                <span className="text-sky-600 font-medium">
+                 
+                </span>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => {
               setEditingEvent(null);
@@ -735,7 +869,7 @@ const AdminEventManagement = () => {
           </button>
         </div>
 
-        {/* Filter & Search */}
+        {/* Filter & Search & Sort */}
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-8">
           <div className="flex gap-2 overflow-x-auto pb-2">
             {[
@@ -756,15 +890,24 @@ const AdminEventManagement = () => {
               </button>
             ))}
           </div>
-          <div className="w-full md:w-80 relative">
-            <FiSearch className="absolute left-3 top-3 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm sự kiện..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm"
-            />
+          
+          <div className="flex gap-3 items-center">
+            {/* Dropdown sắp xếp */}
+            <div className="relative">
+              
+            </div>
+            
+            {/* Search */}
+            <div className="w-full md:w-80 relative">
+              <FiSearch className="absolute left-3 top-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm sự kiện..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm"
+              />
+            </div>
           </div>
         </div>
 

@@ -38,6 +38,8 @@ interface Event {
   image?: string;
   registeredCount?: number;
   isCancelled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function EventsPage() {
@@ -49,6 +51,7 @@ export default function EventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
   const [showRegisteredModal, setShowRegisteredModal] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [registrationConfirmation, setRegistrationConfirmation] =
@@ -77,8 +80,17 @@ export default function EventsPage() {
       console.log("Fetching events...");
       const data = await getAllEventsApi();
       console.log("Events data:", data);
-      setEvents(data);
-      setFilteredEvents(data);
+      
+      // Sắp xếp sự kiện theo thời gian mới nhất (createdAt hoặc startDate)
+      const sortedEvents = data.sort((a: Event, b: Event) => {
+        // Ưu tiên sắp xếp theo ngày tạo mới nhất
+        const dateA = new Date(a.createdAt || a.startDate);
+        const dateB = new Date(b.createdAt || b.startDate);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      setEvents(sortedEvents);
+      setFilteredEvents(sortedEvents);
     } catch (err) {
       console.error("Error fetching events:", err);
       setError("Failed to fetch events");
@@ -104,8 +116,32 @@ export default function EventsPage() {
       );
     }
 
+    // Sắp xếp sự kiện
+    filtered.sort((a: Event, b: Event) => {
+      switch (sortBy) {
+        case "newest":
+          const dateA = new Date(a.createdAt || a.startDate);
+          const dateB = new Date(b.createdAt || b.startDate);
+          return dateB.getTime() - dateA.getTime();
+        case "oldest":
+          const dateAOld = new Date(a.createdAt || a.startDate);
+          const dateBOld = new Date(b.createdAt || b.startDate);
+          return dateAOld.getTime() - dateBOld.getTime();
+        case "startDate":
+          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        case "startDateDesc":
+          return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+        case "capacity":
+          return b.capacity - a.capacity;
+        case "registered":
+          return (b.registeredCount || 0) - (a.registeredCount || 0);
+        default:
+          return 0;
+      }
+    });
+
     setFilteredEvents(filtered);
-  }, [selectedCategory, searchTerm, events, cancelledEvents]);
+  }, [selectedCategory, searchTerm, events, cancelledEvents, sortBy]);
 
   const fetchRegisteredEvents = async () => {
     setRegisteredEvents([]);
@@ -133,8 +169,10 @@ export default function EventsPage() {
       const response = await registerEventApi(eventId, user._id);
       setRegistrationConfirmation(response.data);
       setShowConfirmationModal(true);
-      fetchEvents(); // Refresh events after registration
-      fetchRegisteredEvents(); // Refresh registered events
+      
+      // Refresh events để cập nhật số người đăng ký
+      await fetchEvents();
+      await fetchRegisteredEvents();
     } catch (err) {
       console.error("Registration failed:", err);
     }
@@ -159,7 +197,8 @@ export default function EventsPage() {
         setRegisteredEvents(prev => prev.filter(event => event._id !== eventToUnregister));
       }
       
-      fetchEvents(); // Refresh events after unregistration
+      // Refresh events để cập nhật số người đăng ký
+      await fetchEvents();
       setShowUnregisterSuccess(true);
       setShowUnregisterConfirm(false);
       setEventToUnregister(null);
@@ -245,6 +284,9 @@ export default function EventsPage() {
             <div className="text-center mb-4">
               <p className="text-green-600 text-lg font-medium mb-2">
                 ✅ Đăng ký thành công!
+              </p>
+              <p className="text-sm text-gray-600">
+                Số người đăng ký đã được cập nhật
               </p>
             </div>
             <div className="space-y-2">
@@ -399,6 +441,21 @@ export default function EventsPage() {
                 ))}
               </div>
               
+              {/* Dropdown sắp xếp */}
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-4 py-2 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white text-gray-700 text-sm font-medium"
+                >
+                  <option value="newest">🆕 Mới nhất</option>
+                  <option value="oldest">📅 Cũ nhất</option>
+                  <option value="startDate">📅 Sắp diễn ra</option>
+                  <option value="startDateDesc">📅 Sắp diễn ra (ngược)</option>
+                  <option value="capacity">👥 Sức chứa cao</option>
+                  <option value="registered">📊 Đăng ký nhiều</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -478,10 +535,35 @@ export default function EventsPage() {
                   {event.location}
                 </div>
                 <div className="flex-1"></div>
-                <div className="flex items-end justify-between mt-6">
+                <div className="space-y-2 mb-4">
                   <div className="text-sm text-gray-500">
-                    {event.registeredCount || 0}/{event.capacity} người tham gia
+                    <span className={event.registeredCount && event.registeredCount >= event.capacity ? "text-red-600 font-semibold" : ""}>
+                      {event.registeredCount || 0}/{event.capacity} người tham gia
+                    </span>
+                    {event.registeredCount && event.registeredCount >= event.capacity && (
+                      <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full">
+                        Đã đầy
+                      </span>
+                    )}
                   </div>
+                  {/* Progress bar cho mức độ đăng ký */}
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        event.registeredCount && event.registeredCount >= event.capacity 
+                          ? 'bg-red-500' 
+                          : event.registeredCount && event.registeredCount >= event.capacity * 0.8
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500'
+                      }`}
+                      style={{ 
+                        width: `${Math.min(((event.registeredCount || 0) / event.capacity) * 100, 100)}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="flex items-end justify-between">
+                  <div></div>
                   <button
                     onClick={() => handleRegister(event._id)}
                     disabled={

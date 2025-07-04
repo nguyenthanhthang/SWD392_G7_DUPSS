@@ -30,8 +30,10 @@ const eventSchema = new Schema<IEvent>(
       default: "upcoming",
     },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+
 
 // Middleware
 eventSchema.pre("save", function (next) {

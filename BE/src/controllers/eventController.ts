@@ -82,7 +82,24 @@ export const getAllEvents = async (
 ): Promise<void> => {
   try {
     const events = await Event.find();
-    res.status(200).json(events);
+    
+    // Tính toán số người đăng ký cho mỗi event
+    const eventsWithRegistrationCount = await Promise.all(
+      events.map(async (event) => {
+        const registrationCount = await EventRegistration.countDocuments({
+          eventId: event._id,
+          status: "active"
+        });
+        
+        const eventObj = event.toObject();
+        return {
+          ...eventObj,
+          registeredCount: registrationCount
+        };
+      })
+    );
+    
+    res.status(200).json(eventsWithRegistrationCount);
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi lấy danh sách sự kiện", error });
   }
@@ -99,7 +116,20 @@ export const getEventById = async (
       res.status(404).json({ message: "Không tìm thấy sự kiện" });
       return;
     }
-    res.status(200).json(event);
+    
+    // Tính toán số người đăng ký
+    const registrationCount = await EventRegistration.countDocuments({
+      eventId: event._id,
+      status: "active"
+    });
+    
+    const eventObj = event.toObject();
+    const eventWithCount = {
+      ...eventObj,
+      registeredCount: registrationCount
+    };
+    
+    res.status(200).json(eventWithCount);
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi lấy thông tin sự kiện", error });
   }
