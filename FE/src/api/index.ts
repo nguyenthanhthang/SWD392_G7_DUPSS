@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { Quiz, Question } from "../types/global";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -74,29 +75,69 @@ export const checkInEventApi = async (
 export const getUserQuizHistoryApi = async (
   userId: string
 ): Promise<ApiResponse<QuizHistoryItem[]>> => {
-  try {
-    const response = await axios.get(`${API_URL}/quizzes/history/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      withCredentials: true,
-    });
-    return { success: true, data: response.data };
-  } catch (error) {
-    console.error("Error fetching quiz history:", error);
-    return {
-      success: false,
-      data: [],
-      error: "Failed to fetch quiz history",
-    };
-  }
+  const response = await axios.get(`${API_URL}/quizzes/history/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    withCredentials: true,
+  });
+  return { success: true, data: response.data };
 };
 
 export const getAllBlogsApi = async (isAdmin?: boolean) => {
   try {
-    const response = await axios.get(`${API_URL}/blogs${isAdmin ? '?isAdmin=true' : ''}`);
+    const response = await axios.get(
+      `${API_URL}/blogs${isAdmin ? "?isAdmin=true" : ""}`
+    );
     return response.data;
   } catch (error) {
     throw error;
   }
+};
+
+// Quiz CRUD
+export const createQuizApi = async (data: Quiz) => {
+  const response = await axios.post(`${API_URL}/quizzes`, data);
+  return response.data;
+};
+export const updateQuizApi = async (id: string, data: Partial<Quiz>) => {
+  const response = await axios.put(`${API_URL}/quizzes/${id}`, data);
+  return response.data;
+};
+export const deleteQuizApi = async (id: string) => {
+  const response = await axios.delete(`${API_URL}/quizzes/${id}`);
+  return response.data;
+};
+export const getQuizByIdApi = async (id: string) => {
+  const response = await axios.get(`${API_URL}/quizzes/${id}`);
+  return response.data;
+};
+// Question CRUD
+export const createQuestionApi = async (data: Partial<Question>) => {
+  const response = await axios.post(`${API_URL}/questions`, data);
+  return response.data;
+};
+export const updateQuestionApi = async (
+  id: string,
+  data: Partial<Question>
+) => {
+  const response = await axios.put(`${API_URL}/questions/${id}`, data);
+  return response.data;
+};
+export const deleteQuestionApi = async (id: string) => {
+  const response = await axios.delete(`${API_URL}/questions/${id}`);
+  return response.data;
+};
+export const getQuestionsByQuizApi = async (quizId: string) => {
+  const response = await axios.get(`${API_URL}/questions/quiz/${quizId}`);
+  return response.data;
+};
+export const getQuestionByIdApi = async (id: string) => {
+  const response = await axios.get(`${API_URL}/questions/${id}`);
+  return response.data;
+};
+
+export const getAllQuizzesApi = async (): Promise<{ data: Quiz[] }> => {
+  const response = await axios.get(`${API_URL}/quizzes`);
+  return response.data;
 };

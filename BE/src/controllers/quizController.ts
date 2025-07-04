@@ -3,6 +3,213 @@ import Quiz from "../models/Quiz";
 import Question from "../models/Question";
 import QuizResult from "../models/QuizResult";
 import mongoose from "mongoose";
+import Account from "../models/Account";
+
+// Tạo mới quiz
+export const createQuiz = async (req: Request, res: Response) => {
+  try {
+    const { _id, title, description, ageGroups, tags, maxScore, isActive } =
+      req.body;
+    if (!_id || !title || !description || !ageGroups || !maxScore) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu thông tin bắt buộc" });
+    }
+    // Kiểm tra trùng _id
+    const existed = await Quiz.findById(_id);
+    if (existed) {
+      return res
+        .status(409)
+        .json({ success: false, message: "Quiz ID đã tồn tại" });
+    }
+    const quiz = new Quiz({
+      _id,
+      title,
+      description,
+      ageGroups,
+      tags,
+      maxScore,
+      isActive,
+    });
+    await quiz.save();
+    res.status(201).json({ success: true, data: quiz });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi tạo quiz" });
+  }
+};
+
+// Lấy chi tiết quiz
+export const getQuizById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const quiz = await Quiz.findById(id);
+    if (!quiz) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz không tồn tại" });
+    }
+    res.json({ success: true, data: quiz });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi lấy quiz" });
+  }
+};
+
+// Cập nhật quiz
+export const updateQuiz = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, description, ageGroups, tags, maxScore, isActive } =
+      req.body;
+    const quiz = await Quiz.findByIdAndUpdate(
+      id,
+      { title, description, ageGroups, tags, maxScore, isActive },
+      { new: true, runValidators: true }
+    );
+    if (!quiz) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz không tồn tại" });
+    }
+    res.json({ success: true, data: quiz });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi cập nhật quiz" });
+  }
+};
+
+// Xóa quiz
+export const deleteQuiz = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const quiz = await Quiz.findByIdAndDelete(id);
+    if (!quiz) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz không tồn tại" });
+    }
+    res.json({ success: true, message: "Đã xóa quiz thành công" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi xóa quiz" });
+  }
+};
+
+// Tạo mới câu hỏi
+export const createQuestion = async (req: Request, res: Response) => {
+  try {
+    const {
+      quizId,
+      text,
+      options,
+      type,
+      ageGroup,
+      topic,
+      difficulty,
+      isActive,
+    } = req.body;
+    if (!quizId || !text || !options || !ageGroup || !topic) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu thông tin bắt buộc" });
+    }
+    const question = new Question({
+      quizId,
+      text,
+      options,
+      type,
+      ageGroup,
+      topic,
+      difficulty,
+      isActive,
+    });
+    await question.save();
+    res.status(201).json({ success: true, data: question });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi tạo câu hỏi" });
+  }
+};
+
+// Lấy chi tiết câu hỏi
+export const getQuestionById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const question = await Question.findById(id);
+    if (!question) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Câu hỏi không tồn tại" });
+    }
+    res.json({ success: true, data: question });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi lấy câu hỏi" });
+  }
+};
+
+// Cập nhật câu hỏi
+export const updateQuestion = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { text, options, type, ageGroup, topic, difficulty, isActive } =
+      req.body;
+    const question = await Question.findByIdAndUpdate(
+      id,
+      { text, options, type, ageGroup, topic, difficulty, isActive },
+      { new: true, runValidators: true }
+    );
+    if (!question) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Câu hỏi không tồn tại" });
+    }
+    res.json({ success: true, data: question });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi cập nhật câu hỏi" });
+  }
+};
+
+// Xóa câu hỏi
+export const deleteQuestion = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const question = await Question.findByIdAndDelete(id);
+    if (!question) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Câu hỏi không tồn tại" });
+    }
+    res.json({ success: true, message: "Đã xóa câu hỏi thành công" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi xóa câu hỏi" });
+  }
+};
+
+// Lấy danh sách câu hỏi theo quizId
+export const getQuestionsByQuiz = async (req: Request, res: Response) => {
+  try {
+    const { quizId } = req.params;
+    const questions = await Question.find({ quizId });
+    res.json({ success: true, data: questions });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server khi lấy danh sách câu hỏi",
+    });
+  }
+};
 
 // Interface cho request body khi submit quiz
 interface SubmitQuizRequest extends Request {
@@ -356,6 +563,21 @@ export const getUserQuizResults = async (req: Request, res: Response) => {
     const pageNum = parseInt(page as string);
     const skip = (pageNum - 1) * limitNum;
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.json({
+        success: true,
+        data: {
+          results: [],
+          pagination: {
+            current: pageNum,
+            limit: limitNum,
+            total: 0,
+            pages: 1,
+          },
+        },
+      });
+    }
+
     // Lấy kết quả quiz của user
     const results = await QuizResult.find({
       userId: new mongoose.Types.ObjectId(userId),
@@ -437,5 +659,71 @@ export const getUserQuizHistory = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error fetching quiz history:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Lấy toàn bộ kết quả quiz (có filter, phân trang)
+export const getAllQuizResults = async (req: Request, res: Response) => {
+  try {
+    const {
+      quizId,
+      userId,
+      riskLevel,
+      from,
+      to,
+      page = 1,
+      limit = 20,
+    } = req.query;
+    const filter: any = {};
+    if (quizId) filter.quizId = quizId;
+    if (userId) {
+      if (
+        typeof userId === "string" &&
+        mongoose.Types.ObjectId.isValid(userId)
+      ) {
+        filter.userId = userId;
+      } else if (typeof userId === "string" && userId.includes("@")) {
+        // Nếu userId là email, tìm account
+        const user = await Account.findOne({ email: userId });
+        if (user) filter.userId = user._id;
+        else filter.userId = null; // Không tìm thấy user
+      }
+      // Nếu userId không hợp lệ, không filter theo userId
+    }
+    if (riskLevel) filter.riskLevel = riskLevel;
+    if (from || to) {
+      filter.takenAt = {};
+      if (from) filter.takenAt.$gte = new Date(from as string);
+      if (to) filter.takenAt.$lte = new Date(to as string);
+    }
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 20;
+    const skip = (pageNum - 1) * limitNum;
+    const total = await QuizResult.countDocuments(filter);
+    const results = await QuizResult.find(filter)
+      .populate("quizId", "title")
+      .populate("userId", "fullName email")
+      .sort({ takenAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    res.json({
+      success: true,
+      data: {
+        results,
+        pagination: {
+          current: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi BE getAllQuizResults:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server khi lấy danh sách kết quả quiz",
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
