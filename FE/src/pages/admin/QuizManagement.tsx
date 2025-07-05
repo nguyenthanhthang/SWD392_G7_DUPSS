@@ -273,217 +273,220 @@ const QuizManagement: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      {/* Thêm nút ở đầu trang */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Quản lý trắc nghiệm</h1>
-        <button
-          className="bg-purple-600 text-white px-5 py-2 rounded hover:bg-purple-700 shadow font-semibold"
-          onClick={() => navigate("/admin/quiz-results")}
-        >
-          Kết quả trắc nghiệm
-        </button>
-      </div>
-      {/* Filter Bar */}
-      <div className="bg-blue-50 p-6 rounded-lg mb-6 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-          {/* Search */}
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700">
-              Tìm kiếm
-            </label>
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tiêu đề, mô tả, nhãn..."
-              className="w-full border rounded px-3 py-2"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          {/* Nhóm tuổi */}
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700">
-              Nhóm tuổi
-            </label>
-            <div className="flex flex-wrap gap-3">
-              {ageGroupOptions.map((opt) => (
-                <label
-                  key={opt.value}
-                  className="flex items-center gap-1 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={ageGroups.includes(opt.value)}
-                    onChange={(e) => {
-                      setAgeGroups(
-                        e.target.checked
-                          ? [...ageGroups, opt.value]
-                          : ageGroups.filter((a) => a !== opt.value)
-                      );
-                    }}
-                  />
-                  <span>{opt.label}</span>
-                </label>
-              ))}
+    <div className="p-6 bg-sky-50">
+      <div className="p-4 bg-white rounded-lg shadow-sm">
+        {/* Thêm nút ở đầu trang */}
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Quản lý trắc nghiệm</h1>
+          <button
+            className="bg-sky-600 text-white px-5 py-2 rounded hover:bg-sky-700 shadow font-semibold"
+            onClick={() => navigate("/admin/quiz-results")}
+          >
+            Kết quả trắc nghiệm
+          </button>
+        </div>
+        {/* Filter Bar */}
+        <div className="bg-white p-6 rounded-lg mb-6 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            {/* Search */}
+            <div>
+              <label className="block font-semibold mb-1 text-gray-700">
+                Tìm kiếm
+              </label>
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo tiêu đề, mô tả, nhãn..."
+                className="w-full border rounded px-3 py-2"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            {/* Nhóm tuổi */}
+            <div>
+              <label className="block font-semibold mb-1 text-gray-700">
+                Nhóm tuổi
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {ageGroupOptions.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex items-center gap-1 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={ageGroups.includes(opt.value)}
+                      onChange={(e) => {
+                        setAgeGroups(
+                          e.target.checked
+                            ? [...ageGroups, opt.value]
+                            : ageGroups.filter((a) => a !== opt.value)
+                        );
+                      }}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* Trạng thái */}
+            <div>
+              <label className="block font-semibold mb-1 text-gray-700">
+                Trạng thái
+              </label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="">Tất cả</option>
+                <option value="active">Hoạt động</option>
+                <option value="inactive">Ẩn</option>
+              </select>
+            </div>
+            {/* Tag */}
+            <div className="md:col-span-2">
+              <label className="block font-semibold mb-1 text-gray-700">
+                Nhãn
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {allTags.map((tag) => (
+                  <label key={tag} className="flex items-center gap-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={tags.includes(tag)}
+                      onChange={(e) => {
+                        setTags(
+                          e.target.checked
+                            ? [...tags, tag]
+                            : tags.filter((t) => t !== tag)
+                        );
+                      }}
+                    />
+                    <span>{tagLabel(tag)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* Xuất CSV */}
+            <div className="flex flex-col gap-2 md:items-end justify-end">
+              <button
+                className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 w-full md:w-auto"
+                onClick={() => setShowAddQuiz(true)}
+              >
+                Thêm
+              </button>
             </div>
           </div>
-          {/* Trạng thái */}
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700">
-              Trạng thái
-            </label>
-            <select
-              className="w-full border rounded px-2 py-2"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="active">Hoạt động</option>
-              <option value="inactive">Ẩn</option>
-            </select>
-          </div>
-          {/* Tag */}
-          <div className="md:col-span-2">
-            <label className="block font-semibold mb-1 text-gray-700">
-              Nhãn
-            </label>
-            <div className="flex flex-wrap gap-3">
-              {allTags.map((tag) => (
-                <label key={tag} className="flex items-center gap-1 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={tags.includes(tag)}
-                    onChange={(e) => {
-                      setTags(
-                        e.target.checked
-                          ? [...tags, tag]
-                          : tags.filter((t) => t !== tag)
-                      );
-                    }}
-                  />
-                  <span>{tagLabel(tag)}</span>
-                </label>
+        </div>
+        {/* Table */}
+        <div className="overflow-x-auto rounded shadow bg-white">
+          <table className="min-w-full">
+            <thead className="bg-sky-50">
+              <tr>
+                <th className="px-3 py-2 text-left">Tiêu đề</th>
+                <th className="px-3 py-2 text-left">Mô tả</th>
+                <th className="px-3 py-2 text-left">Nhóm tuổi</th>
+                <th className="px-3 py-2 text-left">Nhãn</th>
+                <th className="px-3 py-2 text-center">Số câu hỏi</th>
+                <th className="px-3 py-2 text-center">Trạng thái</th>
+                <th className="px-3 py-2 text-center">Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.map((quiz) => (
+                <tr key={quiz._id} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 font-semibold">{quiz.title}</td>
+                  <td className="px-3 py-2 text-sm text-gray-700 max-w-xs truncate">
+                    {quiz.description}
+                  </td>
+                  <td className="px-3 py-2">
+                    {quiz.ageGroups?.map((a: string) => (
+                      <span
+                        key={a}
+                        className="inline-block bg-blue-100 text-blue-700 rounded px-2 py-0.5 text-xs mr-1 mb-1"
+                      >
+                        {ageGroupLabel(a)}
+                      </span>
+                    ))}
+                  </td>
+                  <td className="px-3 py-2">
+                    {quiz.tags?.map((t: string) => (
+                      <span
+                        key={t}
+                        className="inline-block bg-green-100 text-green-700 rounded px-2 py-0.5 text-xs mr-1 mb-1"
+                      >
+                        {tagLabel(t)}
+                      </span>
+                    ))}
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    {quiz.questionCount ?? "-"}
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                        quiz.isActive
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {statusLabel(!!quiz.isActive)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <button
+                      className="text-blue-600 hover:underline text-xs mr-2"
+                      onClick={() => handleViewQuiz(quiz)}
+                    >
+                      Xem
+                    </button>
+                    <button
+                      className="text-yellow-600 hover:underline text-xs mr-2"
+                      onClick={() => handleEditQuiz(quiz)}
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      className="text-red-600 hover:underline text-xs"
+                      onClick={() => handleDeleteQuiz(quiz)}
+                    >
+                      Xóa
+                    </button>
+                  </td>
+                </tr>
               ))}
-            </div>
-          </div>
-          {/* Xuất CSV */}
-          <div className="flex flex-col gap-2 md:items-end justify-end">
+              {paged.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-8 text-gray-400">
+                    Không có trắc nghiệm nào phù hợp.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {/* Pagination */}
+          <div className="flex justify-end items-center gap-2 py-3 px-3">
             <button
-              className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 w-full md:w-auto"
-              onClick={() => setShowAddQuiz(true)}
+              className="px-2 py-1 rounded border disabled:opacity-50"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
             >
-              Thêm
+              &lt;
+            </button>
+            <span className="text-sm">
+              Trang {page} / {totalPages || 1}
+            </span>
+            <button
+              className="px-2 py-1 rounded border disabled:opacity-50"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || totalPages === 0}
+            >
+              &gt;
             </button>
           </div>
         </div>
       </div>
-      {/* Table */}
-      <div className="overflow-x-auto rounded shadow">
-        <table className="min-w-full bg-white">
-          <thead className="bg-gray-100 sticky top-0 z-10">
-            <tr>
-              <th className="px-3 py-2 text-left">Tiêu đề</th>
-              <th className="px-3 py-2 text-left">Mô tả</th>
-              <th className="px-3 py-2 text-left">Nhóm tuổi</th>
-              <th className="px-3 py-2 text-left">Nhãn</th>
-              <th className="px-3 py-2 text-center">Số câu hỏi</th>
-              <th className="px-3 py-2 text-center">Trạng thái</th>
-              <th className="px-3 py-2 text-center">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paged.map((quiz) => (
-              <tr key={quiz._id} className="hover:bg-gray-50">
-                <td className="px-3 py-2 font-semibold">{quiz.title}</td>
-                <td className="px-3 py-2 text-sm text-gray-700 max-w-xs truncate">
-                  {quiz.description}
-                </td>
-                <td className="px-3 py-2">
-                  {quiz.ageGroups?.map((a: string) => (
-                    <span
-                      key={a}
-                      className="inline-block bg-blue-100 text-blue-700 rounded px-2 py-0.5 text-xs mr-1 mb-1"
-                    >
-                      {ageGroupLabel(a)}
-                    </span>
-                  ))}
-                </td>
-                <td className="px-3 py-2">
-                  {quiz.tags?.map((t: string) => (
-                    <span
-                      key={t}
-                      className="inline-block bg-green-100 text-green-700 rounded px-2 py-0.5 text-xs mr-1 mb-1"
-                    >
-                      {tagLabel(t)}
-                    </span>
-                  ))}
-                </td>
-                <td className="px-3 py-2 text-center">
-                  {quiz.questionCount ?? "-"}
-                </td>
-                <td className="px-3 py-2 text-center">
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                      quiz.isActive
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {statusLabel(!!quiz.isActive)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-center">
-                  <button
-                    className="text-blue-600 hover:underline text-xs mr-2"
-                    onClick={() => handleViewQuiz(quiz)}
-                  >
-                    Xem
-                  </button>
-                  <button
-                    className="text-yellow-600 hover:underline text-xs mr-2"
-                    onClick={() => handleEditQuiz(quiz)}
-                  >
-                    Sửa
-                  </button>
-                  <button
-                    className="text-red-600 hover:underline text-xs"
-                    onClick={() => handleDeleteQuiz(quiz)}
-                  >
-                    Xóa
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {paged.length === 0 && (
-              <tr>
-                <td colSpan={7} className="text-center py-8 text-gray-400">
-                  Không có trắc nghiệm nào phù hợp.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        {/* Pagination */}
-        <div className="flex justify-end items-center gap-2 py-3">
-          <button
-            className="px-2 py-1 rounded border disabled:opacity-50"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            &lt;
-          </button>
-          <span className="text-sm">
-            Trang {page} / {totalPages || 1}
-          </span>
-          <button
-            className="px-2 py-1 rounded border disabled:opacity-50"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages || totalPages === 0}
-          >
-            &gt;
-          </button>
-        </div>
-      </div>
+
       {/* Modal Xem Quiz */}
       {viewQuiz && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
