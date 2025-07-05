@@ -35,6 +35,8 @@ import ConsultantProfile from "./pages/consultant/ConsultantProfile";
 import ReportsDetails from "./pages/consultant/ReportsDetails";
 import PaymentResultPage from "./pages/PaymentResultPage";
 import AppointmentManagement from "./pages/admin/AppointmentManagement";
+import QuizManagement from "./pages/admin/QuizManagement";
+import QuizResultsManagement from "./pages/admin/QuizResultsManagement";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -157,7 +159,15 @@ function AppContent() {
                   <Route path="consultants" element={<Consultant />} />
                   <Route path="sponsors" element={<Sponsor />} />
                   <Route path="blogs" element={<BlogManagement />} />
-                  <Route path="appointments" element={<AppointmentManagement />} />
+                  <Route
+                    path="appointments"
+                    element={<AppointmentManagement />}
+                  />
+                  <Route path="quizzes" element={<QuizManagement />} />
+                  <Route
+                    path="quiz-results"
+                    element={<QuizResultsManagement />}
+                  />
                 </Routes>
               </AdminLayout>
             </AdminRoute>
@@ -176,8 +186,14 @@ function AppContent() {
                   <Route path="events" element={<EventManagement />} />
                   <Route path="schedule" element={<ScheduleManagement />} />
                   <Route path="reports" element={<ReportsAndUpdates />} />
-                  <Route path="reports/:appointmentId" element={<ReportsDetails />} />
-                  <Route path="consultant-profile" element={<ConsultantProfile />} />
+                  <Route
+                    path="reports/:appointmentId"
+                    element={<ReportsDetails />}
+                  />
+                  <Route
+                    path="consultant-profile"
+                    element={<ConsultantProfile />}
+                  />
                 </Routes>
               </ConsultantLayout>
             </ConsultantRoute>

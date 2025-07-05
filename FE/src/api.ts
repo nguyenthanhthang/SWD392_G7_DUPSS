@@ -4,7 +4,7 @@ export interface BlogData {
   title: string;
   content: string;
   author: string;
-  published: 'draft' | 'published' | 'rejected';
+  published: "draft" | "published" | "rejected";
   topics?: string[];
   image?: File | string; // Có thể là File khi upload hoặc URL string khi hiển thị
   anDanh?: boolean;
@@ -22,30 +22,33 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
-    
+
     // Kiểm tra token tồn tại
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      
+
       // Log để debug
-      if (config.url?.includes('/comments')) {
-        console.log('Request to comments API with token:', token?.substring(0, 10) + '...');
-        console.log('User ID from localStorage:', userId);
-        console.log('Request URL:', config.url);
-        console.log('Request method:', config.method?.toUpperCase());
-        
+      if (config.url?.includes("/comments")) {
+        console.log(
+          "Request to comments API with token:",
+          token?.substring(0, 10) + "..."
+        );
+        console.log("User ID from localStorage:", userId);
+        console.log("Request URL:", config.url);
+        console.log("Request method:", config.method?.toUpperCase());
+
         if (config.data) {
-          console.log('Request payload:', config.data);
+          console.log("Request payload:", config.data);
         }
       }
-    } else if (config.url?.includes('/comments') && config.method === 'post') {
-      console.warn('Attempting to post comment without authentication token!');
+    } else if (config.url?.includes("/comments") && config.method === "post") {
+      console.warn("Attempting to post comment without authentication token!");
     }
-    
+
     return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
+    console.error("Request interceptor error:", error);
     return Promise.reject(error);
   }
 );
@@ -54,8 +57,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Response Error:', error.response?.status, error.response?.data);
-    
+    console.error(
+      "API Response Error:",
+      error.response?.status,
+      error.response?.data
+    );
+
     if (error.response?.status === 401) {
       // Clear local storage on unauthorized
       localStorage.removeItem("token");
@@ -125,7 +132,7 @@ export const checkOtpApi = async (verifyCode: string) => {
 
 // Lấy danh sách tất cả tài khoản
 export const getAllAccountsApi = async () => {
-  const res = await api.get('/accounts');
+  const res = await api.get("/accounts");
   return res.data;
 };
 
@@ -308,12 +315,12 @@ export const createAppointmentApi = async (data: {
 // Cập nhật thông tin account
 export const updateAccountApi = async (
   id: string,
-  data: Partial<{ 
-    fullName: string; 
+  data: Partial<{
+    fullName: string;
     phoneNumber: string;
     photoUrl: string;
     yearOfBirth: number;
-    gender: 'male' | 'female' | 'other';
+    gender: "male" | "female" | "other";
   }>
 ) => {
   const res = await api.put(`/accounts/${id}`, data);
@@ -354,19 +361,19 @@ export const getAllBlogsApi = async () => {
 
 export const getBlogByIdApi = async (id: string) => {
   try {
-    const res = await api.get('/blogs/' + id);
+    const res = await api.get("/blogs/" + id);
     return res.data;
   } catch (error: unknown) {
     // Xử lý các loại lỗi cụ thể
     if (axios.isAxiosError(error) && error.response) {
       // Server trả về response với status code nằm ngoài range 2xx
-      throw new Error(error.response.data.message || 'Không thể tải bài viết');
+      throw new Error(error.response.data.message || "Không thể tải bài viết");
     } else if (axios.isAxiosError(error) && error.request) {
       // Request được gửi nhưng không nhận được response
-      throw new Error('Không thể kết nối đến server');
+      throw new Error("Không thể kết nối đến server");
     } else {
       // Có lỗi khi thiết lập request
-      throw new Error('Có lỗi xảy ra khi tải bài viết');
+      throw new Error("Có lỗi xảy ra khi tải bài viết");
     }
   }
 };
@@ -394,8 +401,8 @@ export const createBlogApi = async (data: BlogData) => {
 };
 
 export const updateBlogApi = async (id: string, data: BlogData) => {
-  console.log('updateBlogApi called with:', { id, data }); // Debug log
-  
+  console.log("updateBlogApi called with:", { id, data }); // Debug log
+
   if (data.image instanceof File) {
     const form = new FormData();
     form.append("title", data.title);
@@ -405,16 +412,16 @@ export const updateBlogApi = async (id: string, data: BlogData) => {
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
     if (data.anDanh !== undefined) form.append("anDanh", String(data.anDanh));
     form.append("image", data.image);
-    
-    console.log('Sending FormData with published:', data.published); // Debug log
-    
+
+    console.log("Sending FormData with published:", data.published); // Debug log
+
     const res = await api.put(`/blogs/${id}`, form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data;
   } else {
-    console.log('Sending JSON with published:', data.published); // Debug log
-    
+    console.log("Sending JSON with published:", data.published); // Debug log
+
     const res = await api.put(`/blogs/${id}`, data);
     return res.data;
   }
@@ -520,17 +527,39 @@ export const getAvailableConsultantsByDayApi = async (date: string) => {
 };
 
 // ===== CERTIFICATE APIs =====
-export const getCertificatesByConsultantIdApi = async (consultantId: string) => {
+export const getCertificatesByConsultantIdApi = async (
+  consultantId: string
+) => {
   const res = await api.get(`/certificates/consultant/${consultantId}`);
   return res.data;
 };
 
-export const createCertificateApi = async (data: { title: string, type: string, issuedBy: number, issueDate: string, expireDate?: string, description?: string, fileUrl: string, consultant_id: string }) => {
-  const res = await api.post('/certificates', data);
+export const createCertificateApi = async (data: {
+  title: string;
+  type: string;
+  issuedBy: number;
+  issueDate: string;
+  expireDate?: string;
+  description?: string;
+  fileUrl: string;
+  consultant_id: string;
+}) => {
+  const res = await api.post("/certificates", data);
   return res.data;
 };
 
-export const updateCertificateApi = async (id: string, data: Partial<{ title: string, type: string, issuedBy: number, issueDate: string, expireDate?: string, description?: string, fileUrl: string }>) => {
+export const updateCertificateApi = async (
+  id: string,
+  data: Partial<{
+    title: string;
+    type: string;
+    issuedBy: number;
+    issueDate: string;
+    expireDate?: string;
+    description?: string;
+    fileUrl: string;
+  }>
+) => {
   const res = await api.put(`/certificates/${id}`, data);
   return res.data;
 };
@@ -551,19 +580,33 @@ export const getCommentsApi = async (blogId: string) => {
   return res.data;
 };
 
-export const addCommentApi = async (blogId: string, data: { userId: string; username: string; content: string }) => {
+export const addCommentApi = async (
+  blogId: string,
+  data: { userId: string; username: string; content: string }
+) => {
   try {
-    console.log('API Call - Adding comment to blog:', blogId, 'with data:', data);
+    console.log(
+      "API Call - Adding comment to blog:",
+      blogId,
+      "with data:",
+      data
+    );
     const res = await api.post(`/blogs/${blogId}/comments`, data);
     return res.data;
   } catch (error) {
-    console.error('API Error - Adding comment failed:', error);
+    console.error("API Error - Adding comment failed:", error);
     throw error;
   }
 };
 
-export const deleteCommentApi = async (blogId: string, commentId: string, userId: string) => {
-  const res = await api.delete(`/blogs/${blogId}/comments/${commentId}`, { data: { userId } });
+export const deleteCommentApi = async (
+  blogId: string,
+  commentId: string,
+  userId: string
+) => {
+  const res = await api.delete(`/blogs/${blogId}/comments/${commentId}`, {
+    data: { userId },
+  });
   return res.data;
 };
 
@@ -628,30 +671,40 @@ export const createFeedbackWithRatingApi = async (data: {
   rating: number; // số từ 1-5
   comment: string;
 }) => {
-  const res = await api.post('/feedbacks', data);
+  const res = await api.post("/feedbacks", data);
   // Sau khi tạo feedback, cập nhật lại rating cho service
   await updateServiceRatingApi(data.service_id);
   return res.data;
 };
 
 export const getAllFeedbacksApi = async () => {
-  const res = await api.get('/feedbacks');
+  const res = await api.get("/feedbacks");
   return res.data;
 };
 
-export const updateFeedbackStatusApi = async (id: string, status: 'approved' | 'rejected') => {
+export const updateFeedbackStatusApi = async (
+  id: string,
+  status: "approved" | "rejected"
+) => {
   const res = await api.put(`/feedbacks/${id}/status`, { status });
   return res.data;
 };
 
 // ===== PAYMENT APIs =====
-export const createMomoPaymentApi = async (data: { amount: number; orderInfo: string; }) => {
-  const res = await api.post('/payment/momo/create-payment', data);
+export const createMomoPaymentApi = async (data: {
+  amount: number;
+  orderInfo: string;
+}) => {
+  const res = await api.post("/payment/momo/create-payment", data);
   return res.data;
 };
 
-export const createVnpayPaymentApi = async (data: { amount: number; orderInfo: string; orderId: string; }) => {
-  const res = await api.post('/payment/vnpay/create-payment', data);
+export const createVnpayPaymentApi = async (data: {
+  amount: number;
+  orderInfo: string;
+  orderId: string;
+}) => {
+  const res = await api.post("/payment/vnpay/create-payment", data);
   return res.data;
 };
 
@@ -661,7 +714,7 @@ export const getAppointmentByIdApi = async (id: string) => {
 };
 
 export const getAllAppointmentsApi = async () => {
-  const res = await api.get('/appointments');
+  const res = await api.get("/appointments");
   return res.data;
 };
 
@@ -697,20 +750,26 @@ export const getReportByIdApi = async (reportId: string) => {
   return res.data;
 };
 
-export const updateReportApi = async (reportId: string, data: {
-  nameOfPatient?: string;
-  age?: number;
-  gender?: string;
-  condition?: string;
-  notes?: string;
-  recommendations?: string;
-  status?: string;
-}) => {
+export const updateReportApi = async (
+  reportId: string,
+  data: {
+    nameOfPatient?: string;
+    age?: number;
+    gender?: string;
+    condition?: string;
+    notes?: string;
+    recommendations?: string;
+    status?: string;
+  }
+) => {
   const res = await api.put(`/reports/${reportId}`, data);
   return res.data;
 };
 
-export const updateAppointmentStatusApi = async (id: string, status: string) => {
+export const updateAppointmentStatusApi = async (
+  id: string,
+  status: string
+) => {
   const res = await api.put(`/appointments/status/${id}`, { status });
   return res.data;
 };
@@ -722,10 +781,10 @@ export const createPaymentApi = async (data: {
   description: string;
   paymentLinkId: string;
   totalPrice: number;
-  status: 'pending' | 'completed' | 'failed';
-  paymentMethod: 'paypal' | 'momo' | 'vnpay' | 'cash' | 'other';
+  status: "pending" | "completed" | "failed";
+  paymentMethod: "paypal" | "momo" | "vnpay" | "cash" | "other";
 }) => {
-  const res = await api.post('/payment', data);
+  const res = await api.post("/payment", data);
   return res.data;
 };
 
@@ -734,12 +793,22 @@ export const deleteAppointmentApi = async (id: string) => {
   return res.data;
 };
 
-export const rescheduleAppointmentApi = async (appointmentId: string, newSlotTimeId: string, newConsultantId?: string) => {
-  const res = await api.put(`/appointments/${appointmentId}/reschedule`, { newSlotTimeId, newConsultantId });
+export const rescheduleAppointmentApi = async (
+  appointmentId: string,
+  newSlotTimeId: string,
+  newConsultantId?: string
+) => {
+  const res = await api.put(`/appointments/${appointmentId}/reschedule`, {
+    newSlotTimeId,
+    newConsultantId,
+  });
   return res.data;
 };
 
-export const capNhatLinkMeetApi = async (appointmentId: string, meetLink: string) => {
+export const capNhatLinkMeetApi = async (
+  appointmentId: string,
+  meetLink: string
+) => {
   const res = await api.put(`/appointments/meet-link/${appointmentId}`, {
     meetLink,
   });
@@ -748,27 +817,92 @@ export const capNhatLinkMeetApi = async (appointmentId: string, meetLink: string
 
 // Thêm các API thống kê doanh thu
 export const getTotalRevenueApi = async () => {
-  const res = await api.get('/payment/statistics/total');
+  const res = await api.get("/payment/statistics/total");
   return res.data;
 };
 
 export const getWeeklyRevenueApi = async () => {
-  const res = await api.get('/payment/statistics/weekly');
+  const res = await api.get("/payment/statistics/weekly");
   return res.data;
 };
 
 export const getMonthlyRevenueApi = async (month?: number, year?: number) => {
   const params = new URLSearchParams();
-  if (month) params.append('month', month.toString());
-  if (year) params.append('year', year.toString());
-  
+  if (month) params.append("month", month.toString());
+  if (year) params.append("year", year.toString());
+
   const res = await api.get(`/payment/statistics/monthly?${params.toString()}`);
   return res.data;
 };
 
 // Thêm API thống kê doanh thu theo dịch vụ
 export const getRevenueByServiceApi = async () => {
-  const res = await api.get('/payment/statistics/by-service');
+  const res = await api.get("/payment/statistics/by-service");
+  return res.data;
+};
+
+// ===== QUIZ MANAGEMENT APIs =====
+
+// Tạo quiz mới
+export const createQuizApi = async (data: {
+  title: string;
+  description: string;
+  ageGroup: string;
+  isActive: boolean;
+}) => {
+  const res = await api.post("/quizzes", data);
+  return res.data;
+};
+
+// Cập nhật quiz
+export const updateQuizApi = async (
+  id: string,
+  data: {
+    title?: string;
+    description?: string;
+    ageGroup?: string;
+    isActive?: boolean;
+  }
+) => {
+  const res = await api.put(`/quizzes/${id}`, data);
+  return res.data;
+};
+
+// Xóa quiz
+export const deleteQuizApi = async (id: string) => {
+  const res = await api.delete(`/quizzes/${id}`);
+  return res.data;
+};
+
+// Tạo câu hỏi mới
+export const createQuestionApi = async (data: {
+  quizId: string;
+  questionText: string;
+  options: string[];
+  correctOption: number;
+  points: number;
+}) => {
+  const res = await api.post("/quizzes/questions", data);
+  return res.data;
+};
+
+// Cập nhật câu hỏi
+export const updateQuestionApi = async (
+  id: string,
+  data: {
+    questionText?: string;
+    options?: string[];
+    correctOption?: number;
+    points?: number;
+  }
+) => {
+  const res = await api.put(`/quizzes/questions/${id}`, data);
+  return res.data;
+};
+
+// Xóa câu hỏi
+export const deleteQuestionApi = async (id: string) => {
+  const res = await api.delete(`/quizzes/questions/${id}`);
   return res.data;
 };
 

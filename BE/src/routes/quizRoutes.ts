@@ -6,6 +6,11 @@ import {
   getUserQuizResults,
   getQuizResultById,
   getUserQuizHistory,
+  createQuiz,
+  getQuizById,
+  updateQuiz,
+  deleteQuiz,
+  getAllQuizResults,
 } from "../controllers/quizController";
 
 const router = express.Router();
@@ -27,5 +32,18 @@ router.get("/quiz-results/result/:resultId", getQuizResultById);
 
 // GET /api/quizzes/history/:userId - Lịch sử làm bài của user
 router.get("/history/:userId", getUserQuizHistory);
+
+// Route lấy toàn bộ kết quả quiz (admin)
+router.get("/quiz-results/all", getAllQuizResults);
+
+// CRUD Quiz
+// POST /api/quizzes - Tạo mới quiz
+router.post("/", createQuiz);
+// GET /api/quizzes/:id - Lấy chi tiết quiz
+router.get("/:id", getQuizById);
+// PUT /api/quizzes/:id - Cập nhật quiz
+router.put("/:id", updateQuiz);
+// DELETE /api/quizzes/:id - Xóa quiz
+router.delete("/:id", deleteQuiz);
 
 export default router;

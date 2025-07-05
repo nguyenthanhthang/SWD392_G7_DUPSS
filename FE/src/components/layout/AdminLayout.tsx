@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import AdminHeader from './AdminHeader';
+import AdminHeader from "./AdminHeader";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -115,7 +115,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       path: "/admin/consultants",
       name: "Quản lý tư vấn viên",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -129,7 +134,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       path: "/admin/blogs",
       name: "Quản lý bài viết",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -144,11 +154,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       name: "Quản lý nhà tài trợ",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      path: "/admin/quizzes",
+      name: "Quản lý trắc nghiệm",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth="2"
             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
       ),
@@ -211,7 +231,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             {/* Logo */}
             <div className="flex items-center justify-center h-16">
               <Link to={baseUrl} className="text-xl font-bold text-sky-600">
-                {user?.role === "admin" ? "HopeHub Admin" : "HopeHub Consultant"}
+                {user?.role === "admin"
+                  ? "HopeHub Admin"
+                  : "HopeHub Consultant"}
               </Link>
             </div>
             {/* Navigation */}
@@ -237,7 +259,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
           {/* Footer */}
           <div className="p-4 border-t">
-            <div className="text-center text-xs text-gray-400">@2025 HOPEHUB</div>
+            <div className="text-center text-xs text-gray-400">
+              @2025 HOPEHUB
+            </div>
           </div>
         </div>
         {/* Main Content */}
