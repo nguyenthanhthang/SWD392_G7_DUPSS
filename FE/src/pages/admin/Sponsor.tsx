@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
+import Select from 'react-select';
 
 // Interface cho dữ liệu nhà tài trợ
 interface ISponsor {
@@ -10,10 +11,12 @@ interface ISponsor {
   email: string;
   status: 'active' | 'inactive' | 'isDeleted';
   ranking: 'platinum' | 'gold' | 'silver' | 'bronze';
-  eventId: {
+  logo?: string;
+  donation?: string;
+  eventIds: {
     _id: string;
     title: string;
-  };
+  }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -33,8 +36,10 @@ interface IFormData {
   fullName: string;
   email: string;
   ranking: 'platinum' | 'gold' | 'silver' | 'bronze';
-  eventId: string;
+  eventIds: string[];
   status: 'active' | 'inactive' | 'isDeleted';
+  logo?: string;
+  donation?: string;
 }
 
 const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
@@ -63,7 +68,7 @@ const Sponsor: React.FC = () => {
     fullName: '',
     email: '',
     ranking: 'bronze',
-    eventId: '',
+    eventIds: [],
     status: 'active'
   });
 
@@ -172,7 +177,7 @@ const Sponsor: React.FC = () => {
       fullName: '',
       email: '',
       ranking: 'bronze',
-      eventId: '',
+      eventIds: [],
       status: 'active'
     });
     setIsCreateModalOpen(true);
@@ -185,7 +190,7 @@ const Sponsor: React.FC = () => {
   const handleCreateSponsor = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.fullName || !formData.email || !formData.eventId) {
+    if (!formData.fullName || !formData.email || formData.eventIds.length === 0) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc!');
       return;
     }
@@ -202,14 +207,16 @@ const Sponsor: React.FC = () => {
   };
 
   const handleOpenUpdateModal = (sponsor: ISponsor) => {
-    setSelectedSponsor(sponsor);
     setFormData({
       fullName: sponsor.fullName,
       email: sponsor.email,
       ranking: sponsor.ranking,
-      eventId: sponsor.eventId._id,
-      status: sponsor.status
+      eventIds: sponsor.eventIds.map(ev => ev._id),
+      status: sponsor.status,
+      logo: sponsor.logo || '',
+      donation: sponsor.donation || ''
     });
+    setSelectedSponsor(sponsor);
     setIsUpdateModalOpen(true);
   };
 
@@ -223,11 +230,10 @@ const Sponsor: React.FC = () => {
     if (!selectedSponsor) return;
 
     try {
-      const response = await api.put(`/sponsors/${selectedSponsor._id}`, formData);
-      
+      await api.put(`/sponsors/${selectedSponsor._id}`, formData);
       setSponsors(prev =>
         prev.map(sponsor =>
-          sponsor._id === selectedSponsor._id ? response.data : sponsor
+          sponsor._id === selectedSponsor._id ? { ...sponsor, ...formData } : sponsor
         )
       );
       handleCloseUpdateModal();
@@ -425,11 +431,13 @@ const Sponsor: React.FC = () => {
         <table className="min-w-full bg-white">
           <thead>
             <tr className="bg-gradient-to-r from-sky-50 to-cyan-50 text-gray-700 text-left text-sm font-semibold uppercase tracking-wider">
-              <th className="px-4 py-3 rounded-tl-lg">Họ và tên</th>
+              <th className="px-4 py-3">Logo</th>
+              <th className="px-4 py-3">Tên nhà tài trợ</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Sự kiện</th>
               <th className="px-4 py-3">Ranking</th>
               <th className="px-4 py-3">Trạng thái</th>
+              <th className="px-4 py-3">Donation</th>
               <th className="px-4 py-3 rounded-tr-lg text-center">Thao tác</th>
             </tr>
           </thead>
@@ -454,9 +462,14 @@ const Sponsor: React.FC = () => {
             ) : (
               paginatedSponsors.map(sponsor => (
               <tr key={sponsor._id} className="hover:bg-sky-50 transition-colors duration-150">
+                <td>
+                  {sponsor.logo && <img src={sponsor.logo} alt="Logo" className="w-12 h-12 object-cover rounded" />}
+                </td>
                 <td className="px-4 py-3 font-medium">{sponsor.fullName}</td>
                 <td className="px-4 py-3">{sponsor.email}</td>
-                <td className="px-4 py-3">{sponsor.eventId.title}</td>
+                <td className="px-4 py-3">
+                  {sponsor.eventIds && sponsor.eventIds.length > 0 ? sponsor.eventIds.map(ev => ev.title).join(', ') : '-'}
+                </td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 text-xs rounded-full ${getRankingColor(sponsor.ranking)}`}>
                     {getRankingName(sponsor.ranking)}
@@ -472,6 +485,9 @@ const Sponsor: React.FC = () => {
                   >
                     {sponsor.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
                   </span>
+                </td>
+                <td>
+                  {sponsor.donation || '-'}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-center space-x-2">
@@ -497,11 +513,11 @@ const Sponsor: React.FC = () => {
                       </button>
                     </Tooltip>
                   </div>
-                                 </td>
-               </tr>
-             ))
+                </td>
+              </tr>
+            ))
             )}
-           </tbody>
+          </tbody>
         </table>
       </div>
 
@@ -537,7 +553,7 @@ const Sponsor: React.FC = () => {
       {/* Modal Tạo mới */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl px-8 py-6 transform transition-all">
             <div className="px-6 py-4 border-b">
               <h3 className="text-xl font-semibold text-gray-800">Thêm nhà tài trợ mới</h3>
             </div>
@@ -545,7 +561,7 @@ const Sponsor: React.FC = () => {
             <form onSubmit={handleCreateSponsor}>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
+                  <label className="block text-sm font-medium text-gray-700">Tên nhà tài trợ</label>
                   <input
                     type="text"
                     name="fullName"
@@ -553,7 +569,7 @@ const Sponsor: React.FC = () => {
                     onChange={handleInputChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                     required
-                    placeholder="Nhập họ và tên"
+                    placeholder="Nhập tên nhà tài trợ"
                   />
                 </div>
 
@@ -571,21 +587,46 @@ const Sponsor: React.FC = () => {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700">Logo nhà tài trợ</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const form = new FormData();
+                      form.append('image', file);
+                      const res = await fetch('http://localhost:5000/api/uploads/upload', {
+                        method: 'POST',
+                        body: form,
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                      });
+                      const data = await res.json();
+                      setFormData(prev => ({ ...prev, logo: data.imageUrl }));
+                    }}
+                  />
+                  {formData.logo && (
+                    <img src={formData.logo} alt="Logo" className="w-24 h-24 object-cover mt-2" />
+                  )}
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-gray-700">Sự kiện</label>
-                  <select
-                    name="eventId"
-                    value={formData.eventId}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                    required
-                  >
-                    <option value="">-- Chọn sự kiện --</option>
-                    {events.map(event => (
-                      <option key={event._id} value={event._id}>
-                        {event.title}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    isMulti
+                    name="eventIds"
+                    options={events.map(ev => ({ value: ev._id, label: ev.title }))}
+                    value={events.filter(ev => formData.eventIds.includes(ev._id)).map(ev => ({ value: ev._id, label: ev.title }))}
+                    onChange={selected => {
+                      setFormData(prev => ({
+                        ...prev,
+                        eventIds: selected ? (selected as any[]).map(item => item.value) : []
+                      }));
+                    }}
+                    className="basic-multi-select"
+                    classNamePrefix="select"
+                    placeholder="Chọn sự kiện..."
+                  />
                 </div>
 
                 <div>
@@ -616,6 +657,30 @@ const Sponsor: React.FC = () => {
                     <option value="inactive">Không hoạt động</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Donation</label>
+                  <input
+                    type="text"
+                    name="donation"
+                    value={formData.donation}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                    placeholder="Nhập số tiền hoặc hiện vật tài trợ"
+                  />
+                </div>
+
+                {formData.eventIds.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {events
+                      .filter(ev => formData.eventIds.includes(ev._id))
+                      .map(ev => (
+                        <span key={ev._id} className="px-2 py-1 bg-sky-100 text-sky-700 rounded text-xs">
+                          {ev.title}
+                        </span>
+                      ))}
+                  </div>
+                )}
               </div>
 
               <div className="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3">
@@ -634,7 +699,7 @@ const Sponsor: React.FC = () => {
       {/* Modal Cập nhật */}
       {isUpdateModalOpen && selectedSponsor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl px-8 py-6 transform transition-all">
             <div className="px-6 py-4 border-b">
               <h3 className="text-xl font-semibold text-gray-800">Cập nhật nhà tài trợ</h3>
             </div>
@@ -642,7 +707,7 @@ const Sponsor: React.FC = () => {
             <form onSubmit={handleUpdateSponsor}>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
+                  <label className="block text-sm font-medium text-gray-700">Tên nhà tài trợ</label>
                   <input
                     type="text"
                     name="fullName"
@@ -650,7 +715,7 @@ const Sponsor: React.FC = () => {
                     onChange={handleInputChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
                     required
-                    placeholder="Nhập họ và tên"
+                    placeholder="Nhập tên nhà tài trợ"
                   />
                 </div>
 
@@ -668,21 +733,46 @@ const Sponsor: React.FC = () => {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700">Logo nhà tài trợ</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const form = new FormData();
+                      form.append('image', file);
+                      const res = await fetch('http://localhost:5000/api/uploads/upload', {
+                        method: 'POST',
+                        body: form,
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                      });
+                      const data = await res.json();
+                      setFormData(prev => ({ ...prev, logo: data.imageUrl }));
+                    }}
+                  />
+                  {formData.logo && (
+                    <img src={formData.logo} alt="Logo" className="w-24 h-24 object-cover mt-2" />
+                  )}
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-gray-700">Sự kiện</label>
-                  <select
-                    name="eventId"
-                    value={formData.eventId}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                    required
-                  >
-                    <option value="">-- Chọn sự kiện --</option>
-                    {events.map(event => (
-                      <option key={event._id} value={event._id}>
-                        {event.title}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    isMulti
+                    name="eventIds"
+                    options={events.map(ev => ({ value: ev._id, label: ev.title }))}
+                    value={events.filter(ev => formData.eventIds.includes(ev._id)).map(ev => ({ value: ev._id, label: ev.title }))}
+                    onChange={selected => {
+                      setFormData(prev => ({
+                        ...prev,
+                        eventIds: selected ? (selected as any[]).map(item => item.value) : []
+                      }));
+                    }}
+                    className="basic-multi-select"
+                    classNamePrefix="select"
+                    placeholder="Chọn sự kiện..."
+                  />
                 </div>
 
                 <div>
@@ -713,6 +803,30 @@ const Sponsor: React.FC = () => {
                     <option value="inactive">Không hoạt động</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Donation</label>
+                  <input
+                    type="text"
+                    name="donation"
+                    value={formData.donation}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                    placeholder="Nhập số tiền hoặc hiện vật tài trợ"
+                  />
+                </div>
+
+                {formData.eventIds.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {events
+                      .filter(ev => formData.eventIds.includes(ev._id))
+                      .map(ev => (
+                        <span key={ev._id} className="px-2 py-1 bg-sky-100 text-sky-700 rounded text-xs">
+                          {ev.title}
+                        </span>
+                      ))}
+                  </div>
+                )}
               </div>
 
               <div className="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3">

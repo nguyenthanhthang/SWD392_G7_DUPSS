@@ -5,7 +5,9 @@ export interface ISponsor extends Document {
   email: string;
   status: 'active' | 'inactive' | 'isDeleted';
   ranking: 'platinum' | 'gold' | 'silver' | 'bronze';
-  eventId: mongoose.Types.ObjectId;
+  logo?: string;
+  donation?: string;
+  eventIds: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,17 +37,25 @@ const sponsorSchema = new Schema<ISponsor>({
     required: [true, 'Ranking là bắt buộc'],
     default: 'bronze'
   },
-  eventId: {
+  logo: {
+    type: String,
+    trim: true
+  },
+  donation: {
+    type: String,
+    trim: true
+  },
+  eventIds: [{
     type: Schema.Types.ObjectId,
     ref: 'Event',
-    required: [true, 'Event ID là bắt buộc']
-  }
+    required: [true, 'Ít nhất một sự kiện là bắt buộc']
+  }]
 }, {
   timestamps: true
 });
 
 // Index để tối ưu truy vấn
-sponsorSchema.index({ eventId: 1, status: 1 });
+sponsorSchema.index({ eventIds: 1, status: 1 });
 sponsorSchema.index({ email: 1 });
 
 export default mongoose.model<ISponsor>('Sponsor', sponsorSchema); 

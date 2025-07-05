@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
 import Sponsor, { ISponsor } from '../models/Sponsor';
 
+
+
 // Lấy tất cả sponsors
 export const getAllSponsors = async (req: Request, res: Response) => {
   try {
     const sponsors = await Sponsor.find({ status: { $ne: 'isDeleted' } })
-      .populate('eventId', 'title')
+      .populate('eventIds', 'title')
       .sort({ createdAt: -1 });
     
     res.status(200).json(sponsors);
@@ -21,10 +23,10 @@ export const getSponsorsByEvent = async (req: Request, res: Response) => {
     const { eventId } = req.params;
     
     const sponsors = await Sponsor.find({ 
-      eventId, 
+      eventIds: eventId, 
       status: { $ne: 'isDeleted' } 
     })
-    .populate('eventId', 'title')
+    .populate('eventIds', 'title')
     .sort({ ranking: 1, createdAt: -1 });
     
     res.status(200).json(sponsors);
@@ -40,7 +42,7 @@ export const getSponsorById = async (req: Request, res: Response) => {
     const { id } = req.params;
     
     const sponsor = await Sponsor.findById(id)
-      .populate('eventId', 'title');
+      .populate('eventIds', 'title');
     
     if (!sponsor) {
       return res.status(404).json({ message: 'Không tìm thấy nhà tài trợ' });
@@ -56,28 +58,38 @@ export const getSponsorById = async (req: Request, res: Response) => {
 // Tạo sponsor mới
 export const createSponsor = async (req: Request, res: Response) => {
   try {
-    const { fullName, email, ranking, eventId } = req.body;
+    const { fullName, email, ranking, eventIds } = req.body;
     
-    // Kiểm tra email đã tồn tại trong event này chưa
+    // Parse eventIds từ string thành array
+    const eventIdsArray = Array.isArray(eventIds) ? eventIds : [eventIds];
+    
+    // Kiểm tra email đã tồn tại trong các event này chưa
     const existingSponsor = await Sponsor.findOne({ 
       email, 
-      eventId, 
+      eventIds: { $in: eventIdsArray },
       status: { $ne: 'isDeleted' } 
     });
     
     if (existingSponsor) {
-      return res.status(400).json({ message: 'Email này đã được sử dụng cho sự kiện này' });
+      return res.status(400).json({ message: 'Email này đã được sử dụng cho một trong các sự kiện này' });
     }
     
-    const sponsor = new Sponsor({
+    const sponsorData: any = {
       fullName,
       email,
       ranking,
-      eventId
-    });
+      eventIds: eventIdsArray
+    };
+    
+    // Thêm logo nếu có
+    if (req.body.logo) {
+      sponsorData.logo = req.body.logo;
+    }
+    
+    const sponsor = new Sponsor(sponsorData);
     
     const savedSponsor = await sponsor.save();
-    const populatedSponsor = await savedSponsor.populate('eventId', 'title');
+    const populatedSponsor = await savedSponsor.populate('eventIds', 'title');
     
     res.status(201).json(populatedSponsor);
   } catch (error) {
@@ -90,7 +102,7 @@ export const createSponsor = async (req: Request, res: Response) => {
 export const updateSponsor = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { fullName, email, ranking, status } = req.body;
+    const { fullName, email, ranking, status, eventIds, logo, donation } = req.body;
     
     const sponsor = await Sponsor.findById(id);
     
@@ -98,25 +110,30 @@ export const updateSponsor = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Không tìm thấy nhà tài trợ' });
     }
     
-    // Kiểm tra email đã tồn tại trong event này chưa (trừ sponsor hiện tại)
+    // Parse eventIds từ string thành array nếu có
+    const eventIdsArray = eventIds ? (Array.isArray(eventIds) ? eventIds : [eventIds]) : sponsor.eventIds;
+    
+    // Kiểm tra email đã tồn tại trong các event này chưa (trừ sponsor hiện tại)
     if (email && email !== sponsor.email) {
       const existingSponsor = await Sponsor.findOne({ 
         email, 
-        eventId: sponsor.eventId, 
+        eventIds: { $in: eventIdsArray },
         _id: { $ne: id },
         status: { $ne: 'isDeleted' } 
       });
       
       if (existingSponsor) {
-        return res.status(400).json({ message: 'Email này đã được sử dụng cho sự kiện này' });
+        return res.status(400).json({ message: 'Email này đã được sử dụng cho một trong các sự kiện này' });
       }
     }
     
+    const updateData: any = { fullName, email, ranking, status, eventIds: eventIdsArray, logo, donation };
+    
     const updatedSponsor = await Sponsor.findByIdAndUpdate(
       id,
-      { fullName, email, ranking, status },
+      updateData,
       { new: true, runValidators: true }
-    ).populate('eventId', 'title');
+    ).populate('eventIds', 'title');
     
     res.status(200).json(updatedSponsor);
   } catch (error) {
