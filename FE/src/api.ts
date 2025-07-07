@@ -11,7 +11,7 @@ export interface BlogData {
 }
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api", // Đổi lại nếu BE chạy port khác hoặc có prefix khác
+  baseURL: "https://swd392-g7-dupss.onrender.com/api", // Đổi lại nếu BE chạy port khác hoặc có prefix khác
   headers: {
     "Content-Type": "application/json",
   },
