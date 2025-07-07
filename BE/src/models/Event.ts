@@ -10,6 +10,11 @@ export interface IEvent extends Document {
   location: string;
   capacity: number;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  sponsors?: {
+    sponsorId: mongoose.Types.ObjectId;
+    donation: number;
+    tier: "Platinum" | "Gold" | "Silver" | "Bronze";
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,11 +34,34 @@ const eventSchema = new Schema<IEvent>(
       enum: ["upcoming", "ongoing", "completed", "cancelled"],
       default: "upcoming",
     },
+    sponsors: [{
+      sponsorId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Sponsor',
+        required: true
+      },
+      donation: {
+        type: String,
+        required: true
+      },
+      tier: {
+        type: String,
+        enum: ["Platinum", "Gold", "Silver", "Bronze"],
+        required: true
+      }
+    }]
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 
+
+// Virtual populate sponsors
+eventSchema.virtual('sponsorDetails', {
+  ref: 'Sponsor',
+  localField: 'sponsors.sponsorId',
+  foreignField: '_id'
+});
 
 // Middleware
 eventSchema.pre("save", function (next) {
