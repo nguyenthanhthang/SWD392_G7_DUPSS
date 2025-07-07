@@ -20,61 +20,15 @@ interface RegisteredUser {
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 // [POST] /api/events - Tạo sự kiện mới
-export const createEvent = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const createEvent = async (req: Request, res: Response) => {
   try {
-    const { 
-      title, 
-      description, 
-      startDate, 
-      endDate, 
-      registrationStartDate,
-      registrationEndDate,
-      location, 
-      capacity 
-    } = req.body;
-
-    // Validation
-    if (!title || !description || !startDate || !endDate || !registrationStartDate || !registrationEndDate || !location || !capacity) {
-      res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
-      return;
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const regStart = new Date(registrationStartDate);
-    const regEnd = new Date(registrationEndDate);
-
-    // Validate dates logic
-    if (regEnd > regStart && regStart < start && regEnd <= start && end > start) {
-      // Valid: regStart < regEnd <= eventStart < eventEnd
-    } else {
-      res.status(400).json({ 
-        message: "Thời gian không hợp lệ. Đăng ký phải kết thúc trước khi sự kiện bắt đầu." 
-      });
-      return;
-    }
-
-    const event = new Event({
-      title,
-      description,
-      startDate: start,
-      endDate: end,
-      registrationStartDate: regStart,
-      registrationEndDate: regEnd,
-      location,
-      capacity,
-    });
-
+    const event = new Event(req.body);
     await event.save();
     res.status(201).json(event);
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi tạo sự kiện", error });
   }
 };
-
 // [GET] /api/events - Lấy danh sách sự kiện
 export const getAllEvents = async (
   req: Request,
@@ -141,13 +95,138 @@ export const updateEvent = async (
   res: Response
 ): Promise<void> => {
   try {
-    const updated = await Event.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
-    if (!updated) {
+    const { 
+      title, 
+      description, 
+      startDate, 
+      endDate, 
+      registrationStartDate,
+      registrationEndDate,
+      location, 
+      capacity,
+      sponsors
+    } = req.body;
+
+    // Kiểm tra sự kiện tồn tại
+    const existingEvent = await Event.findById(req.params.id);
+    if (!existingEvent) {
       res.status(404).json({ message: "Không tìm thấy sự kiện để cập nhật" });
       return;
     }
+
+    // Validate title nếu có cập nhật
+    if (title !== undefined) {
+      if (title.trim().length < 5) {
+        res.status(400).json({ message: "Tiêu đề phải có ít nhất 5 ký tự" });
+        return;
+      }
+      if (title.trim().length > 100) {
+        res.status(400).json({ message: "Tiêu đề không được vượt quá 100 ký tự" });
+        return;
+      }
+    }
+
+    // Validate description nếu có cập nhật
+    if (description !== undefined) {
+      if (description.trim().length < 10) {
+        res.status(400).json({ message: "Mô tả phải có ít nhất 10 ký tự" });
+        return;
+      }
+      if (description.trim().length > 1000) {
+        res.status(400).json({ message: "Mô tả không được vượt quá 1000 ký tự" });
+        return;
+      }
+    }
+
+    // Validate location nếu có cập nhật
+    if (location !== undefined) {
+      if (location.trim().length < 3) {
+        res.status(400).json({ message: "Địa điểm phải có ít nhất 3 ký tự" });
+        return;
+      }
+    }
+
+    // Validate capacity nếu có cập nhật
+    if (capacity !== undefined) {
+      if (capacity <= 0) {
+        res.status(400).json({ message: "Sức chứa phải lớn hơn 0" });
+        return;
+      }
+      if (capacity > 10000) {
+        res.status(400).json({ message: "Sức chứa không được vượt quá 10,000 người" });
+        return;
+      }
+    }
+
+    // Validate dates nếu có cập nhật
+    if (startDate || endDate || registrationStartDate || registrationEndDate) {
+      const start = startDate ? new Date(startDate) : existingEvent.startDate;
+      const end = endDate ? new Date(endDate) : existingEvent.endDate;
+      const regStart = registrationStartDate ? new Date(registrationStartDate) : existingEvent.registrationStartDate;
+      const regEnd = registrationEndDate ? new Date(registrationEndDate) : existingEvent.registrationEndDate;
+      const now = new Date();
+
+      // Kiểm tra thời gian đăng ký
+      if (regEnd <= regStart) {
+        res.status(400).json({ 
+          message: "Thời gian kết thúc đăng ký phải sau thời gian bắt đầu đăng ký" 
+        });
+        return;
+      }
+      
+      // Kiểm tra thời gian sự kiện
+      if (end <= start) {
+        res.status(400).json({ 
+          message: "Thời gian kết thúc sự kiện phải sau thời gian bắt đầu" 
+        });
+        return;
+      }
+      
+      // Kiểm tra thời gian đăng ký phải trước sự kiện
+      if (regEnd > start) {
+        res.status(400).json({ 
+          message: "Thời gian kết thúc đăng ký phải trước khi sự kiện bắt đầu" 
+        });
+        return;
+      }
+      
+      // Kiểm tra thời gian bắt đầu đăng ký phải trong tương lai
+      if (regStart <= now) {
+        res.status(400).json({ 
+          message: "Thời gian bắt đầu đăng ký phải trong tương lai" 
+        });
+        return;
+      }
+    }
+
+    // Chuẩn hóa sponsors: chỉ nhận sponsorId, donation, tier
+    let sponsorsToSaveUpdate: {
+      sponsorId: mongoose.Types.ObjectId;
+      donation: string;
+      tier: "Platinum" | "Gold" | "Silver" | "Bronze";
+    }[] = [];
+    if (sponsors && Array.isArray(sponsors)) {
+      sponsorsToSaveUpdate = sponsors.map((s: any) => ({
+        sponsorId: new mongoose.Types.ObjectId(s.sponsorId),
+        donation: String(s.donation),
+        tier: s.tier
+      }));
+    }
+
+    const updated = await Event.findByIdAndUpdate(req.params.id, {
+      title,
+      description,
+      startDate: startDate ? new Date(startDate) : existingEvent.startDate,
+      endDate: endDate ? new Date(endDate) : existingEvent.endDate,
+      registrationStartDate: registrationStartDate ? new Date(registrationStartDate) : existingEvent.registrationStartDate,
+      registrationEndDate: registrationEndDate ? new Date(registrationEndDate) : existingEvent.registrationEndDate,
+      location,
+      capacity,
+      sponsors: sponsorsToSaveUpdate,
+    }, {
+      new: true,
+    });
+    
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi cập nhật sự kiện", error });

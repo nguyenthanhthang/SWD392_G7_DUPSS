@@ -21,6 +21,20 @@ interface BarcodeDetector {
   detect(image: HTMLVideoElement): Promise<Array<{ rawValue: string }>>;
 }
 
+interface Sponsor {
+  _id: string;
+  name: string;
+  email: string;
+  status: 'active' | 'inactive' | 'isDeleted';
+  logo?: string;
+}
+
+interface EventSponsor {
+  sponsorId: string;
+  donation: string;
+  tier: "Platinum" | "Gold" | "Silver" | "Bronze";
+}
+
 interface Event {
   _id: string;
   title: string;
@@ -35,6 +49,7 @@ interface Event {
   image?: string;
   participants?: number;
   registeredCount?: number;
+  sponsors?: EventSponsor[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -57,6 +72,7 @@ interface EventFormData {
   location: string;
   capacity: number;
   image?: string;
+  sponsors: EventSponsor[];
 }
 
 // Event Card Component
@@ -67,9 +83,6 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
   onDelete: (e: Event) => void;
   onCancel: (e: Event) => void;
 }) => {
-  const isFull = event.registeredCount && event.registeredCount >= event.capacity;
-  const isNearFull = event.registeredCount && event.registeredCount >= event.capacity * 0.8;
-  
   return (
   <motion.div
     whileHover={{ scale: 1.03 }}
@@ -104,7 +117,13 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
       <p className="text-gray-500 text-sm mb-2 line-clamp-2">{event.description}</p>
       <div className="flex items-center text-gray-400 text-xs mb-1">
         <FiCalendar className="mr-1" />
-        {new Date(event.startDate).toLocaleDateString("vi-VN")}
+        {new Date(event.startDate).toLocaleString("vi-VN", {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}
       </div>
       <div className="flex items-center text-gray-400 text-xs mb-1">
         <FiMapPin className="mr-1" />
@@ -200,8 +219,108 @@ const EventFormModal = ({
     registrationEndDate: "",
     location: "",
     capacity: 50,
-    image: ""
+    image: "",
+    sponsors: []
   });
+
+  // Sponsor management states
+  const [availableSponsors, setAvailableSponsors] = useState<Sponsor[]>([]);
+  const [showNewSponsorForm, setShowNewSponsorForm] = useState(false);
+  const [newSponsor, setNewSponsor] = useState({
+    name: "",
+    email: "",
+    logo: ""
+  });
+  const [selectedSponsorId, setSelectedSponsorId] = useState("");
+  const [sponsorDonation, setSponsorDonation] = useState("");
+  const [sponsorTier, setSponsorTier] = useState<"Platinum" | "Gold" | "Silver" | "Bronze">("Bronze");
+
+  // Fetch available sponsors
+  const fetchSponsors = async () => {
+    try {
+      const response = await fetch('/api/sponsors');
+      const data = await response.json();
+      setAvailableSponsors(data);
+    } catch (error) {
+      console.error('Error fetching sponsors:', error);
+    }
+  };
+
+  // Create new sponsor
+  const handleCreateSponsor = async () => {
+    if (!newSponsor.name || !newSponsor.email) {
+      toast.error('Vui lòng điền đầy đủ thông tin nhà tài trợ');
+      return;
+    }
+
+    try {
+      console.log('Sending sponsor data:', newSponsor); // Debug log
+      const response = await fetch('/api/sponsors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newSponsor),
+      });
+      
+      if (response.ok) {
+        const createdSponsor = await response.json();
+        setAvailableSponsors(prev => [...prev, createdSponsor]);
+        setNewSponsor({ name: "", email: "", logo: "" });
+        setShowNewSponsorForm(false);
+        toast.success('Tạo nhà tài trợ thành công!');
+      } else {
+        // Lấy lỗi message từ BE
+        const errorData = await response.json();
+        const errorMessage = errorData.message || errorData.error || 'Không thể tạo nhà tài trợ';
+        toast.error(errorMessage);
+        console.error('BE Error:', errorData); // Debug log
+      }
+    } catch (error) {
+      console.error('FE Error:', error); // Debug log
+      toast.error('Lỗi khi tạo nhà tài trợ');
+    }
+  };
+
+  // Add sponsor to event
+  const handleAddSponsor = () => {
+    if (!selectedSponsorId || !sponsorDonation.trim()) {
+      toast.error('Vui lòng chọn nhà tài trợ và nhập nội dung tài trợ');
+      return;
+    }
+    // Không kiểm tra là số nữa
+    const existingSponsor = formData.sponsors.find(s => s.sponsorId === selectedSponsorId);
+    if (existingSponsor) {
+      toast.error('Nhà tài trợ này đã được thêm vào sự kiện');
+      return;
+    }
+    const newEventSponsor: EventSponsor = {
+      sponsorId: selectedSponsorId,
+      donation: sponsorDonation.trim(),
+      tier: sponsorTier
+    };
+    setFormData(prev => ({
+      ...prev,
+      sponsors: [...prev.sponsors, newEventSponsor]
+    }));
+    setSelectedSponsorId("");
+    setSponsorDonation("");
+    setSponsorTier("Bronze");
+  };
+
+  // Remove sponsor from event
+  const handleRemoveSponsor = (sponsorId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      sponsors: prev.sponsors.filter(s => s.sponsorId !== sponsorId)
+    }));
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchSponsors();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (event && isEditing) {
@@ -214,7 +333,8 @@ const EventFormModal = ({
         registrationEndDate: event.registrationEndDate ? new Date(event.registrationEndDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
         location: event.location,
         capacity: event.capacity,
-        image: event.image || ""
+        image: event.image || "",
+        sponsors: event.sponsors || []
       });
     } else {
       // Set default times for new events
@@ -231,7 +351,8 @@ const EventFormModal = ({
         registrationEndDate: tomorrow.toISOString().slice(0, 16),
         location: "",
         capacity: 50,
-        image: ""
+        image: "",
+        sponsors: []
       });
     }
   }, [event, isEditing, open]);
@@ -245,8 +366,38 @@ const EventFormModal = ({
       return;
     }
     
+    if (formData.title.trim().length < 5) {
+      toast.error("Tiêu đề phải có ít nhất 5 ký tự");
+      return;
+    }
+    
+    if (formData.title.trim().length > 100) {
+      toast.error("Tiêu đề không được vượt quá 100 ký tự");
+      return;
+    }
+    
+    if (formData.description.trim().length < 10) {
+      toast.error("Mô tả phải có ít nhất 10 ký tự");
+      return;
+    }
+    
+    if (formData.description.trim().length > 1000) {
+      toast.error("Mô tả không được vượt quá 1000 ký tự");
+      return;
+    }
+    
+    if (formData.location.trim().length < 3) {
+      toast.error("Địa điểm phải có ít nhất 3 ký tự");
+      return;
+    }
+    
     if (formData.capacity <= 0) {
       toast.error("Sức chứa phải lớn hơn 0");
+      return;
+    }
+    
+    if (formData.capacity > 10000) {
+      toast.error("Sức chứa không được vượt quá 10,000 người");
       return;
     }
     
@@ -282,6 +433,16 @@ const EventFormModal = ({
     if (regStartDate < new Date()) {
       toast.error("Thời gian bắt đầu đăng ký phải trong tương lai");
       return;
+    }
+    
+    // Validate URL hình ảnh nếu có
+    if (formData.image && formData.image.trim()) {
+      try {
+        new URL(formData.image);
+      } catch {
+        toast.error("URL hình ảnh không hợp lệ");
+        return;
+      }
     }
     
     console.log("Form validation passed, submitting:", formData);
@@ -332,69 +493,49 @@ const EventFormModal = ({
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ngày bắt đầu đăng ký *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian bắt đầu đăng ký *</label>
               <input
-                type="date"
-                value={formData.registrationStartDate.split('T')[0]}
-                onChange={(e) => {
-                  const date = e.target.value;
-                  const time = formData.registrationStartDate.split('T')[1] || '00:00';
-                  setFormData({ ...formData, registrationStartDate: `${date}T${time}` });
-                }}
+                type="datetime-local"
+                value={formData.registrationStartDate}
+                onChange={(e) => setFormData({ ...formData, registrationStartDate: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
-
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ngày kết thúc đăng ký *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian kết thúc đăng ký *</label>
               <input
-                type="date"
-                value={formData.registrationEndDate.split('T')[0]}
-                onChange={(e) => {
-                  const date = e.target.value;
-                  const time = formData.registrationEndDate.split('T')[1] || '23:59';
-                  setFormData({ ...formData, registrationEndDate: `${date}T${time}` });
-                }}
+                type="datetime-local"
+                value={formData.registrationEndDate}
+                onChange={(e) => setFormData({ ...formData, registrationEndDate: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
-
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ngày bắt đầu sự kiện *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian bắt đầu sự kiện *</label>
               <input
-                type="date"
-                value={formData.startDate.split('T')[0]}
-                onChange={(e) => {
-                  const date = e.target.value;
-                  const time = formData.startDate.split('T')[1] || '09:00';
-                  setFormData({ ...formData, startDate: `${date}T${time}` });
-                }}
+                type="datetime-local"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
-
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ngày kết thúc sự kiện *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian kết thúc sự kiện *</label>
               <input
-                type="date"
-                value={formData.endDate.split('T')[0]}
-                onChange={(e) => {
-                  const date = e.target.value;
-                  const time = formData.endDate.split('T')[1] || '17:00';
-                  setFormData({ ...formData, endDate: `${date}T${time}` });
-                }}
+                type="datetime-local"
+                value={formData.endDate}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
               />
-
             </div>
           </div>
           
@@ -440,6 +581,114 @@ const EventFormModal = ({
             )}
           </div>
           
+          {/* Sponsor Management Section */}
+          <div className="border-t pt-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4">Nhà tài trợ</h4>
+            
+            {/* Add Sponsor Form */}
+            <div className="bg-gray-50 p-4 rounded-xl mb-4">
+              <div className="flex flex-col md:flex-row gap-3 mb-3 items-end">
+                <div className="flex-1 min-w-[160px]">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Chọn nhà tài trợ</label>
+                  <select
+                    value={selectedSponsorId}
+                    onChange={(e) => setSelectedSponsorId(e.target.value)}
+                    className="w-full h-11 px-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
+                  >
+                    <option value="">-- Chọn nhà tài trợ --</option>
+                    {availableSponsors.map((sponsor) => (
+                      <option key={sponsor._id} value={sponsor._id}>
+                        {sponsor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 min-w-[160px]">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tài trợ (tiền, sản phẩm, dịch vụ...)</label>
+                  <input
+                    type="text"
+                    value={sponsorDonation}
+                    onChange={(e) => setSponsorDonation(e.target.value)}
+                    className="w-full h-11 px-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    placeholder="10.000.000 VNĐ, 100 áo thun, ..."
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px]">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cấp độ</label>
+                  <select
+                    value={sponsorTier}
+                    onChange={(e) => setSponsorTier(e.target.value as 'Platinum' | 'Gold' | 'Silver' | 'Bronze')}
+                    className="w-full h-11 px-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
+                  >
+                    <option value="Bronze">Bronze</option>
+                    <option value="Silver">Silver</option>
+                    <option value="Gold">Gold</option>
+                    <option value="Platinum">Platinum</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleAddSponsor}
+                  className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors text-sm"
+                >
+                  Thêm nhà tài trợ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNewSponsorForm(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                >
+                  Tạo nhà tài trợ mới
+                </button>
+              </div>
+            </div>
+
+            {/* Selected Sponsors List */}
+            {formData.sponsors.length > 0 && (
+              <div className="space-y-2">
+                <h5 className="font-medium text-gray-700">Danh sách nhà tài trợ:</h5>
+                {formData.sponsors.map((eventSponsor, index) => {
+                  const sponsor = availableSponsors.find(s => s._id === eventSponsor.sponsorId);
+                  return (
+                    <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border">
+                      <div className="flex items-center space-x-3">
+                        {sponsor?.logo && (
+                          <img src={sponsor.logo} alt={sponsor.name} className="w-8 h-8 rounded-full object-cover" />
+                        )}
+                        <div>
+                          <div className="font-medium">{sponsor?.name || 'Unknown Sponsor'}</div>
+                          <div className="text-sm text-gray-500">{sponsor?.email}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <div className="font-medium">{eventSponsor.donation}</div>
+                          <div className={`text-xs px-2 py-1 rounded-full ${
+                            eventSponsor.tier === 'Platinum' ? 'bg-purple-100 text-purple-800' :
+                            eventSponsor.tier === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
+                            eventSponsor.tier === 'Silver' ? 'bg-gray-100 text-gray-800' :
+                            'bg-orange-100 text-orange-800'
+                          }`}>
+                            {eventSponsor.tier}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSponsor(eventSponsor.sponsorId)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <FiX size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">URL hình ảnh</label>
             <input
@@ -467,6 +716,101 @@ const EventFormModal = ({
             </button>
           </div>
         </form>
+
+        {/* New Sponsor Modal */}
+        {showNewSponsorForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-semibold text-gray-800">Tạo nhà tài trợ mới</h4>
+                <button 
+                  onClick={() => setShowNewSponsorForm(false)}
+                  className="text-gray-400 hover:text-gray-700"
+                >
+                  <FiX size={20} />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tên nhà tài trợ *</label>
+                  <input
+                    type="text"
+                    value={newSponsor.name}
+                    onChange={(e) => setNewSponsor({ ...newSponsor, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    placeholder="Nhập tên nhà tài trợ"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    value={newSponsor.email}
+                    onChange={(e) => setNewSponsor({ ...newSponsor, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    placeholder="sponsor@example.com"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Logo nhà tài trợ</label>
+                  <div className="flex items-center gap-3">
+                    {newSponsor.logo && (
+                      <img src={newSponsor.logo} alt="Logo preview" className="w-24 h-24 object-cover border rounded-lg" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const form = new FormData();
+                        form.append('image', file);
+                        try {
+                          const res = await fetch('/api/uploads/upload', {
+                            method: 'POST',
+                            body: form,
+                            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                          });
+                          if (!res.ok) throw new Error('Upload thất bại');
+                          const data = await res.json();
+                          setNewSponsor(prev => ({ ...prev, logo: data.imageUrl }));
+                          toast.success('Tải logo lên thành công!');
+                        } catch (error) {
+                          toast.error('Tải logo lên thất bại!');
+                        }
+                      }}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewSponsorForm(false)}
+                    className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-all"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateSponsor}
+                    className="flex-1 py-2 px-4 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-all"
+                  >
+                    Tạo nhà tài trợ
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </motion.div>
     </div>
   );
@@ -627,7 +971,7 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle }: { open: boolean; 
           <QrReader
             constraints={{ facingMode: "environment" }}
             onResult={(result, error) => {
-              if (!!result) onScan(result.getText());
+              if (result) onScan(result.getText());
             }}
           />
         </div>
@@ -700,10 +1044,10 @@ const AdminEventManagement = () => {
       toast.success("Tạo sự kiện thành công!");
       setShowEventForm(false);
       fetchEvents();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Create event error:", error);
-      console.error("Error response:", error?.response?.data);
-      const errorMessage = error?.response?.data?.message || error?.message || "Không thể tạo sự kiện";
+      console.error("Error response:", error instanceof Response ? await error.json() : error);
+      const errorMessage = error instanceof Response ? await error.json()?.message || error.statusText : error instanceof Error ? error.message : "Không thể tạo sự kiện";
       toast.error(errorMessage);
     }
   };
@@ -810,14 +1154,16 @@ const AdminEventManagement = () => {
   // Sắp xếp sự kiện
   const sortedEvents = [...filteredEvents].sort((a: Event, b: Event) => {
     switch (sortBy) {
-      case "newest":
+      case "newest": {
         const dateA = new Date(a.createdAt || a.startDate);
         const dateB = new Date(b.createdAt || b.startDate);
         return dateB.getTime() - dateA.getTime();
-      case "oldest":
+      }
+      case "oldest": {
         const dateAOld = new Date(a.createdAt || a.startDate);
         const dateBOld = new Date(b.createdAt || b.startDate);
         return dateAOld.getTime() - dateBOld.getTime();
+      }
       case "startDate":
         return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
       case "startDateDesc":

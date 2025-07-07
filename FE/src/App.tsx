@@ -20,7 +20,7 @@ import AccountList from "./pages/admin/AccountList";
 import ConsultantDetailPage from "./pages/ConsultantDetailPage";
 import Service from "./pages/admin/Service";
 import Consultant from "./pages/admin/Consultant";
-import Sponsor from "./pages/admin/Sponsor";
+
 import AboutUsPage from "./pages/AboutUsPage";
 import ServicePage from "./pages/ServicePage";
 import AppointmentsPage from "./pages/Appointments";
@@ -157,7 +157,7 @@ function AppContent() {
                   <Route path="services" element={<Service />} />
                   <Route path="events" element={<EventManagement />} />
                   <Route path="consultants" element={<Consultant />} />
-                  <Route path="sponsors" element={<Sponsor />} />
+               
                   <Route path="blogs" element={<BlogManagement />} />
                   <Route
                     path="appointments"

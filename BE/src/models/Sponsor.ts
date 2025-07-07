@@ -1,23 +1,20 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ISponsor extends Document {
-  fullName: string;
+  name: string;
   email: string;
   status: 'active' | 'inactive' | 'isDeleted';
-  ranking: 'platinum' | 'gold' | 'silver' | 'bronze';
   logo?: string;
-  donation?: string;
-  eventIds: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 const sponsorSchema = new Schema<ISponsor>({
-  fullName: {
+  name: {
     type: String,
-    required: [true, 'Họ và tên là bắt buộc'],
+    required: [true, 'Tên nhà tài trợ là bắt buộc'],
     trim: true,
-    maxlength: [100, 'Họ và tên không được vượt quá 100 ký tự']
+    maxlength: [100, 'Tên nhà tài trợ không được vượt quá 100 ký tự']
   },
   email: {
     type: String,
@@ -31,31 +28,16 @@ const sponsorSchema = new Schema<ISponsor>({
     enum: ['active', 'inactive', 'isDeleted'],
     default: 'active'
   },
-  ranking: {
-    type: String,
-    enum: ['platinum', 'gold', 'silver', 'bronze'],
-    required: [true, 'Ranking là bắt buộc'],
-    default: 'bronze'
-  },
   logo: {
     type: String,
     trim: true
-  },
-  donation: {
-    type: String,
-    trim: true
-  },
-  eventIds: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Event',
-    required: [true, 'Ít nhất một sự kiện là bắt buộc']
-  }]
+  }
 }, {
   timestamps: true
 });
 
 // Index để tối ưu truy vấn
-sponsorSchema.index({ eventIds: 1, status: 1 });
+sponsorSchema.index({ status: 1 });
 sponsorSchema.index({ email: 1 });
 
 export default mongoose.model<ISponsor>('Sponsor', sponsorSchema); 

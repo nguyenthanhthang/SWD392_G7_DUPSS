@@ -4,7 +4,6 @@ import {
   getSponsorsByEvent,
   getSponsorById,
   createSponsor,
-  updateSponsor,
   deleteSponsor,
   getSponsorStats
 } from '../controllers/sponsorController';
@@ -22,9 +21,6 @@ router.get('/:id', getSponsorById);
 
 // Tạo sponsor mới
 router.post('/', createSponsor);
-
-// Cập nhật sponsor
-router.put('/:id', updateSponsor);
 
 // Xóa sponsor
 router.delete('/:id', deleteSponsor);
