@@ -1,7 +1,6 @@
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const cloudinary = require("../config/cloudinary");
+import cloudinary from "../config/cloudinary";
 
 // Cấu hình storage cho multer
 const storage = new CloudinaryStorage({
