@@ -20,8 +20,7 @@ import sponsorRoutes from "./routes/sponsorRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import questionRoutes from "./routes/questionRoutes";
 
-
-const uploadRouter = require("./routes/upload");
+import uploadRouter from "./routes/upload";
 
 // Load biến môi trường
 dotenv.config();
