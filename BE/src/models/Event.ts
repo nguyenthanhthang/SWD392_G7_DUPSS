@@ -15,6 +15,7 @@ export interface IEvent extends Document {
     donation: number;
     tier: "Platinum" | "Gold" | "Silver" | "Bronze";
   }[];
+  image?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,7 +50,8 @@ const eventSchema = new Schema<IEvent>(
         enum: ["Platinum", "Gold", "Silver", "Bronze"],
         required: true
       }
-    }]
+    }],
+    image: { type: String },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

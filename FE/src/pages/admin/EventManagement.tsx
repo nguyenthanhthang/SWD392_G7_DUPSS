@@ -430,19 +430,12 @@ const EventFormModal = ({
       return;
     }
     
-    if (regStartDate < new Date()) {
+    if (!isEditing && regStartDate < new Date()) {
       toast.error("Thời gian bắt đầu đăng ký phải trong tương lai");
       return;
     }
-    
-    // Validate URL hình ảnh nếu có
-    if (formData.image && formData.image.trim()) {
-      try {
-        new URL(formData.image);
-      } catch {
-        toast.error("URL hình ảnh không hợp lệ");
-        return;
-      }
+    if (isEditing && regStartDate < new Date()) {
+      toast.warn("Lưu ý: Thời gian bắt đầu đăng ký đã ở trong quá khứ.");
     }
     
     console.log("Form validation passed, submitting:", formData);
@@ -689,15 +682,38 @@ const EventFormModal = ({
             )}
           </div>
 
+          {/* Hình ảnh sự kiện */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">URL hình ảnh</label>
-            <input
-              type="url"
-              value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
-              placeholder="https://example.com/image.jpg"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hình ảnh sự kiện</label>
+            <div className="flex items-center gap-3">
+              {formData.image && (
+                <img src={formData.image} alt="Preview" className="w-24 h-24 object-cover border rounded-lg" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const form = new FormData();
+                  form.append('image', file);
+                  try {
+                    const res = await fetch('/api/uploads/upload', {
+                      method: 'POST',
+                      body: form,
+                      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    });
+                    if (!res.ok) throw new Error('Upload thất bại');
+                    const data = await res.json();
+                    setFormData(prev => ({ ...prev, image: data.imageUrl }));
+                    toast.success('Tải ảnh lên thành công!');
+                  } catch (error) {
+                    toast.error('Tải ảnh lên thất bại!');
+                  }
+                }}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+              />
+            </div>
           </div>
           
           <div className="flex gap-3 pt-4">
@@ -995,13 +1011,15 @@ const AdminEventManagement = () => {
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
   const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 6;
+  const [rowsPerPage, setRowsPerPage] = useState(6);
   const [sortBy, setSortBy] = useState("newest");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancellingEvent, setCancellingEvent] = useState<Event | null>(null);
+  const [allSponsors, setAllSponsors] = useState<Sponsor[]>([]);
 
   useEffect(() => {
     fetchEvents();
+    fetchAllSponsors();
   }, []);
 
   const fetchEvents = async () => {
@@ -1025,6 +1043,16 @@ const AdminEventManagement = () => {
     }
   };
 
+  const fetchAllSponsors = async () => {
+    try {
+      const res = await fetch('/api/sponsors');
+      const data = await res.json();
+      setAllSponsors(data);
+    } catch (err) {
+      // ignore
+    }
+  };
+
   const handleCreateEvent = async (formData: EventFormData) => {
     try {
       console.log("Creating event with data:", formData);
@@ -1036,7 +1064,9 @@ const AdminEventManagement = () => {
         registrationStartDate: new Date(formData.registrationStartDate),
         registrationEndDate: new Date(formData.registrationEndDate),
         location: formData.location,
-        capacity: formData.capacity
+        capacity: formData.capacity,
+        image: formData.image,
+        sponsors: formData.sponsors
       };
       console.log("API payload:", payload);
       
@@ -1063,7 +1093,9 @@ const AdminEventManagement = () => {
         registrationStartDate: new Date(formData.registrationStartDate),
         registrationEndDate: new Date(formData.registrationEndDate),
         location: formData.location,
-        capacity: formData.capacity
+        capacity: formData.capacity,
+        image: formData.image,
+        sponsors: formData.sponsors
       });
       toast.success("Cập nhật sự kiện thành công!");
       setShowEventForm(false);
@@ -1194,10 +1226,6 @@ const AdminEventManagement = () => {
             {events.length > 0 && (
               <div className="flex gap-4 text-sm text-gray-600">
                 <span>📊 Tổng cộng: {events.length} sự kiện</span>
-                <span>👥 Đã đăng ký: {events.reduce((sum, event) => sum + (event.registeredCount || 0), 0)} người</span>
-                <span className="text-red-600 font-medium">
-                  ⚠️ Đầy: {events.filter(event => event.registeredCount && event.registeredCount >= event.capacity).length} sự kiện
-                </span>
                 <span className="text-sky-600 font-medium">
                  
                 </span>
@@ -1256,6 +1284,24 @@ const AdminEventManagement = () => {
             </div>
           </div>
         </div>
+
+        {/* Hiển thị tất cả nhà tài trợ */}
+        {allSponsors.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-bold text-gray-700 mb-2">Tất cả nhà tài trợ</h2>
+            <div className="flex flex-wrap gap-4">
+              {allSponsors.map(s => (
+                <div key={s._id} className="flex items-center gap-2 bg-white rounded-lg shadow px-4 py-2 border">
+                  {s.logo && <img src={s.logo} alt={s.name} className="w-10 h-10 rounded-full object-cover" />}
+                  <div>
+                    <div className="font-semibold text-gray-800">{s.name}</div>
+                    <div className="text-xs text-gray-500">{s.email}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Events Grid */}
         {loading ? (

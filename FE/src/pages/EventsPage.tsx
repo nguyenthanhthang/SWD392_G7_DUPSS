@@ -40,6 +40,12 @@ interface Event {
   isCancelled?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  sponsors?: {
+    logo?: string;
+    name: string;
+    tier: string;
+    donation: string;
+  }[];
 }
 
 export default function EventsPage() {
@@ -468,7 +474,8 @@ export default function EventsPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col h-full min-h-[420px]"
+              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col h-full min-h-[420px] cursor-pointer"
+              onClick={() => navigate(`/events/${event._id}`)}
             >
               <div className="relative h-48">
                 <img
@@ -496,6 +503,23 @@ export default function EventsPage() {
                 <p className="text-gray-600 mb-4 line-clamp-2 min-h-[48px]">
                   {event.description}
                 </p>
+                {/* Thông tin nhà tài trợ */}
+                {event.sponsors && event.sponsors.length > 0 && event.sponsors.some(s => s.logo) && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs text-gray-500 font-medium">Nhà tài trợ:</span>
+                    {event.sponsors.map((s, idx) =>
+                      s.logo ? (
+                        <img
+                          key={idx}
+                          src={s.logo}
+                          alt="Sponsor logo"
+                          className="w-9 h-9 rounded-full object-cover border bg-white shadow-sm"
+                          style={{ maxWidth: 36, maxHeight: 36 }}
+                        />
+                      ) : null
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center text-gray-500 mb-4">
                   <svg
                     className="w-5 h-5 mr-2"
@@ -565,7 +589,7 @@ export default function EventsPage() {
                 <div className="flex items-end justify-between">
                   <div></div>
                   <button
-                    onClick={() => handleRegister(event._id)}
+                    onClick={e => { e.stopPropagation(); handleRegister(event._id); }}
                     disabled={
                       (event.registeredCount || 0) >= event.capacity ||
                       event.status !== "upcoming" ||

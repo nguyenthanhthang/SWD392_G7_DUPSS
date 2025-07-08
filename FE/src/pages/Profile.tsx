@@ -42,6 +42,23 @@ interface Blog {
   rejectionReason?: string;
 }
 
+// Định nghĩa type cho sponsor (có thể đặt ở đầu file hoặc gần interface Event)
+type Sponsor = {
+  logo: string;
+};
+
+// Định nghĩa type Event (tối thiểu các trường cần dùng)
+type Event = {
+  _id: string;
+  title: string;
+  startDate?: string;
+  location?: string;
+  isCancelled?: boolean;
+  sponsors?: Sponsor[];
+  qrCode?: string;
+  image?: string;
+};
+
 const menuTabs = [
   { key: "profile", label: "Hồ sơ người dùng" },
   { key: "blogs", label: "Bài viết" },
@@ -79,11 +96,10 @@ export default function Profile() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user: authUser } = useAuth();
-  const [registeredEvents, setRegisteredEvents] = useState<any[]>([]);
-  const [showRegisteredModal, setShowRegisteredModal] = useState(false);
-  const [showUnregisterConfirm, setShowUnregisterConfirm] = useState(false);
-  const [eventToUnregister, setEventToUnregister] = useState<string | null>(null);
-  const [showUnregisterSuccess, setShowUnregisterSuccess] = useState(false);
+  const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
+  const [showQR, setShowQR] = useState<{ open: boolean; qr?: string } | null>(null);
+  const handleOpenQR = (qr: string) => setShowQR({ open: true, qr });
+  const handleCloseQR = () => setShowQR(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -265,8 +281,8 @@ export default function Profile() {
       // Update local user state
       setUser(prev => prev ? { ...prev, photoUrl: imageUrl } : null);
       showToast('success', 'Cập nhật ảnh đại diện thành công!');
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
+    } catch {
+      console.error('Error uploading avatar:');
       showToast('error', 'Không thể cập nhật ảnh đại diện!');
       setAvatarPreview(null); // Reset preview on error
     } finally {
@@ -279,7 +295,7 @@ export default function Profile() {
     try {
       const data = await getRegisteredEventsApi(authUser._id);
       setRegisteredEvents(data);
-    } catch (err) {
+    } catch {
       // handle error if needed
     }
   };
@@ -291,21 +307,12 @@ export default function Profile() {
   }, [authUser]);
 
   const handleUnregister = async (eventId: string) => {
-    setEventToUnregister(eventId);
-    setShowUnregisterConfirm(true);
-  };
-
-  const confirmUnregister = async () => {
-    if (!authUser || !eventToUnregister) return;
+    if (!authUser) return;
     try {
-      await unregisterEventApi(eventToUnregister, authUser._id);
-      setRegisteredEvents(prev => prev.map(event => event._id === eventToUnregister ? { ...event, isCancelled: true } : event));
-      setShowUnregisterSuccess(true);
-      setShowUnregisterConfirm(false);
-      setEventToUnregister(null);
-    } catch (err) {
-      setShowUnregisterConfirm(false);
-      setEventToUnregister(null);
+      await unregisterEventApi(eventId, authUser._id);
+      setRegisteredEvents(prev => prev.map(event => event._id === eventId ? { ...event, isCancelled: true } : event));
+    } catch {
+      // handle error nếu cần
     }
   };
 
@@ -708,145 +715,95 @@ export default function Profile() {
                   <div className="mb-6">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">Sự kiện đã đăng ký</h2>
                     {/* Registered Events */}
-                    {registeredEvents.length > 0 ? (
-                      <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Sự kiện đã đăng ký</h3>
-                        <div className="space-y-4">
-                          {registeredEvents.map((event) => (
-                            <div
-                              key={event._id}
-                              className={`border rounded-xl p-4 transition-colors ${
-                                event.isCancelled
-                                  ? 'bg-red-50 border-red-200 opacity-80'
-                                  : 'bg-green-50 border-green-200'
-                              }`}
-                            >
-                              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                                {event.title}
+                    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                      {registeredEvents.map((event) => (
+                        <div
+                          key={event._id}
+                          className="relative flex flex-col md:flex-row items-stretch bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden mb-8 max-w-3xl w-full mx-auto ticket-card justify-center"
+                          style={{ minHeight: '180px' }}
+                        >
+                          {/* Ảnh sự kiện bên trái */}
+                          <div className="flex-shrink-0 w-full md:w-56 h-40 md:h-auto bg-gray-100 flex items-center justify-center">
+                            <img
+                              src={event.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80'}
+                              alt={event.title}
+                              className="object-cover w-full h-full rounded-l-2xl border-r border-blue-100"
+                            />
+                          </div>
+                          {/* Thông tin sự kiện ở giữa */}
+                          <div className="flex-1 flex flex-col justify-between px-6 py-4 gap-2">
+                            <div>
+                              <h3 className="text-lg font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                                <span role="img" aria-label="vé">🎟️</span>
+                                <span className="truncate">{event.title}</span>
                               </h3>
-                              <div className="text-sm text-gray-600 space-y-1">
-                                <p>
-                                  <span className="font-medium">Thời gian:</span>{' '}
-                                  {format(new Date(event.startDate), 'dd/MM/yyyy HH:mm')}
-                                </p>
-                                <p>
-                                  <span className="font-medium">Địa điểm:</span>{' '}
-                                  {event.location}
-                                </p>
-                                <p>
-                                  <span className="font-medium">Trạng thái:</span>{' '}
-                                  <span className={event.isCancelled ? 'text-red-600' : 'text-green-600'}>
-                                    {event.isCancelled ? 'Đã hủy' : 'Đã đăng ký'}
-                                  </span>
-                                </p>
+                              <div className="flex items-center text-base text-gray-700 mb-1 gap-2">
+                                <span role="img" aria-label="clock">🕒</span>
+                                <span className="font-medium">Thời gian:</span>
+                                <span>{event.startDate ? format(new Date(event.startDate), 'dd/MM/yyyy HH:mm') : 'Không xác định'}</span>
                               </div>
-                              {!event.isCancelled && (
-                                <div className="flex items-center justify-between mt-4">
-                                  <button
-                                    onClick={() => handleUnregister(event._id)}
-                                    className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors text-sm font-medium"
-                                  >
-                                    Hủy đăng ký
-                                  </button>
+                              <div className="flex items-center text-base text-gray-700 mb-1 gap-2">
+                                <span role="img" aria-label="location">📍</span>
+                                <span className="font-medium">Địa điểm:</span>
+                                <span>{event.location}</span>
+                              </div>
+                              <div className="flex items-center text-base mb-1 gap-2">
+                                <span className="font-medium">Trạng thái:</span>
+                                <span className={event.isCancelled ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                  {event.isCancelled ? 'Đã hủy' : 'Đã đăng ký'}
+                                </span>
+                              </div>
+                              {/* Logo sponsor */}
+                              {event.sponsors && event.sponsors.length > 0 && event.sponsors.some((s: Sponsor) => s.logo) && (
+                                <div className="flex gap-2 mt-2 items-center">
+                                  <span className="text-xs text-gray-500 mr-1">Nhà tài trợ:</span>
+                                  {event.sponsors.map((s: Sponsor, idx: number) =>
+                                    s.logo ? (
+                                      <img
+                                        key={idx}
+                                        src={s.logo}
+                                        alt="Sponsor logo"
+                                        className="w-7 h-7 rounded-full object-cover border bg-white shadow-sm"
+                                      />
+                                    ) : null
+                                  )}
                                 </div>
                               )}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">
-                        Bạn chưa đăng ký sự kiện nào
-                      </p>
-                    )}
-                    {/* Confirm Unregister Modal */}
-                    {showUnregisterConfirm && (
-                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-                          <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800">
-                              Xác nhận hủy đăng ký
-                            </h2>
-                            <button
-                              onClick={() => setShowUnregisterConfirm(false)}
-                              className="text-gray-500 hover:text-gray-700"
-                            >
-                              <svg
-                                className="w-6 h-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                            {/* Nút */}
+                            <div className="flex gap-4 mt-4 flex-wrap">
+                              <button
+                                onClick={() => window.open(`/events/${event._id}`, '_blank')}
+                                className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
+                                Xem chi tiết
+                              </button>
+                              {!event.isCancelled && (
+                                <button
+                                  onClick={() => handleUnregister(event._id)}
+                                  className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
+                                >
+                                  Hủy đăng ký
+                                </button>
+                              )}
+                              {event.qrCode && (
+                                <button
+                                  onClick={() => handleOpenQR(event.qrCode!)}
+                                  className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
+                                >
+                                  Xem mã QR
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-gray-700 mb-4">
-                            Bạn có chắc chắn muốn hủy đăng ký sự kiện này không?
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => setShowUnregisterConfirm(false)}
-                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors"
-                            >
-                              Hủy
-                            </button>
-                            <button
-                              onClick={confirmUnregister}
-                              className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
-                            >
-                              Xác nhận
-                            </button>
-                          </div>
+                          {/* Hiệu ứng lỗ vé */}
+                          <div className="hidden md:block absolute top-6 left-0 w-4 h-8 bg-white rounded-r-full border-l border-blue-100 shadow-sm"></div>
+                          <div className="hidden md:block absolute bottom-6 left-0 w-4 h-8 bg-white rounded-r-full border-l border-blue-100 shadow-sm"></div>
+                          <div className="hidden md:block absolute top-6 right-0 w-4 h-8 bg-white rounded-l-full border-r border-blue-100 shadow-sm"></div>
+                          <div className="hidden md:block absolute bottom-6 right-0 w-4 h-8 bg-white rounded-l-full border-r border-blue-100 shadow-sm"></div>
                         </div>
-                      </div>
-                    )}
-                    {/* Unregister Success Modal */}
-                    {showUnregisterSuccess && (
-                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-                          <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800">
-                              Hủy đăng ký thành công
-                            </h2>
-                            <button
-                              onClick={() => setShowUnregisterSuccess(false)}
-                              className="text-gray-500 hover:text-gray-700"
-                            >
-                              <svg
-                                className="w-6 h-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                          <div className="text-green-600 text-lg font-medium mb-4">
-                            Bạn đã hủy đăng ký sự kiện thành công.
-                          </div>
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => setShowUnregisterSuccess(false)}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-                            >
-                              Đóng
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -967,6 +924,22 @@ export default function Profile() {
                 await updateBlogApi(blogDangSua._id, dataUpdate);
               }}
             />
+          </div>
+        </div>
+      )}
+      {/* Modal QR code */}
+      {showQR?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center relative min-w-[320px]">
+            <button
+              onClick={handleCloseQR}
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+            <img src={showQR.qr} alt="QR Check-in" className="w-60 h-60 rounded-xl border shadow mb-2" />
+            <span className="text-base text-gray-700 font-medium">Mã QR check-in</span>
           </div>
         </div>
       )}
