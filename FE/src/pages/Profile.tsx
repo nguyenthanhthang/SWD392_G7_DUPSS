@@ -716,9 +716,9 @@ export default function Profile() {
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">Sự kiện đã đăng ký</h2>
                     {/* Registered Events */}
                     <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                      {registeredEvents.map((event) => (
-                        <div
-                          key={event._id}
+                          {registeredEvents.map((event) => (
+                            <div
+                              key={event._id}
                           className="relative flex flex-col md:flex-row items-stretch bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden mb-8 max-w-3xl w-full mx-auto ticket-card justify-center"
                           style={{ minHeight: '180px' }}
                         >
@@ -750,8 +750,8 @@ export default function Profile() {
                               <div className="flex items-center text-base mb-1 gap-2">
                                 <span className="font-medium">Trạng thái:</span>
                                 <span className={event.isCancelled ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
-                                  {event.isCancelled ? 'Đã hủy' : 'Đã đăng ký'}
-                                </span>
+                                    {event.isCancelled ? 'Đã hủy' : 'Đã đăng ký'}
+                                  </span>
                               </div>
                               {/* Logo sponsor */}
                               {event.sponsors && event.sponsors.length > 0 && event.sponsors.some((s: Sponsor) => s.logo) && (
@@ -766,44 +766,44 @@ export default function Profile() {
                                         className="w-7 h-7 rounded-full object-cover border bg-white shadow-sm"
                                       />
                                     ) : null
-                                  )}
-                                </div>
                               )}
                             </div>
+                              )}
+                          </div>
                             {/* Nút */}
                             <div className="flex gap-4 mt-4 flex-wrap">
-                              <button
+                            <button
                                 onClick={() => window.open(`/events/${event._id}`, '_blank')}
                                 className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
-                              >
+                            >
                                 Xem chi tiết
-                              </button>
+                            </button>
                               {!event.isCancelled && (
-                                <button
+                            <button
                                   onClick={() => handleUnregister(event._id)}
                                   className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
-                                >
+                            >
                                   Hủy đăng ký
-                                </button>
-                              )}
+                            </button>
+                    )}
                               {event.qrCode && (
-                                <button
+                            <button
                                   onClick={() => handleOpenQR(event.qrCode!)}
                                   className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
                                 >
                                   Xem mã QR
-                                </button>
+                            </button>
                               )}
-                            </div>
+                          </div>
                           </div>
                           {/* Hiệu ứng lỗ vé */}
                           <div className="hidden md:block absolute top-6 left-0 w-4 h-8 bg-white rounded-r-full border-l border-blue-100 shadow-sm"></div>
                           <div className="hidden md:block absolute bottom-6 left-0 w-4 h-8 bg-white rounded-r-full border-l border-blue-100 shadow-sm"></div>
                           <div className="hidden md:block absolute top-6 right-0 w-4 h-8 bg-white rounded-l-full border-r border-blue-100 shadow-sm"></div>
                           <div className="hidden md:block absolute bottom-6 right-0 w-4 h-8 bg-white rounded-l-full border-r border-blue-100 shadow-sm"></div>
-                        </div>
+                          </div>
                       ))}
-                    </div>
+                        </div>
                   </div>
                 </div>
               )}

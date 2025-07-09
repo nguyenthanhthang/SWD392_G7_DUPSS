@@ -3,12 +3,19 @@ import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
+import { useAuth } from "../contexts/AuthContext";
+import { registerEventApi, getRegisteredEventsApi } from "../api";
 
 interface Sponsor {
   logo?: string;
   name: string;
   tier: string;
   donation: string;
+}
+
+interface EventRegistered {
+  _id: string;
+  isCancelled?: boolean;
 }
 
 interface EventDetail {
@@ -23,19 +30,37 @@ interface EventDetail {
   image?: string;
   sponsors?: Sponsor[];
   registeredCount?: number;
+  registrationStartDate?: string;
+  registrationEndDate?: string;
 }
 
 export default function EventDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [registerSuccess, setRegisterSuccess] = useState<string | null>(null);
+  const [registeredEvents, setRegisteredEvents] = useState<EventRegistered[]>([]);
 
   useEffect(() => {
     fetchEventDetail();
+    const fetchRegistered = async () => {
+      if (user) {
+        try {
+          const data = await getRegisteredEventsApi(user._id);
+          setRegisteredEvents(data);
+        } catch {
+          // ignore
+        }
+      }
+    };
+    fetchRegistered();
     // eslint-disable-next-line
-  }, [id]);
+  }, [id, user]);
 
   const fetchEventDetail = async () => {
     try {
@@ -51,6 +76,61 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleRegister = async () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (!event?._id) return;
+    setIsRegistering(true);
+    setRegisterError(null);
+    setRegisterSuccess(null);
+    try {
+      await registerEventApi(event._id, user._id);
+      setRegisterSuccess("Đăng ký thành công!");
+      fetchEventDetail(); // refresh event info
+      // refresh registered events
+      if (user) {
+        const data = await getRegisteredEventsApi(user._id);
+        setRegisteredEvents(data);
+      }
+    } catch (err) {
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        typeof (err as { response?: unknown }).response === 'object' &&
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message
+      ) {
+        setRegisterError((err as { response: { data: { message: string } } }).response.data.message);
+      } else {
+        setRegisterError("Đăng ký thất bại");
+      }
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  useEffect(() => {
+    if (error || !event) {
+      const timeout = setTimeout(() => {
+        navigate('/events');
+      }, 1500);
+      return () => clearTimeout(timeout);
+    }
+  }, [error, event, navigate]);
+
+  // Xác định trạng thái đăng ký
+  const reg = event ? registeredEvents.find(ev => ev._id === event._id) : undefined;
+  const isCancelled = reg?.isCancelled;
+  const isRegistered = reg && !isCancelled;
+
+  // Thêm biến kiểm tra thời gian đăng ký
+  const now = new Date();
+  const isInRegistrationPeriod = event && event.registrationStartDate && event.registrationEndDate
+    ? now >= new Date(event.registrationStartDate) && now <= new Date(event.registrationEndDate)
+    : true;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-[#f6f8fb]">
@@ -64,12 +144,6 @@ export default function EventDetailPage() {
   }
 
   if (error || !event) {
-    useEffect(() => {
-      const timeout = setTimeout(() => {
-        navigate('/events');
-      }, 1500);
-      return () => clearTimeout(timeout);
-    }, []);
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-[#f6f8fb]">
         <Header />
@@ -120,6 +194,46 @@ export default function EventDetailPage() {
                 {event.registeredCount || 0}/{event.capacity} người tham gia
               </span>
             </div>
+            {/* Nút đăng ký */}
+            {event.status === "upcoming" && (event.registeredCount || 0) < event.capacity && (
+              <button
+                className={
+                  "mt-6 w-full px-4 py-2 rounded-lg text-white text-base font-semibold transition" +
+                  ((event.registeredCount || 0) >= event.capacity || event.status !== "upcoming" || !isInRegistrationPeriod
+                    ? " bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : isCancelled
+                    ? " bg-blue-600 hover:bg-blue-700"
+                    : isRegistered
+                    ? " bg-green-600 cursor-not-allowed"
+                    : " bg-blue-600 hover:bg-blue-700"
+                  )
+                }
+                onClick={handleRegister}
+                disabled={
+                  (event.registeredCount || 0) >= event.capacity ||
+                  event.status !== "upcoming" ||
+                  !isInRegistrationPeriod ||
+                  (isRegistered && !isCancelled) ||
+                  isRegistering
+                }
+              >
+                {(event.registeredCount || 0) >= event.capacity
+                  ? "Đã đầy"
+                  : event.status !== "upcoming"
+                  ? "Không thể đăng ký"
+                  : !isInRegistrationPeriod
+                  ? "Ngoài thời gian đăng ký"
+                  : isCancelled
+                  ? "Đăng ký lại"
+                  : isRegistered
+                  ? "Đã đăng ký"
+                  : isRegistering
+                  ? "Đang đăng ký..."
+                  : "Đăng ký"}
+              </button>
+            )}
+            {registerError && <div className="mt-2 text-red-500 text-sm">{registerError}</div>}
+            {registerSuccess && <div className="mt-2 text-green-600 text-sm">{registerSuccess}</div>}
           </div>
           <div className="flex-1 flex flex-col">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">{event.title}</h2>

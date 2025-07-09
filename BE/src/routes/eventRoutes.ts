@@ -11,6 +11,7 @@ import {
   checkInEvent,
   getEventAttendance,
   getRegisteredEvents,
+  getCheckInHistory,
 } from "../controllers/eventController";
 
 const router = express.Router();
@@ -31,5 +32,6 @@ router.post("/:id/unregister", unregisterEvent);
 router.get("/:id/qr", getEventQRCode);
 router.post("/:id/check-in", checkInEvent);
 router.get("/:id/attendance", getEventAttendance);
+router.get("/:id/check-in-history", getCheckInHistory);
 
 export default router;

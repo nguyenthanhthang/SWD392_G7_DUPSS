@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { useAuth } from "../../contexts/AuthContext";
+import React, { useState, useEffect, useRef } from "react";
 import { checkInEventApi, getAllEventsApi, createEventApi, updateEventApi, deleteEventApi } from "../../api";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { QrReader } from "react-qr-reader";
 import { motion } from "framer-motion";
 import { FiSearch, FiUsers, FiMapPin, FiCalendar, FiCheckCircle, FiXCircle, FiChevronLeft, FiChevronRight, FiPlus, FiEdit, FiTrash2, FiX } from "react-icons/fi";
+import { Html5Qrcode } from "html5-qrcode";
 
 // Thêm type definitions cho BarcodeDetector API
 declare global {
@@ -33,6 +31,9 @@ interface EventSponsor {
   sponsorId: string;
   donation: string;
   tier: "Platinum" | "Gold" | "Silver" | "Bronze";
+  logo?: string;
+  name?: string;
+  _id?: string;
 }
 
 interface Event {
@@ -58,7 +59,7 @@ interface Event {
 interface CheckInRecord {
   userName: string;
   eventName: string;
-  timestamp: Date;
+  timestamp: string;
   status: "success" | "error";
 }
 
@@ -164,7 +165,7 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
         <button
           onClick={() => onSelect(event)}
           className="flex-1 py-2 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-all text-sm"
-          disabled={event.status !== "ongoing"}
+          disabled={event.status === "cancelled"}
         >
           Quét QR
         </button>
@@ -316,6 +317,13 @@ const EventFormModal = ({
     }));
   };
 
+  // Thêm hàm format về local datetime-local string
+  function toLocalDatetimeString(dateString: string) {
+    const d = new Date(dateString);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  }
+
   useEffect(() => {
     if (open) {
       fetchSponsors();
@@ -327,10 +335,10 @@ const EventFormModal = ({
       setFormData({
         title: event.title,
         description: event.description,
-        startDate: new Date(event.startDate).toISOString().slice(0, 16),
-        endDate: new Date(event.endDate).toISOString().slice(0, 16),
-        registrationStartDate: event.registrationStartDate ? new Date(event.registrationStartDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-        registrationEndDate: event.registrationEndDate ? new Date(event.registrationEndDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+        startDate: toLocalDatetimeString(event.startDate),
+        endDate: toLocalDatetimeString(event.endDate),
+        registrationStartDate: event.registrationStartDate ? toLocalDatetimeString(event.registrationStartDate) : toLocalDatetimeString(new Date().toISOString()),
+        registrationEndDate: event.registrationEndDate ? toLocalDatetimeString(event.registrationEndDate) : toLocalDatetimeString(new Date().toISOString()),
         location: event.location,
         capacity: event.capacity,
         image: event.image || "",
@@ -341,14 +349,13 @@ const EventFormModal = ({
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
       setFormData({
         title: "",
         description: "",
-        startDate: tomorrow.toISOString().slice(0, 16),
-        endDate: tomorrow.toISOString().slice(0, 16),
-        registrationStartDate: now.toISOString().slice(0, 16),
-        registrationEndDate: tomorrow.toISOString().slice(0, 16),
+        startDate: toLocalDatetimeString(tomorrow.toISOString()),
+        endDate: toLocalDatetimeString(tomorrow.toISOString()),
+        registrationStartDate: toLocalDatetimeString(now.toISOString()),
+        registrationEndDate: toLocalDatetimeString(tomorrow.toISOString()),
         location: "",
         capacity: 50,
         image: "",
@@ -642,42 +649,38 @@ const EventFormModal = ({
             {formData.sponsors.length > 0 && (
               <div className="space-y-2">
                 <h5 className="font-medium text-gray-700">Danh sách nhà tài trợ:</h5>
-                {formData.sponsors.map((eventSponsor, index) => {
-                  const sponsor = availableSponsors.find(s => s._id === eventSponsor.sponsorId);
-                  return (
-                    <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border">
-                      <div className="flex items-center space-x-3">
-                        {sponsor?.logo && (
-                          <img src={sponsor.logo} alt={sponsor.name} className="w-8 h-8 rounded-full object-cover" />
-                        )}
-                        <div>
-                          <div className="font-medium">{sponsor?.name || 'Unknown Sponsor'}</div>
-                          <div className="text-sm text-gray-500">{sponsor?.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <div className="font-medium">{eventSponsor.donation}</div>
-                          <div className={`text-xs px-2 py-1 rounded-full ${
-                            eventSponsor.tier === 'Platinum' ? 'bg-purple-100 text-purple-800' :
-                            eventSponsor.tier === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
-                            eventSponsor.tier === 'Silver' ? 'bg-gray-100 text-gray-800' :
-                            'bg-orange-100 text-orange-800'
-                          }`}>
-                            {eventSponsor.tier}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSponsor(eventSponsor.sponsorId)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <FiX size={16} />
-                        </button>
+                {formData.sponsors.map((s, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      {s.logo && (
+                        <img src={s.logo} alt={s.name} className="w-8 h-8 rounded-full object-cover" />
+                      )}
+                      <div>
+                        <div className="font-medium">{s.name || 'Unknown Sponsor'}</div>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <div className="font-medium">{s.donation}</div>
+                        <div className={`text-xs px-2 py-1 rounded-full ${
+                          s.tier === 'Platinum' ? 'bg-purple-100 text-purple-800' :
+                          s.tier === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
+                          s.tier === 'Silver' ? 'bg-gray-100 text-gray-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {s.tier}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSponsor(s.sponsorId || s._id || '')}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <FiX size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -689,7 +692,7 @@ const EventFormModal = ({
               {formData.image && (
                 <img src={formData.image} alt="Preview" className="w-24 h-24 object-cover border rounded-lg" />
               )}
-              <input
+            <input
                 type="file"
                 accept="image/*"
                 onChange={async (e) => {
@@ -712,7 +715,7 @@ const EventFormModal = ({
                   }
                 }}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
-              />
+            />
             </div>
           </div>
           
@@ -965,7 +968,7 @@ const CheckInHistory = ({ history }: { history: CheckInRecord[] }) => (
           )}
           <span className="font-medium text-gray-700 mr-2">{rec.userName}</span>
           <span className="text-gray-500">- {rec.eventName}</span>
-          <span className="ml-auto text-gray-400">{rec.timestamp.toLocaleTimeString("vi-VN")}</span>
+          <span className="ml-auto text-gray-400">{rec.timestamp}</span>
         </li>
       ))}
     </ul>
@@ -973,7 +976,96 @@ const CheckInHistory = ({ history }: { history: CheckInRecord[] }) => (
 );
 
 // QR Scanner Modal
-const QRScannerModal = ({ open, onClose, onScan, eventTitle }: { open: boolean; onClose: () => void; onScan: (data: string | null) => void; eventTitle: string }) => {
+const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, checkInHistoryError, eventCapacity }: { open: boolean; onClose: () => void; onScan: (data: string | null) => void; eventTitle: string; checkInHistory: CheckInRecord[]; checkInHistoryError?: string | null; eventCapacity?: number }) => {
+  const qrRegionId = "qr-reader-html5";
+  const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
+  const scanningRef = useRef(false);
+  const isScanningCamera = useRef(true); // Quản lý trạng thái camera
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    console.log('File upload:', file);
+    if (!file) return;
+    try {
+      const html5Qr = html5QrcodeRef.current || new Html5Qrcode(qrRegionId);
+      // Chỉ stop nếu đang quét camera
+      if (isScanningCamera.current) {
+        try {
+          await html5Qr.stop();
+          isScanningCamera.current = false;
+        } catch (err) {
+          console.warn('Stop camera error (ignore if not running):', err);
+        }
+      }
+      // Scan file
+      const result = await html5Qr.scanFile(file, true);
+      console.log('QR result (image):', result);
+      onScan(result);
+      setTimeout(() => onClose(), 500);
+    } catch (err) {
+      console.error('Scan file error:', err);
+      toast.error('Không nhận diện được mã QR trong ảnh!');
+      // Nếu scan file thất bại, khởi động lại camera
+      try {
+        await html5QrcodeRef.current?.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 300, height: 300 } },
+          (decodedText) => {
+            console.log('QR result:', decodedText);
+            if (scanningRef.current) {
+              scanningRef.current = false;
+              onScan(decodedText);
+              setTimeout(() => onClose(), 500);
+            }
+          },
+          (errorMessage) => {
+            // Xử lý lỗi scan nếu cần
+            // console.warn('QR scan error:', errorMessage);
+          }
+        );
+        isScanningCamera.current = true;
+      } catch (e) {
+        console.warn('Restart camera error:', e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    scanningRef.current = true;
+    const html5Qr = new Html5Qrcode(qrRegionId);
+    html5QrcodeRef.current = html5Qr;
+    isScanningCamera.current = true;
+    html5Qr
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 300, height: 300 } },
+        (decodedText) => {
+          console.log('QR result:', decodedText);
+          if (scanningRef.current) {
+            scanningRef.current = false;
+            onScan(decodedText);
+            setTimeout(() => onClose(), 500);
+          }
+        },
+        (errorMessage) => {
+          // Xử lý lỗi scan nếu cần
+          // console.warn('QR scan error:', errorMessage);
+        }
+      )
+      .catch(() => {});
+    return () => {
+      scanningRef.current = false;
+      isScanningCamera.current = false;
+      try {
+        html5Qr.stop().then(() => html5Qr.clear()).catch(() => {});
+      } catch (e) {
+        // ignore
+      }
+    };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -983,15 +1075,43 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle }: { open: boolean; 
         </button>
         <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">Quét mã QR check-in</h3>
         <p className="text-gray-500 text-center mb-4">Sự kiện: <span className="font-semibold text-sky-600">{eventTitle}</span></p>
-        <div className="rounded-xl overflow-hidden border border-gray-200 mb-4">
-          <QrReader
-            constraints={{ facingMode: "environment" }}
-            onResult={(result, error) => {
-              if (result) onScan(result.getText());
-            }}
+        <div className="rounded-xl overflow-hidden border border-gray-200 mb-4 flex justify-center">
+          <div id={qrRegionId} style={{ width: 300, height: 300 }} />
+        </div>
+        <div className="flex flex-col items-center mb-2">
+          <button
+            className="px-4 py-2 bg-sky-100 text-sky-700 rounded-lg font-semibold hover:bg-sky-200 mb-1"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Tải ảnh QR từ máy tính
+          </button>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            style={{ display: "none" }}
+            onChange={handleFileChange}
           />
         </div>
-        <p className="text-xs text-gray-400 text-center">Đưa mã QR của người tham gia vào khung camera để check-in</p>
+        <p className="text-xs text-gray-400 text-center">Đưa mã QR của người tham gia vào khung camera hoặc tải ảnh QR để check-in</p>
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold mb-2">Danh sách check-in gần nhất:</h4>
+          {checkInHistoryError ? (
+            <div className="text-red-500 text-xs mb-2">{checkInHistoryError}</div>
+          ) : (
+            <ul className="max-h-32 overflow-y-auto text-xs">
+              {checkInHistory.length === 0 && <li className="text-gray-400">Chưa có ai check-in</li>}
+              {checkInHistory.map((item, idx) => (
+                <li key={idx} className="text-green-600">
+                  {item.userName}{item.email ? ` | ${item.email}` : ''} - {item.timestamp ? new Date(item.timestamp).toLocaleString('vi-VN') : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="mt-2 text-center text-sm text-gray-600 font-medium">
+          Đã check-in: {checkInHistory.length}/{eventCapacity || '--'} người
+        </div>
       </motion.div>
     </div>
   );
@@ -1016,6 +1136,7 @@ const AdminEventManagement = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancellingEvent, setCancellingEvent] = useState<Event | null>(null);
   const [allSponsors, setAllSponsors] = useState<Sponsor[]>([]);
+  const [checkInHistoryError, setCheckInHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -1077,7 +1198,7 @@ const AdminEventManagement = () => {
     } catch (error: unknown) {
       console.error("Create event error:", error);
       console.error("Error response:", error instanceof Response ? await error.json() : error);
-      const errorMessage = error instanceof Response ? await error.json()?.message || error.statusText : error instanceof Error ? error.message : "Không thể tạo sự kiện";
+      const errorMessage = error instanceof Response ? (await error.json()).message || error.statusText : error instanceof Error ? error.message : "Không thể tạo sự kiện";
       toast.error(errorMessage);
     }
   };
@@ -1142,7 +1263,7 @@ const AdminEventManagement = () => {
   const handleEventSelect = (event: Event) => {
     setSelectedEvent(event);
     setShowQRScanner(true);
-    setCheckInHistory([]);
+    fetchCheckInHistory(event._id); // Gọi API khi mở modal
   };
 
   const handleEditEvent = (event: Event) => {
@@ -1155,24 +1276,48 @@ const AdminEventManagement = () => {
     setShowDeleteConfirm(true);
   };
 
+  const fetchCheckInHistory = async (eventId: string) => {
+    try {
+      setCheckInHistoryError(null);
+      const res = await fetch(`/api/events/${eventId}/check-in-history`); // Sửa endpoint
+      if (res.ok) {
+        const data = await res.json();
+        setCheckInHistory(data);
+      } else if (res.status === 404) {
+        setCheckInHistory([]);
+        setCheckInHistoryError('Chưa có lịch sử check-in cho sự kiện này.');
+      } else {
+        setCheckInHistoryError('Không lấy được lịch sử check-in.');
+      }
+    } catch {
+      setCheckInHistoryError('Không lấy được lịch sử check-in.');
+    }
+  };
+
+  // 1. Sửa handleScan để không crash khi check-in trùng
   const handleScan = async (data: string | null) => {
     if (!data || !selectedEvent) return;
     try {
-      await checkInEventApi(selectedEvent._id, "", data);
+      await checkInEventApi(selectedEvent._id, data);
       setCheckInHistory((prev) => [
-        { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date(), status: "success" as const },
+        { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date().toISOString(), status: "success" as const },
         ...prev
       ].slice(0, 10));
       toast.success("Check-in thành công!");
-      
-      // Refresh events để cập nhật số liệu
-      await fetchEvents();
-    } catch (error) {
+      fetchEvents();
+      fetchCheckInHistory(selectedEvent._id);
+    } catch (error: any) {
+      if (error?.response?.status === 400 && error?.response?.data?.message?.includes("Đã check-in")) {
+        toast.info("Người này đã check-in trước đó!");
+        // Không đóng modal, không thao tác lại với scanner
+        return;
+      }
+      toast.error("Check-in thất bại!");
       setCheckInHistory((prev) => [
-        { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date(), status: "error" as const },
+        { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date().toISOString(), status: "error" as const },
         ...prev
       ].slice(0, 10));
-      toast.error("Check-in thất bại!");
+      fetchCheckInHistory(selectedEvent._id);
     }
   };
 
@@ -1371,6 +1516,9 @@ const AdminEventManagement = () => {
         onClose={() => setShowQRScanner(false)} 
         onScan={handleScan} 
         eventTitle={selectedEvent?.title || ""} 
+        checkInHistory={checkInHistory} 
+        checkInHistoryError={checkInHistoryError} 
+        eventCapacity={selectedEvent?.capacity}
       />
 
       {/* Check-in History */}

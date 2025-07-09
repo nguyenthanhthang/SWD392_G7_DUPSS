@@ -163,6 +163,7 @@ export const registerEvent = async (
     // Kiểm tra số lượng đăng ký
     const registrationCount = await EventRegistration.countDocuments({
       eventId: event._id,
+      status: "active"
     });
     if (registrationCount >= event.capacity) {
       res.status(400).json({ message: "Sự kiện đã đủ số lượng đăng ký" });
@@ -176,6 +177,34 @@ export const registerEvent = async (
     });
 
     if (existingRegistration) {
+      if (existingRegistration.status === 'cancelled') {
+        // Tạo JWT token mới
+        const token = jwt.sign(
+          {
+            userId: req.body.userId,
+            eventId: event._id,
+            timestamp: new Date().toISOString(),
+          },
+          JWT_SECRET,
+          { expiresIn: "7d" }
+        );
+        // Tạo QR code mới
+        const qrString = await QRCode.toDataURL(token);
+        existingRegistration.status = 'active';
+        existingRegistration.token = token;
+        existingRegistration.qrString = qrString;
+        await existingRegistration.save();
+        res.status(200).json({
+          message: "Đăng ký lại sự kiện thành công",
+          data: {
+            userName: account.fullName,
+            eventName: event.title,
+            eventDate: event.startDate,
+            qrCode: qrString,
+          },
+        });
+        return;
+      }
       res.status(400).json({ message: "Bạn đã đăng ký sự kiện này" });
       return;
     }
@@ -378,3 +407,32 @@ export const getRegisteredEvents = async (
       .json({ message: "Lỗi khi lấy danh sách sự kiện đã đăng ký", error });
   }
 };
+
+// Thêm hàm mới:
+export const getCheckInHistory = async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const eventId = new mongoose.Types.ObjectId(req.params.id);
+    // Lấy các bản ghi check-in thành công, populate userId (fullName) và eventId (title)
+    const registrations = await EventRegistration.find({ eventId, status: 'active', checkedInAt: { $ne: null } })
+      .populate('userId', 'fullName')
+      .populate('eventId', 'title')
+      .sort({ checkedInAt: -1 });
+
+    
+
+    const result = registrations.map(r => ({
+      userId: r.userId,
+      eventId: r.eventId,
+      userName: (r.userId as any)?.fullName || r.userId,
+      eventName: (r.eventId as any)?.title || r.eventId,
+      timestamp: r.checkedInAt,
+      status: 'success'
+    }));
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi lấy lịch sử check-in' });
+  }
+};
+
+// Thêm hàm mới:

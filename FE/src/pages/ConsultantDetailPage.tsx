@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { useEffect, useState } from 'react';
-import { getConsultantByIdApi, getAllServicesApi, getAllCertificatesApi, getSlotTimeByConsultantIdApi, createAppointmentApi } from '../api';
+import { getConsultantByIdApi, getAllServicesApi, getAllCertificatesApi, getSlotTimeByConsultantIdApi, createAppointmentApi, getSlotTimeByIdApi } from '../api';
 import { addDays, startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { useAuth } from '../contexts/AuthContext';
@@ -211,6 +211,14 @@ function ConsultantDetailPage() {
     }
     setBookingLoading(true);
     try {
+      // Kiểm tra lại slot còn available không trước khi đặt (gọi theo id)
+      const latestSlot = await getSlotTimeByIdApi(selectedSlotObj._id);
+      if (!latestSlot || latestSlot.status !== 'available') {
+        showNotification('Slot này đã có người đặt, vui lòng chọn slot khác!', 'error');
+        setBookingLoading(false);
+        handleCloseModal();
+        return;
+      }
       const payload = {
         slotTime_id: selectedSlotObj._id,
         user_id: user._id,
@@ -221,7 +229,61 @@ function ConsultantDetailPage() {
         note: form.note,
       };
       await createAppointmentApi(payload);
-      // Sau khi đặt lịch thành công, cập nhật trạng thái slot vừa đặt thành 'booked' trong slotTimes
+      setSlotTimes(prevSlotTimes => prevSlotTimes.map(st =>
+        st._id === selectedSlotObj._id ? { ...st, status: 'booked' } : st
+      ));
+      showNotification('Đặt lịch thành công!', 'success');
+      handleCloseModal();
+    } catch (err: unknown) {
+      let msg = '';
+      if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data) {
+        msg = (err.response.data as { message?: string }).message || '';
+      }
+      showNotification('Đặt lịch thất bại! ' + msg, 'error');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  // Hàm kiểm tra slot trước khi chuyển sang thanh toán
+  const handleGoToPayment = async () => {
+    if (!selectedSlotObj) return;
+    const latestSlot = await getSlotTimeByIdApi(selectedSlotObj._id);
+    if (!latestSlot || latestSlot.status !== 'available') {
+      showNotification('Slot này đã có người đặt, vui lòng chọn slot khác!', 'error');
+      handleCloseModal();
+      return;
+    }
+    // Chuyển sang bước/thanh toán (tuỳ flow của bạn)
+    // Ví dụ: setShowPaymentModal(true);
+  };
+
+  // Hàm gọi sau khi thanh toán thành công
+  const handlePaymentSuccess = async () => {
+    if (!user || !consultant || !selectedSlotObj) {
+      showNotification('Thiếu thông tin người dùng, chuyên gia hoặc slot!', 'error');
+      return;
+    }
+    setBookingLoading(true);
+    try {
+      // Kiểm tra lại slot còn available không trước khi tạo appointment
+      const latestSlot = await getSlotTimeByIdApi(selectedSlotObj._id);
+      if (!latestSlot || latestSlot.status !== 'available') {
+        showNotification('Slot này đã có người đặt, vui lòng chọn slot khác!', 'error');
+        setBookingLoading(false);
+        handleCloseModal();
+        return;
+      }
+      const payload = {
+        slotTime_id: selectedSlotObj._id,
+        user_id: user._id,
+        consultant_id: consultant._id,
+        service_id: form.serviceId,
+        dateBooking: selectedSlotObj.start_time,
+        reason: form.reason,
+        note: form.note,
+      };
+      await createAppointmentApi(payload);
       setSlotTimes(prevSlotTimes => prevSlotTimes.map(st =>
         st._id === selectedSlotObj._id ? { ...st, status: 'booked' } : st
       ));
