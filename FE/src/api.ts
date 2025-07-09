@@ -189,8 +189,8 @@ export const updateSlotTimeApi = async (
   return res.data;
 };
 
-export const updateStatusSlotTimeApi = async (id: string, status: string) => {
-  const res = await api.put(`/slot-times/status/${id}`, { status });
+export const updateStatusSlotTimeApi = async (id: string, status: string, userId?: string) => {
+  const res = await api.put(`/slot-times/status/${id}`, { status, userId });
   return res.data;
 };
 

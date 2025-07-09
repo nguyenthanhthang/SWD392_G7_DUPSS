@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, deleteAppointmentApi, createVnpayPaymentApi, createMomoPaymentApi } from '../api';
+import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, deleteAppointmentApi, createVnpayPaymentApi, createMomoPaymentApi, updateStatusSlotTimeApi } from '../api';
 import { ChevronLeft, ChevronRight, User, Sparkles, Calendar, Banknote, Star, MessageCircle, ChevronDown } from 'lucide-react';
 import { addDays, startOfWeek, isSameWeek } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -57,6 +57,7 @@ interface SlotTime {
   start_time: string;
   end_time: string;
   status: string;
+  holdedBy?: string;
 }
 
 interface AvailableConsultant {
@@ -408,7 +409,10 @@ export default function ServicePage() {
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [countdownTime, setCountdownTime] = useState<number | null>(null);
   const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
+  const [slotHoldTime, setSlotHoldTime] = useState<number | null>(null);
+  const [heldSlotId, setHeldSlotId] = useState<string | null>(null);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
+  const slotHoldInterval = useRef<NodeJS.Timeout | null>(null);
 
   const handleStartConsulting = () => {
     if (!user) {
@@ -542,18 +546,83 @@ export default function ServicePage() {
     return !phoneError && !reasonError;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validate form if on the personal information step
     if (currentStep === 3) {
       if (validateForm()) {
-        setCurrentStep(currentStep + 1);
+        // Kiểm tra slot còn available không trước khi chuyển sang bước thanh toán
+        if (selectedSlot && selectedConsultant) {
+          try {
+            const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+            const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
+            const slotDate = addDays(weekStart, dayIdx);
+            const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+            const slotHour = selectedSlot.time;
+            
+            // Tìm slot time object
+            const slotTimeObj = allSlotTimes.find(st => {
+              if (st.status !== 'available') return false;
+              const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+              const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
+              return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
+            });
+
+            if (!slotTimeObj) {
+              setShowError('Slot này không còn khả dụng. Vui lòng chọn slot khác!');
+              return;
+            }
+
+            // Cập nhật trạng thái slot thành "booked" để giữ slot
+            await updateStatusSlotTimeApi(slotTimeObj._id, 'booked', user!._id);
+            // Lưu thông tin slot đang được giữ
+            setHeldSlotId(slotTimeObj._id);
+            setSlotHoldTime(120); // 2 phút = 120 giây
+            
+            // Cập nhật lại danh sách slot times
+            const updatedSlotTimes = allSlotTimes.map(st => 
+              st._id === slotTimeObj._id ? { ...st, status: 'booked' } : st
+            );
+            setAllSlotTimes(updatedSlotTimes);
+            
+            setCurrentStep(currentStep + 1);
+          } catch (error) {
+            console.error("Error holding slot:", error);
+            setShowError('Slot đã có người giữ. Vui lòng chọn lại slot!');
+            return;
+          }
+        } else {
+          setCurrentStep(currentStep + 1);
+        }
       }
     } else if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     }
   };
-  const handleBack = () => {
-    if (currentStep > 0) setCurrentStep(currentStep - 1);
+  const handleBack = async () => {
+    if (currentStep > 0) {
+      // Nếu đang ở bước thanh toán và quay lại, giải phóng slot
+      if (currentStep === 4 && heldSlotId && slotHoldTime !== null) {
+        try {
+          await updateStatusSlotTimeApi(heldSlotId, 'available');
+          
+          // Cập nhật lại danh sách slot times
+          const updatedSlotTimes = allSlotTimes.map(st => 
+            st._id === heldSlotId ? { ...st, status: 'available' } : st
+          );
+          setAllSlotTimes(updatedSlotTimes);
+          
+          // Reset slot hold state
+          setHeldSlotId(null);
+          setSlotHoldTime(null);
+          if (slotHoldInterval.current) {
+            clearInterval(slotHoldInterval.current);
+          }
+        } catch (error) {
+          console.error("Error releasing slot on back:", error);
+        }
+      }
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   const today = new Date();
@@ -590,20 +659,18 @@ export default function ServicePage() {
       setShowError('Thiếu thông tin đặt lịch!');
       return;
     }
+    
+    // Kiểm tra xem slot có đang được user hiện tại hold không
+    if (!heldSlotId || slotHoldTime === null) {
+      setShowError('Slot đã hết thời gian giữ. Vui lòng chọn lại slot!');
+      return;
+    }
+    
     try {
-      const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-      const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
-      const slotDate = addDays(weekStart, dayIdx);
-      const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-      const slotHour = selectedSlot.time;
-      const slotTimeObj = allSlotTimes.find(st => {
-        if (st.status !== 'available') return false;
-        const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-        const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
-        return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
-      });
-      if (!slotTimeObj) {
-        setShowError('Không tìm thấy slot time phù hợp!');
+      // Sử dụng slot đang được hold thay vì tìm trong danh sách
+      const slotTimeObj = allSlotTimes.find(st => st._id === heldSlotId);
+      if (!slotTimeObj || slotTimeObj.status !== 'booked') {
+        setShowError('Không tìm thấy slot time phù hợp hoặc slot không còn được giữ!');
         return;
       }
       const payload = {
@@ -646,7 +713,28 @@ export default function ServicePage() {
     }
   };
 
-  const handleOpenConsultantDrawer = (slotDay: string, slotTime: string) => {
+  const handleOpenConsultantDrawer = async (slotDay: string, slotTime: string) => {
+    // Nếu đang giữ slot khác, giải phóng trước
+    if (heldSlotId && slotHoldTime !== null) {
+      try {
+        await updateStatusSlotTimeApi(heldSlotId, 'available');
+        
+        // Cập nhật lại danh sách slot times
+        const updatedSlotTimes = allSlotTimes.map(st => 
+          st._id === heldSlotId ? { ...st, status: 'available' } : st
+        );
+        setAllSlotTimes(updatedSlotTimes);
+        
+        setHeldSlotId(null);
+        setSlotHoldTime(null);
+        if (slotHoldInterval.current) {
+          clearInterval(slotHoldInterval.current);
+        }
+      } catch (error) {
+        console.error("Error releasing previous slot:", error);
+      }
+    }
+    
     setSelectedSlot({ day: slotDay, time: slotTime });
     
     const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -746,9 +834,49 @@ export default function ServicePage() {
         console.error("Error cleaning up appointment:", error);
       }
     }
+    
+    // Giải phóng slot khi thanh toán thất bại hoặc hết thời gian
+    if (heldSlotId) {
+      try {
+        await updateStatusSlotTimeApi(heldSlotId, 'available');
+        
+        // Cập nhật lại danh sách slot times
+        const updatedSlotTimes = allSlotTimes.map(st => 
+          st._id === heldSlotId ? { ...st, status: 'available' } : st
+        );
+        setAllSlotTimes(updatedSlotTimes);
+        
+        setHeldSlotId(null);
+        setSlotHoldTime(null);
+        if (slotHoldInterval.current) {
+          clearInterval(slotHoldInterval.current);
+        }
+      } catch (error) {
+        console.error("Error releasing slot on payment failure:", error);
+      }
+    }
   };
 
-  // Handle countdown timer
+  // Function to release held slot
+  const releaseSlot = async () => {
+    if (heldSlotId) {
+      try {
+        await updateStatusSlotTimeApi(heldSlotId, 'available');
+        
+        // Cập nhật lại danh sách slot times
+        const updatedSlotTimes = allSlotTimes.map(st => 
+          st._id === heldSlotId ? { ...st, status: 'available' } : st
+        );
+        setAllSlotTimes(updatedSlotTimes);
+        
+        console.log('Slot released successfully');
+      } catch (error) {
+        console.error("Error releasing slot:", error);
+      }
+    }
+  };
+
+  // Handle countdown timer for payment
   useEffect(() => {
     if (countdownTime === null) return;
 
@@ -768,12 +896,43 @@ export default function ServicePage() {
     };
   }, [countdownTime]);
 
+  // Handle slot hold countdown timer
+  useEffect(() => {
+    if (slotHoldTime === null) return;
+
+    if (slotHoldTime > 0) {
+      slotHoldInterval.current = setInterval(() => {
+        setSlotHoldTime(prev => prev !== null ? prev - 1 : null);
+      }, 1000);
+    } else if (slotHoldTime === 0) {
+      // Hết thời gian giữ slot, trả về available và quay lại step 2
+      void releaseSlot();
+      setSlotHoldTime(null);
+      setHeldSlotId(null);
+      setCurrentStep(2); // Quay lại step chọn thời gian
+      setShowError('Hết thời gian giữ slot. Vui lòng chọn lại thời gian!');
+    }
+
+    return () => {
+      if (slotHoldInterval.current) {
+        clearInterval(slotHoldInterval.current);
+      }
+    };
+  }, [slotHoldTime]);
+
   // Cleanup on unmount or navigation
   useEffect(() => {
     return () => {
       void cleanupPendingAppointment(false);
+      // Chỉ giải phóng slot nếu chưa thanh toán thành công
+      if (heldSlotId && slotHoldTime !== null) {
+        void releaseSlot();
+      }
       if (countdownInterval.current) {
         clearInterval(countdownInterval.current);
+      }
+      if (slotHoldInterval.current) {
+        clearInterval(slotHoldInterval.current);
       }
     };
   }, []);
@@ -791,21 +950,17 @@ export default function ServicePage() {
       return;
     }
 
-    try {
-      const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-      const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
-      const slotDate = addDays(weekStart, dayIdx);
-      const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-      const slotHour = selectedSlot.time;
-      const slotTimeObj = allSlotTimes.find(st => {
-        if (st.status !== 'available') return false;
-        const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-        const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
-        return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
-      });
+    // Kiểm tra xem slot có còn được giữ không
+    if (!heldSlotId || slotHoldTime === null) {
+      setShowError('Slot đã hết thời gian giữ. Vui lòng chọn lại slot!');
+      return;
+    }
 
-      if (!slotTimeObj) {
-        setShowError('Không tìm thấy slot time phù hợp!');
+    try {
+      const slotTimeObj = allSlotTimes.find(st => st._id === heldSlotId);
+
+      if (!slotTimeObj || slotTimeObj.status !== 'booked') {
+        setShowError('Slot không còn khả dụng. Vui lòng chọn slot khác!');
         return;
       }
 
@@ -843,6 +998,7 @@ export default function ServicePage() {
         phone: form.phone,
         gender: form.gender,
         paymentMethod: form.paymentMethod,
+        heldSlotId: heldSlotId, // Lưu thông tin slot đang được giữ
       };
       localStorage.setItem('pendingBill', JSON.stringify(paymentData));
 
@@ -854,6 +1010,7 @@ export default function ServicePage() {
           orderId: newAppointment._id,
         });
         if (vnpayRes && vnpayRes.payUrl) {
+          // Không giải phóng slot khi redirect - slot sẽ được xử lý ở PaymentResultPage
           window.location.href = vnpayRes.payUrl;
           return;
         } else {
@@ -869,6 +1026,7 @@ export default function ServicePage() {
           orderInfo: `Thanh toán cho lịch hẹn ${newAppointment._id}`,
         });
         if (momoRes && momoRes.payUrl) {
+          // Không giải phóng slot khi redirect - slot sẽ được xử lý ở PaymentResultPage
           window.location.href = momoRes.payUrl;
           return;
         } else {
@@ -879,6 +1037,7 @@ export default function ServicePage() {
 
       // Các phương thức khác (card) giữ nguyên flow cũ
       if (form.paymentMethod === 'card') {
+        // Không giải phóng slot khi navigate - slot sẽ được xử lý ở PaymentResultPage
         navigate('/payment/result');
       }
       // PayPal đã xử lý riêng
@@ -893,7 +1052,14 @@ export default function ServicePage() {
       {/* Countdown timer always visible when active */}
       {countdownTime !== null && (
         <div className="fixed top-6 right-6 z-[9999] bg-red-100 text-red-800 px-6 py-3 rounded-xl font-semibold shadow-lg text-lg">
-          Thời gian giữ slot còn: {countdownTime}s
+          Thời gian thanh toán còn: {countdownTime}s
+        </div>
+      )}
+      
+      {/* Slot hold countdown timer */}
+      {slotHoldTime !== null && (
+        <div className="fixed top-6 left-6 z-[9999] bg-amber-100 text-amber-800 px-6 py-3 rounded-xl font-semibold shadow-lg text-lg">
+          Thời gian giữ slot còn: {Math.floor(slotHoldTime / 60)}:{(slotHoldTime % 60).toString().padStart(2, '0')}
         </div>
       )}
       <Header />
@@ -1528,6 +1694,11 @@ export default function ServicePage() {
                       </div>
                       <h2 className="text-3xl font-semibold text-gray-800 mb-2 tracking-tight">Điền thông tin cá nhân</h2>
                       <p className="text-gray-600 text-lg">Vui lòng nhập thông tin liên hệ để xác nhận đặt lịch</p>
+                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <p className="text-amber-800 text-sm">
+                          <strong>Lưu ý:</strong> Khi bạn nhấn "Tiếp tục", slot sẽ được giữ trong 5 phút để bạn hoàn tất thanh toán.
+                        </p>
+                      </div>
                     </div>
                     <div className="flex flex-col gap-5">
                       <div>
@@ -1750,30 +1921,27 @@ export default function ServicePage() {
                                         setShowError('Lỗi thanh toán PayPal. Vui lòng thử lại.');
                                         return;
                                       }
-                                      try {
-                                        await actions.order.capture();
-                                        // Lưu pendingBill vào localStorage và điều hướng sang PaymentResultPage
-                                        const userInfo = localStorage.getItem('userInfo');
-                                        const currentUser = userInfo ? JSON.parse(userInfo) : null;
-                                        if (!selectedSlot || !currentUser) {
-                                          setShowError('Thiếu thông tin đặt lịch!');
-                                          return;
-                                        }
-                                        const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-                                        const dayIdx = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].indexOf(selectedSlot.day);
-                                        const slotDate = addDays(weekStart, dayIdx);
-                                        const slotDateStr = formatInTimeZone(slotDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-                                        const slotHour = selectedSlot.time;
-                                        const slotTimeObj = allSlotTimes.find(st => {
-                                          if (st.status !== 'available') return false;
-                                          const stDateStr = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
-                                          const stHour = formatInTimeZone(st.start_time, 'Asia/Ho_Chi_Minh', 'HH:00');
-                                          return stDateStr === slotDateStr && stHour === slotHour && st.consultant_id === selectedConsultant;
-                                        });
-                                        if (!slotTimeObj) {
-                                          setShowError('Không tìm thấy slot time phù hợp!');
-                                          return;
-                                        }
+                                                            try {
+                        await actions.order.capture();
+                        // Lưu pendingBill vào localStorage và điều hướng sang PaymentResultPage
+                        const userInfo = localStorage.getItem('userInfo');
+                        const currentUser = userInfo ? JSON.parse(userInfo) : null;
+                        if (!selectedSlot || !currentUser) {
+                          setShowError('Thiếu thông tin đặt lịch!');
+                          return;
+                        }
+                        
+                        // Kiểm tra slot đang được hold
+                        if (!heldSlotId || slotHoldTime === null) {
+                          setShowError('Slot đã hết thời gian giữ. Vui lòng chọn lại slot!');
+                          return;
+                        }
+                        
+                        const slotTimeObj = allSlotTimes.find(st => st._id === heldSlotId);
+                        if (!slotTimeObj || slotTimeObj.status !== 'booked') {
+                          setShowError('Không tìm thấy slot time phù hợp hoặc slot không còn được giữ!');
+                          return;
+                        }
                                         const service = services.find(s => s._id === form.serviceId);
                                         if (!service || !service.price) {
                                           setShowError('Dịch vụ không hợp lệ hoặc không có giá!');
@@ -1799,6 +1967,7 @@ export default function ServicePage() {
                                           paypalStatus: 'COMPLETED',
                                         };
                                         localStorage.setItem('pendingBill', JSON.stringify(billData));
+                                        // Không giải phóng slot khi thanh toán thành công - slot sẽ được xử lý ở PaymentResultPage
                                         navigate('/payment/result');
                                       } catch {
                                         setShowError('Thanh toán thất bại. Vui lòng thử lại.');

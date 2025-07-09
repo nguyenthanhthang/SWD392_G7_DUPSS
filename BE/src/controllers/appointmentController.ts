@@ -10,14 +10,32 @@ export const createAppointment = async (req: Request, res: Response) => {
         if (!slotTime) {
             return res.status(404).json({ message: "Slot time not found" });
         }
-        if (slotTime.status !== "available") {
-            return res.status(400).json({ message: "Slot time is not available" });
+        
+        // Kiểm tra slot có khả dụng hoặc đang được hold bởi user hiện tại
+        const isSlotAvailable = slotTime.status === "available";
+        const isSlotHeldByUser = slotTime.status === "booked" && 
+                                slotTime.holdedBy && 
+                                slotTime.holdedBy.toString() === req.body.user_id;
+        
+        if (!isSlotAvailable && !isSlotHeldByUser) {
+            return res.status(400).json({ 
+                message: "Slot time is not available or not held by this user",
+                currentStatus: slotTime.status,
+                holdedBy: slotTime.holdedBy
+            });
         }
 
         const savedAppointment = await newAppointment.save();
-        await SlotTime.findByIdAndUpdate(req.body.slotTime_id, { status: "booked" });
+        
+        // Cập nhật slot thành booked và xóa holdedBy (vì đã chính thức book)
+        await SlotTime.findByIdAndUpdate(req.body.slotTime_id, { 
+            status: "booked",
+            holdedBy: null 
+        });
+        
         res.status(201).json(savedAppointment);
     } catch (err: any) { 
+        console.error("Error creating appointment:", err);
         res.status(400).json({ message: err.message });
     }
 }   
@@ -146,9 +164,12 @@ export const deleteAppointment = async (req: Request, res: Response) => {
         if (appointment.status !== "pending") {
             return res.status(400).json({ message: "Chỉ được xóa lịch hẹn ở trạng thái chờ xác nhận (pending)" });
         }
-        // Trả slotTime về trạng thái 'available' nếu appointment đang giữ slot
+        // Trả slotTime về trạng thái 'available' và cleanup holdedBy nếu appointment đang giữ slot
         if (appointment.slotTime_id) {
-            await SlotTime.findByIdAndUpdate(appointment.slotTime_id, { status: "available" });
+            await SlotTime.findByIdAndUpdate(appointment.slotTime_id, { 
+                status: "available",
+                holdedBy: null 
+            });
         }
         await Appointment.findByIdAndDelete(req.params.id);
         res.status(200).json({ message: "Appointment deleted successfully" });
@@ -194,13 +215,23 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
             });
         }
 
-        // Kiểm tra slot time mới tồn tại và available
+        // Kiểm tra slot time mới tồn tại và available hoặc held by user
         const newSlotTime = await SlotTime.findById(newSlotTimeId);
         if (!newSlotTime) {
             return res.status(404).json({ message: "Không tìm thấy slot thời gian mới" });
         }
-        if (newSlotTime.status !== "available") {
-            return res.status(400).json({ message: "Slot thời gian mới không còn trống" });
+        
+        const isNewSlotAvailable = newSlotTime.status === "available";
+        const isNewSlotHeldByUser = newSlotTime.status === "booked" && 
+                                   newSlotTime.holdedBy && 
+                                   newSlotTime.holdedBy.toString() === currentAppointment.user_id.toString();
+        
+        if (!isNewSlotAvailable && !isNewSlotHeldByUser) {
+            return res.status(400).json({ 
+                message: "Slot thời gian mới không còn trống hoặc không được hold bởi bạn",
+                currentStatus: newSlotTime.status,
+                holdedBy: newSlotTime.holdedBy
+            });
         }
 
         // Kiểm tra consultant_id khớp với slot
@@ -216,11 +247,17 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
             isRescheduled: true 
         });
 
-        // 2. Trả slot cũ về "available"
-        await SlotTime.findByIdAndUpdate(currentAppointment.slotTime_id, { status: "available" });
+        // 2. Trả slot cũ về "available" và cleanup holdedBy
+        await SlotTime.findByIdAndUpdate(currentAppointment.slotTime_id, { 
+            status: "available",
+            holdedBy: null 
+        });
 
-        // 3. Cập nhật slot mới thành "booked"
-        await SlotTime.findByIdAndUpdate(newSlotTimeId, { status: "booked" });
+        // 3. Cập nhật slot mới thành "booked" và cleanup holdedBy (vì đã chính thức book)
+        await SlotTime.findByIdAndUpdate(newSlotTimeId, { 
+            status: "booked",
+            holdedBy: null 
+        });
 
         // 4. Tạo appointment mới với isRescheduled = true (không cho đổi lịch nữa)
         const newAppointment = new Appointment({

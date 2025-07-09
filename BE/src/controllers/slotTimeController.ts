@@ -98,11 +98,71 @@ export const updateSlotTime = async (req: Request, res: Response) => {
 export const updateStatusSlotTime = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;  
-        const { status } = req.body;
-        const slotTime = await SlotTime.findByIdAndUpdate(id, { status }, { new: true });
-        res.status(200).json({ message: "Cập nhật trạng thái slot time thành công",data:slotTime });
+        const { status, userId } = req.body;
+        
+        // Lấy thông tin slot hiện tại
+        const currentSlot = await SlotTime.findById(id);
+        if (!currentSlot) {
+            return res.status(404).json({ message: "Không tìm thấy slot time" });
+        }
+        
+        let update: any = { status };
+        
+        // Validation dựa trên trạng thái mới
+        if (status === 'booked') {
+            // Chỉ cho phép book slot nếu đang available
+            if (currentSlot.status !== 'available') {
+                return res.status(400).json({ 
+                    message: "Slot này không thể đặt (đã được đặt hoặc không khả dụng)",
+                    currentStatus: currentSlot.status 
+                });
+            }
+            
+            // Kiểm tra userId được cung cấp
+            if (!userId) {
+                return res.status(400).json({ message: "Thiếu thông tin userId để hold slot" });
+            }
+            
+            update.holdedBy = userId;
+        } 
+        else if (status === 'available') {
+            // Khi release slot, kiểm tra quyền
+            if (currentSlot.status === 'booked' && currentSlot.holdedBy) {
+                // Nếu slot đang được hold bởi user khác, không cho phép release
+                if (userId && currentSlot.holdedBy.toString() !== userId) {
+                    return res.status(403).json({ 
+                        message: "Bạn không có quyền release slot này (slot đang được hold bởi user khác)" 
+                    });
+                }
+            }
+            
+            update.holdedBy = null;
+        }
+        
+        // Sử dụng findOneAndUpdate với điều kiện để tránh race condition
+        const slotTime = await SlotTime.findOneAndUpdate(
+            { 
+                _id: id,
+                // Điều kiện bổ sung để đảm bảo atomic update
+                ...(status === 'booked' ? { status: 'available' } : {})
+            },
+            update, 
+            { new: true }
+        );
+        
+        if (!slotTime) {
+            return res.status(409).json({ 
+                message: "Không thể cập nhật slot - có thể đã bị thay đổi bởi user khác. Vui lòng refresh và thử lại." 
+            });
+        }
+        
+        res.status(200).json({ 
+            message: "Cập nhật trạng thái slot time thành công",
+            data: slotTime 
+        });
     } catch (error) {
-        res.status(500).json({ message: "Xảy ra lỗi khi cập nhật trạng thái slot time",error });
+        console.error("Error updating slot status:", error);
+        res.status(500).json({ message: "Xảy ra lỗi khi cập nhật trạng thái slot time", error });
     }
 }   
 
