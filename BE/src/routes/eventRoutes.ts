@@ -13,20 +13,21 @@ import {
   getRegisteredEvents,
   getCheckInHistory,
 } from "../controllers/eventController";
+import { authMiddleware, roleMiddleware } from "../middleware";
 
 const router = express.Router();
 
 // CRUD routes
-router.post("/", createEvent);
+router.post("/", authMiddleware, roleMiddleware(["admin"]), createEvent);
 router.get("/", getAllEvents);
 router.get("/registered/:userId", getRegisteredEvents);
 router.get("/:id", getEventById);
-router.put("/:id", updateEvent);
-router.delete("/:id", deleteEvent);
+router.put("/:id", authMiddleware, roleMiddleware(["admin"]), updateEvent);
+router.delete("/:id", authMiddleware, roleMiddleware(["admin"]), deleteEvent);
 
 // Registration routes
-router.post("/:id/register", registerEvent);
-router.post("/:id/unregister", unregisterEvent);
+router.post("/:id/register", authMiddleware, roleMiddleware(["customer"]), registerEvent);
+router.post("/:id/unregister", authMiddleware, roleMiddleware(["customer"]), unregisterEvent);
 
 // QR code và check-in routes
 router.get("/:id/qr", getEventQRCode);
