@@ -26,6 +26,7 @@ export const getAllBlogs = async (req: Request, res: Response) => {
 export const getBlogById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const isAdmin = req.query.isAdmin === 'true';
     
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'ID blog không hợp lệ' });
@@ -37,7 +38,8 @@ export const getBlogById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Không tìm thấy blog' });
     }
     
-    if (blog.published !== 'published') {
+    // Nếu không phải admin, chỉ cho phép xem blog đã xuất bản
+    if (!isAdmin && blog.published !== 'published') {
       return res.status(404).json({ message: 'Bài viết này chưa được xuất bản hoặc không tồn tại' });
     }
     
@@ -57,7 +59,7 @@ export const createBlog = async (req: MulterRequest, res: Response) => {
     }
     
     // Validate published status
-    const validStatuses = ['draft', 'published', 'rejected'];
+    const validStatuses = ['draft', 'published', 'unpublished', 'rejected'];
     const publishedStatus = published || 'draft';
     if (!validStatuses.includes(publishedStatus)) {
       return res.status(400).json({ message: 'Trạng thái published không hợp lệ' });
@@ -134,7 +136,7 @@ export const updateBlog = async (req: MulterRequest, res: Response) => {
     
     // Validate và xử lý published status
     if (published !== undefined && published !== null) {
-      const validStatuses = ['draft', 'published', 'rejected'];
+      const validStatuses = ['draft', 'published', 'unpublished', 'rejected'];
       if (!validStatuses.includes(published)) {
         return res.status(400).json({ 
           message: `Trạng thái published không hợp lệ: ${published}. Các giá trị hợp lệ: ${validStatuses.join(', ')}` 
@@ -288,5 +290,39 @@ export const getComments = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error in getComments:', error);
     res.status(500).json({ message: 'Lỗi server khi lấy comments' });
+  }
+};
+
+// [PATCH] /api/blogs/:id/status - Thay đổi trạng thái blog (chỉ admin)
+export const updateBlogStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { published } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'ID blog không hợp lệ' });
+    }
+
+    const validStatuses = ['draft', 'published', 'unpublished', 'rejected'];
+    if (!validStatuses.includes(published)) {
+      return res.status(400).json({ 
+        message: `Trạng thái published không hợp lệ: ${published}. Các giá trị hợp lệ: ${validStatuses.join(', ')}` 
+      });
+    }
+
+    const blog = await Blog.findByIdAndUpdate(
+      id,
+      { published },
+      { new: true }
+    );
+
+    if (!blog) {
+      return res.status(404).json({ message: 'Không tìm thấy blog' });
+    }
+
+    res.json(blog);
+  } catch (error) {
+    console.error('Error in updateBlogStatus:', error);
+    res.status(500).json({ message: 'Lỗi server khi cập nhật trạng thái blog' });
   }
 }; 

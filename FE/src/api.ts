@@ -4,7 +4,7 @@ export interface BlogData {
   title: string;
   content: string;
   author: string;
-  published: "draft" | "published" | "rejected";
+  published: "draft" | "published" | "unpublished" | "rejected";
   topics?: string[];
   image?: File | string; // Có thể là File khi upload hoặc URL string khi hiển thị
   anDanh?: boolean;
@@ -426,6 +426,12 @@ export const updateBlogApi = async (id: string, data: BlogData) => {
     const res = await api.put(`/blogs/${id}`, data);
     return res.data;
   }
+};
+
+// API để cập nhật trạng thái blog (chỉ admin)
+export const updateBlogStatusApi = async (id: string, published: "draft" | "published" | "unpublished" | "rejected") => {
+  const res = await api.patch(`/blogs/${id}/status`, { published });
+  return res.data;
 };
 
 export const deleteBlogApi = async (id: string) => {

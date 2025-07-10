@@ -1,44 +1,80 @@
 const mongoose = require('mongoose');
-const Blog = require('../models/Blog');
+require('dotenv').config();
 
 // Kết nối database
-mongoose.connect('mongodb://localhost:27017/your_database_name', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/your_database_name');
+
+// Schema Blog với enum mới
+const BlogSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  author: { type: String, required: true },
+  image: { type: String },
+  thumbnail: { type: String },
+  topics: [{ type: String }],
+  published: { 
+    type: String, 
+    enum: ['draft', 'published', 'unpublished', 'rejected'], 
+    default: 'draft' 
+  },
+  comments: [{
+    userId: { type: String, required: true },
+    username: { type: String, required: true },
+    content: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+  }],
+  anDanh: { type: Boolean, default: false }
+}, {
+  timestamps: true,
+  versionKey: false
 });
+
+const Blog = mongoose.model('Blog', BlogSchema);
 
 async function migrateBlogStatus() {
   try {
-    console.log('Bắt đầu migration trạng thái blog...');
+    console.log('Bắt đầu migration blog status...');
     
-    // Lấy tất cả blogs
-    const blogs = await Blog.find({});
-    console.log(`Tìm thấy ${blogs.length} blogs cần migration`);
+    // Kiểm tra số lượng blog
+    const blogCount = await Blog.countDocuments();
+    console.log(`Tổng số blog trong database: ${blogCount}`);
     
-    let updatedCount = 0;
-    
-    for (const blog of blogs) {
-      // Kiểm tra nếu published là boolean
-      if (typeof blog.published === 'boolean') {
-        // Chuyển đổi boolean sang string
-        const newStatus = blog.published ? 'published' : 'draft';
-        
-        // Cập nhật blog
-        await Blog.findByIdAndUpdate(blog._id, {
-          published: newStatus
-        });
-        
-        console.log(`Đã cập nhật blog "${blog.title}" từ ${blog.published} thành "${newStatus}"`);
-        updatedCount++;
+    // Hiển thị thống kê trạng thái hiện tại
+    const statusStats = await Blog.aggregate([
+      {
+        $group: {
+          _id: '$published',
+          count: { $sum: 1 }
+        }
       }
+    ]);
+    
+    console.log('Thống kê trạng thái blog hiện tại:');
+    statusStats.forEach(stat => {
+      console.log(`- ${stat._id || 'null'}: ${stat.count} blog`);
+    });
+    
+    // Kiểm tra xem có blog nào có trạng thái không hợp lệ không
+    const invalidBlogs = await Blog.find({
+      published: { $nin: ['draft', 'published', 'unpublished', 'rejected'] }
+    });
+    
+    if (invalidBlogs.length > 0) {
+      console.log(`Tìm thấy ${invalidBlogs.length} blog có trạng thái không hợp lệ:`);
+      invalidBlogs.forEach(blog => {
+        console.log(`- Blog "${blog.title}" có trạng thái: ${blog.published}`);
+      });
+    } else {
+      console.log('Tất cả blog đều có trạng thái hợp lệ!');
     }
     
-    console.log(`Migration hoàn thành! Đã cập nhật ${updatedCount} blogs`);
+    console.log('Migration hoàn thành!');
     
   } catch (error) {
-    console.error('Lỗi trong quá trình migration:', error);
+    console.error('Lỗi migration:', error);
   } finally {
     mongoose.connection.close();
+    console.log('Đã đóng kết nối database');
   }
 }
 

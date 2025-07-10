@@ -15,7 +15,7 @@ export interface IBlog extends Document {
   image?: string;
   thumbnail?: string;
   topics?: string[];
-  published: 'draft' | 'published' | 'rejected';
+  published: 'draft' | 'published' | 'unpublished' | 'rejected';
   comments: IComment[];
   createdAt: Date;
   updatedAt: Date;
@@ -39,7 +39,7 @@ const BlogSchema: Schema = new Schema(
     topics: [{ type: String }],
     published: { 
       type: String, 
-      enum: ['draft', 'published', 'rejected'], 
+      enum: ['draft', 'published', 'unpublished', 'rejected'], 
       default: 'draft' 
     },
     comments: [CommentSchema],

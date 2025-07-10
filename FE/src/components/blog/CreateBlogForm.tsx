@@ -18,7 +18,7 @@ interface CreateBlogFormProps {
     author?: string;
     topics?: string;
     image?: string;
-    published?: 'draft' | 'published' | 'rejected';
+    published?: 'draft' | 'published' | 'unpublished' | 'rejected';
     anDanh?: boolean;
   };
   onSubmit?: (data: BlogData) => Promise<void>;
@@ -62,7 +62,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [anDanh, setAnDanh] = useState(initialData?.anDanh || false);
-  const [trangThai, setTrangThai] = useState<'draft' | 'published' | 'rejected'>(
+  const [trangThai, setTrangThai] = useState<'draft' | 'published' | 'unpublished' | 'rejected'>(
     initialData?.published || 'draft'
   );
 
@@ -192,7 +192,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
         content: noiDung,
         author: realAuthor,
         topics: topics.split(",").map((topic: string) => topic.trim()),
-        published: isAdmin ? trangThai : 'draft',
+        published: isAdmin ? (trangThai === 'draft' ? 'published' : trangThai) : 'draft',
         anDanh: anDanh
       };
       if (hinhAnh) {
@@ -493,12 +493,11 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               </label>
               <select
                 value={trangThai}
-                onChange={(e) => setTrangThai(e.target.value as 'draft' | 'published' | 'rejected')}
+                onChange={(e) => setTrangThai(e.target.value as 'draft' | 'published' | 'unpublished' | 'rejected')}
                 className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 bg-blue-50 text-blue-900"
               >
-                <option value="draft">Chưa xuất bản</option>
-                <option value="published">Đã xuất bản</option>
-                <option value="rejected">Từ chối</option>
+                <option value="published">Xuất bản</option>
+                <option value="unpublished">Ngừng xuất bản</option>
               </select>
             </div>
           )}

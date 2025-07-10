@@ -9,6 +9,7 @@ import {
   addComment,
   deleteComment,
   getComments,
+  updateBlogStatus,
 } from "../controllers/blogController";
 import upload from "../middleware/uploadImage";
 
@@ -22,6 +23,8 @@ router.get("/:id", getBlogById);
 router.post("/", upload.single("image"), createBlog);
 // Cập nhật blog (có upload ảnh)
 router.put("/:id", upload.single("image"), updateBlog);
+// Cập nhật trạng thái blog (chỉ admin)
+router.patch("/:id/status", updateBlogStatus);
 // Xóa blog
 router.delete("/:id", deleteBlog);
 // Lấy blog theo userId
