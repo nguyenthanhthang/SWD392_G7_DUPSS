@@ -135,6 +135,7 @@ const BlogManagement: React.FC = () => {
       title: blog.title,
       content: blog.content,
       authorId: blog.authorId._id,
+      authorName: blog.authorId.fullName, // Thêm dòng này để truyền tên tác giả
       topics: blog.topics?.join(', ') || '',
       published: blog.published,
       image: blog.image || '',
@@ -703,6 +704,7 @@ const BlogManagement: React.FC = () => {
                 title: editingBlog.title,
                 content: editingBlog.content,
                 authorId: editingBlog.authorId._id,
+                authorName: editingBlog.authorId.fullName, // Thêm dòng này để truyền tên tác giả
                 topics: editingBlog.topics?.join(', ') || '',
                 image: editingBlog.image || '',
                 published: editingBlog.published,
@@ -711,6 +713,7 @@ const BlogManagement: React.FC = () => {
                 title: formData.title,
                 content: formData.content,
                 authorId: formData.authorId,
+                authorName: formData.authorName, // Thêm dòng này để truyền tên tác giả
                 topics: formData.topics || '',
                 image: formData.image || '',
                 published: formData.published,
