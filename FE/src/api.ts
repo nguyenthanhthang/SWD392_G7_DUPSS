@@ -805,7 +805,7 @@ export const rescheduleAppointmentApi = async (
   newSlotTimeId: string,
   newConsultantId?: string
 ) => {
-  const res = await api.put(`/appointments/${appointmentId}/reschedule`, {
+  const res = await api.put(`/appointments/reschedule/${appointmentId}`, {
     newSlotTimeId,
     newConsultantId,
   });
