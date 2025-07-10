@@ -701,7 +701,7 @@ export default function Profile() {
                               >
                                 Xem chi tiết
                               </button>
-                              {blog.published !== 'rejected' && (
+                              {blog.published !== 'rejected' && blog.published !== 'published' && (
                                 <button 
                                   onClick={() => { setBlogDangSua(blog); setModalEdit(true); }} 
                                   className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-sm font-medium transition-colors"
@@ -952,6 +952,12 @@ export default function Profile() {
               onCancel={() => setModalEdit(false)}
               onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(authUser?._id) getBlogsByUserIdApi(authUser._id).then(setBlogs); }}
               onSubmit={async (data) => {
+                // Kiểm tra nếu blog đang chỉnh sửa đã xuất bản thì không cho phép
+                if (blogDangSua.published === 'published') {
+                  showToast('error', 'Không thể chỉnh sửa bài viết đã xuất bản.');
+                  return;
+                }
+                
                 const dataUpdate = { ...data };
                 if (blogDangSua.published === 'published') dataUpdate.published = 'draft';
                 await updateBlogApi(blogDangSua._id, dataUpdate);
