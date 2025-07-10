@@ -19,7 +19,7 @@ interface Blog {
   image?: string;
   thumbnail?: string;
   topics?: string[];
-  published: 'draft' | 'published' | 'rejected';
+  published: 'draft' | 'published' | 'unpublished' | 'rejected';
   comments: IComment[];
   createdAt: string;
   updatedAt: string;
