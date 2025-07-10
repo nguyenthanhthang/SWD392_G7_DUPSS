@@ -45,23 +45,27 @@ const BlogManagement: React.FC = () => {
   const [blogDangXem, setBlogDangXem] = useState<Blog | null>(null);
   const [hienModalXem, setHienModalXem] = useState(false);
 
+  // Thêm state cho tab
+  const [activeTab, setActiveTab] = useState<'draft' | 'published' | 'unpublished' | 'rejected'>('draft');
+
   // Filtered blogs
-  const filteredBlogs = blogs.filter(blog => {
-    const matchesSearch =
-      searchTerm === '' ||
-      blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (blog.authorId?.fullName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (blog.authorId?.username?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === '' ||
-      (statusFilter === 'published' && blog.published === 'published') ||
-      (statusFilter === 'unpublished' && blog.published === 'unpublished') ||
-      (statusFilter === 'rejected' && blog.published === 'rejected') ||
-      (statusFilter === 'pending' && blog.published === 'draft');
-    const matchesAuthor =
-      authorFilter === '' || (blog.authorId?.fullName === authorFilter || blog.authorId?.username === authorFilter);
-    return matchesSearch && matchesStatus && matchesAuthor;
-  });
+  const filteredBlogs = blogs.filter(blog => blog.published === activeTab)
+    .filter(blog => {
+      const matchesSearch =
+        searchTerm === '' ||
+        blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (blog.authorId?.fullName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (blog.authorId?.username?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === '' ||
+        (statusFilter === 'published' && blog.published === 'published') ||
+        (statusFilter === 'unpublished' && blog.published === 'unpublished') ||
+        (statusFilter === 'rejected' && blog.published === 'rejected') ||
+        (statusFilter === 'pending' && blog.published === 'draft');
+      const matchesAuthor =
+        authorFilter === '' || (blog.authorId?.fullName === authorFilter || blog.authorId?.username === authorFilter);
+      return matchesSearch && matchesStatus && matchesAuthor;
+    });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,6 +115,16 @@ const BlogManagement: React.FC = () => {
       setNotification({
         type: 'error', 
         message: 'Không thể sửa bài viết đã bị từ chối. Vui lòng tạo bài viết mới.'
+      });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
+    // Kiểm tra nếu blog đã xuất bản thì không cho sửa
+    if (blog.published === 'published') {
+      setNotification({
+        type: 'error', 
+        message: 'Không thể sửa bài viết đã xuất bản.'
       });
       setTimeout(() => setNotification(null), 3000);
       return;
@@ -332,6 +346,31 @@ const BlogManagement: React.FC = () => {
     }
   };
 
+  const handleAdminChangeStatus = async (blog: Blog, newStatus: 'published' | 'unpublished') => {
+    if (blog.published === newStatus) return;
+    try {
+      await updateBlogStatusApi(blog._id, newStatus);
+      fetchBlogs();
+      setNotification({ type: 'success', message: 'Cập nhật trạng thái thành công!' });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error: any) {
+      setNotification({ type: 'error', message: 'Cập nhật trạng thái thất bại!' });
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
+  const handleAdminDraftStatus = async (blog: Blog, newStatus: 'draft' | 'published' | 'rejected') => {
+    if (blog.published === newStatus) return;
+    try {
+      await updateBlogStatusApi(blog._id, newStatus);
+      fetchBlogs();
+      setNotification({ type: 'success', message: 'Cập nhật trạng thái thành công!' });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error: any) {
+      setNotification({ type: 'error', message: 'Cập nhật trạng thái thất bại!' });
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
 
 
   return (
@@ -459,6 +498,26 @@ const BlogManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Thêm thanh tab phía trên bảng */}
+      <div className="flex gap-2 mb-4">
+        <button
+          className={`px-4 py-2 rounded-t-lg font-medium border-b-2 ${activeTab === 'draft' ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-transparent text-gray-500 bg-white'}`}
+          onClick={() => setActiveTab('draft')}
+        >Chưa duyệt</button>
+        <button
+          className={`px-4 py-2 rounded-t-lg font-medium border-b-2 ${activeTab === 'published' ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-transparent text-gray-500 bg-white'}`}
+          onClick={() => setActiveTab('published')}
+        >Đã xuất bản</button>
+        <button
+          className={`px-4 py-2 rounded-t-lg font-medium border-b-2 ${activeTab === 'unpublished' ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-transparent text-gray-500 bg-white'}`}
+          onClick={() => setActiveTab('unpublished')}
+        >Ngừng xuất bản</button>
+        <button
+          className={`px-4 py-2 rounded-t-lg font-medium border-b-2 ${activeTab === 'rejected' ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-transparent text-gray-500 bg-white'}`}
+          onClick={() => setActiveTab('rejected')}
+        >Từ chối</button>
+      </div>
+
       {/* Table */}
       <div className="overflow-hidden shadow-md ring-1 ring-black ring-opacity-5 bg-white rounded-xl">
         <div className="overflow-x-auto">
@@ -507,7 +566,13 @@ const BlogManagement: React.FC = () => {
                   </td>
                   */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {blog.anDanh ? <span className="text-cyan-600 italic">(Ẩn danh)</span> : (blog.authorId?.fullName || 'Không xác định')}
+                    <div className="flex items-center">
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {blog.anDanh ? 'Ẩn danh' : (blog.authorId?.fullName || 'Không xác định')}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   {/*
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -521,55 +586,41 @@ const BlogManagement: React.FC = () => {
                   </td>
                   */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(blog.published)}
-                      
-                      {/* Nút cho blog của user (chưa duyệt) */}
-                      {!isAdminBlog(blog) && blog.published === 'draft' && (
-                        <div className="flex space-x-1">
-                          <button
-                            onClick={() => handleDuyetBlog(blog)}
-                            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex items-center gap-1"
-                            title="Duyệt bài viết"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Duyệt
-                          </button>
-                          <button
-                            onClick={() => handleTuChoiBlog(blog)}
-                            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center gap-1"
-                            title="Từ chối bài viết"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Từ chối
-                          </button>
-                        </div>
-                      )}
-                      
-                      {/* Nút cho blog của admin */}
-                      {isAdminBlog(blog) && (
-                        <button
-                          onClick={() => handleToggleAdminBlogStatus(blog)}
-                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-                            blog.published === 'published' 
-                              ? 'bg-orange-500 text-white hover:bg-orange-600' 
-                              : 'bg-green-500 text-white hover:bg-green-600'
-                          }`}
-                          title={blog.published === 'published' ? 'Ngừng xuất bản' : 'Xuất bản'}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            {blog.published === 'published' ? (
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            ) : (
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            )}
+                    <div className="flex items-center gap-2">
+                      {activeTab === 'draft' ? (
+                        <div className="flex items-center gap-1">
+                          {/* Icon bút chì */}
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1 group-hover:text-sky-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
-                          {blog.published === 'published' ? 'Ngừng' : 'Xuất bản'}
-                        </button>
+                          <select
+                            value={blog.published}
+                            onChange={e => handleAdminDraftStatus(blog, e.target.value as 'draft' | 'published' | 'rejected')}
+                            className="px-2 py-1 rounded border border-gray-300 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            style={{ minWidth: 120 }}
+                          >
+                            <option value="draft">Chưa duyệt</option>
+                            <option value="published">Duyệt</option>
+                            <option value="rejected">Từ chối</option>
+                          </select>
+                        </div>
+                      ) : isAdminBlog(blog) ? (
+                        <div className="flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1 group-hover:text-sky-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          <select
+                            value={blog.published}
+                            onChange={e => handleAdminChangeStatus(blog, e.target.value as 'published' | 'unpublished')}
+                            className="px-2 py-1 rounded border border-gray-300 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            style={{ minWidth: 120 }}
+                          >
+                            <option value="published">Đã xuất bản</option>
+                            <option value="unpublished">Ngừng xuất bản</option>
+                          </select>
+                        </div>
+                      ) : (
+                        getStatusBadge(blog.published)
                       )}
                     </div>
                   </td>
@@ -586,8 +637,8 @@ const BlogManagement: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                       </button>
-                      {/* Chỉ hiển thị nút sửa nếu blog không bị từ chối */}
-                      {blog.published !== 'rejected' && (
+                      {/* Chỉ hiển thị nút sửa nếu blog không phải trạng thái published hoặc rejected */}
+                      {blog.published !== 'rejected' && blog.published !== 'published' && (
                         <button
                           onClick={() => handleEdit(blog)}
                           className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
