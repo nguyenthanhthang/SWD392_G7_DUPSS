@@ -14,7 +14,9 @@ export const getAllBlogs = async (req: Request, res: Response) => {
     
     // If not admin, only return published blogs
     const query = isAdmin ? {} : { published: 'published' };
-    const blogs = await Blog.find(query).sort({ createdAt: -1 });
+    const blogs = await Blog.find(query)
+      .populate('authorId', 'fullName username')
+      .sort({ createdAt: -1 });
     
     res.json(blogs);
   } catch (error) {
@@ -32,7 +34,7 @@ export const getBlogById = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'ID blog không hợp lệ' });
     }
 
-    const blog = await Blog.findById(id);
+    const blog = await Blog.findById(id).populate('authorId', 'fullName username');
     
     if (!blog) {
       return res.status(404).json({ message: 'Không tìm thấy blog' });
@@ -52,7 +54,7 @@ export const getBlogById = async (req: Request, res: Response) => {
 
 export const createBlog = async (req: MulterRequest, res: Response) => {
   try {
-    const { title, content, author, topics, published, anDanh } = req.body;
+    const { title, content, authorId, topics, published, anDanh } = req.body;
     let imageUrl = req.body.image;
     if (req.file && req.file.path) {
       imageUrl = req.file.path;
@@ -63,6 +65,11 @@ export const createBlog = async (req: MulterRequest, res: Response) => {
     const publishedStatus = published || 'draft';
     if (!validStatuses.includes(publishedStatus)) {
       return res.status(400).json({ message: 'Trạng thái published không hợp lệ' });
+    }
+    
+    // Validate authorId
+    if (!authorId || !mongoose.Types.ObjectId.isValid(authorId)) {
+      return res.status(400).json({ message: 'ID tác giả không hợp lệ' });
     }
     
     // Nếu topics là string (từ form-data), parse thành mảng
@@ -81,7 +88,7 @@ export const createBlog = async (req: MulterRequest, res: Response) => {
     const newBlog = new Blog({ 
       title, 
       content, 
-      author, 
+      authorId, 
       topics: topicsArr, 
       published: publishedStatus, 
       image: imageUrl,
@@ -108,10 +115,18 @@ export const updateBlog = async (req: MulterRequest, res: Response) => {
       return res.status(403).json({ message: 'Không thể sửa bài viết đã bị từ chối. Vui lòng tạo bài viết mới.' });
     }
 
-    const { title, content, author, topics, published, anDanh } = req.body;
+    const { title, content, authorId, topics, published, anDanh } = req.body;
     console.log('Update blog request body:', req.body); // Debug log
     
-    let updateData: any = { title, content, author };
+    let updateData: any = { title, content };
+    
+    // Validate authorId nếu có cập nhật
+    if (authorId && !mongoose.Types.ObjectId.isValid(authorId)) {
+      return res.status(400).json({ message: 'ID tác giả không hợp lệ' });
+    }
+    if (authorId) {
+      updateData.authorId = authorId;
+    }
     
     // Xử lý topics
     if (topics !== undefined && topics !== null) {
@@ -163,7 +178,7 @@ export const updateBlog = async (req: MulterRequest, res: Response) => {
       req.params.id,
       updateData,
       { new: true }
-    );
+    ).populate('authorId', 'fullName username');
     
     if (!blog) return res.status(404).json({ message: 'Không tìm thấy blog' });
     res.json(blog);
@@ -186,11 +201,15 @@ export const deleteBlog = async (req: Request, res: Response) => {
 export const getBlogsByUserId = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    // Lấy user từ bảng Account
-    const user = await import('../models/Account').then(m => m.default.findById(userId));
-    if (!user) return res.json([]);
-    // Lấy blog theo author là fullName hoặc username
-    const blogs = await Blog.find({ author: { $in: [user.fullName, user.username] } }).sort({ createdAt: -1 });
+    
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'ID user không hợp lệ' });
+    }
+    
+    // Lấy blog theo authorId
+    const blogs = await Blog.find({ authorId: userId })
+      .populate('authorId', 'fullName username')
+      .sort({ createdAt: -1 });
     res.json(blogs);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server' });
@@ -314,7 +333,7 @@ export const updateBlogStatus = async (req: Request, res: Response) => {
       id,
       { published },
       { new: true }
-    );
+    ).populate('authorId', 'fullName username');
 
     if (!blog) {
       return res.status(404).json({ message: 'Không tìm thấy blog' });

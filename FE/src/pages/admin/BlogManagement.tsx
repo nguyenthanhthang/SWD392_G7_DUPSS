@@ -12,7 +12,11 @@ interface Blog {
   _id: string;
   title: string;
   content: string;
-  author: string;
+  authorId: {
+    _id: string;
+    fullName: string;
+    username: string;
+  };
   image?: string;
   thumbnail?: string;
   topics?: string[];
@@ -20,7 +24,7 @@ interface Blog {
   comments: any[];
   createdAt: string;
   updatedAt: string;
-  anDanh?: boolean;
+  anDanh: boolean;
 }
 
 const BlogManagement: React.FC = () => {
@@ -46,7 +50,8 @@ const BlogManagement: React.FC = () => {
     const matchesSearch =
       searchTerm === '' ||
       blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      blog.author.toLowerCase().includes(searchTerm.toLowerCase());
+      (blog.authorId?.fullName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (blog.authorId?.username?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === '' ||
       (statusFilter === 'published' && blog.published === 'published') ||
@@ -54,7 +59,7 @@ const BlogManagement: React.FC = () => {
       (statusFilter === 'rejected' && blog.published === 'rejected') ||
       (statusFilter === 'pending' && blog.published === 'draft');
     const matchesAuthor =
-      authorFilter === '' || blog.author === authorFilter;
+      authorFilter === '' || (blog.authorId?.fullName === authorFilter || blog.authorId?.username === authorFilter);
     return matchesSearch && matchesStatus && matchesAuthor;
   });
 
@@ -90,7 +95,7 @@ const BlogManagement: React.FC = () => {
     setFormData({ 
       title: '', 
       content: '', 
-      author: user?.username || 'Admin', 
+      authorId: user?._id || '', 
       topics: '', 
       published: 'draft',
       image: '',
@@ -115,7 +120,7 @@ const BlogManagement: React.FC = () => {
     setFormData({
       title: blog.title,
       content: blog.content,
-      author: blog.author,
+      authorId: blog.authorId._id,
       topics: blog.topics?.join(', ') || '',
       published: blog.published,
       image: blog.image || '',
@@ -269,7 +274,7 @@ const BlogManagement: React.FC = () => {
 
   // Kiểm tra xem blog có phải của admin không
   const isAdminBlog = (blog: Blog) => {
-    return blog.author === user?.username || blog.author === 'Admin';
+    return blog.authorId?.username === user?.username || blog.authorId?.username === 'Admin';
   };
 
   // Handle duyệt blog (chỉ cho blog của user)
@@ -425,10 +430,11 @@ const BlogManagement: React.FC = () => {
             >
               <option value="">Tất cả tác giả</option>
               {blogs
-                .map(blog => blog.author)
+                .filter(blog => blog.authorId) // Lọc bỏ blog không có authorId
+                .map(blog => (blog.anDanh ? 'Ẩn danh' : (blog.authorId?.fullName || 'Không xác định')))
                 .filter((author, index, array) => array.indexOf(author) === index)
                 .map(author => {
-                  const hasAnonymous = blogs.some(blog => blog.author === author && blog.anDanh);
+                  const hasAnonymous = blogs.some(blog => (blog.anDanh ? 'Ẩn danh' : (blog.authorId?.fullName || 'Không xác định')) === author && blog.anDanh);
                   return (
                     <option key={author} value={author}>
                       {author} {hasAnonymous ? '[Có bài ẩn danh]' : ''}
@@ -501,7 +507,7 @@ const BlogManagement: React.FC = () => {
                   </td>
                   */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {blog.anDanh ? <span className="text-cyan-600 italic">(Ẩn danh)</span> : blog.author}
+                    {blog.anDanh ? <span className="text-cyan-600 italic">(Ẩn danh)</span> : (blog.authorId?.fullName || 'Không xác định')}
                   </td>
                   {/*
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -645,7 +651,7 @@ const BlogManagement: React.FC = () => {
               initialData={editingBlog ? {
                 title: editingBlog.title,
                 content: editingBlog.content,
-                author: editingBlog.author,
+                authorId: editingBlog.authorId._id,
                 topics: editingBlog.topics?.join(', ') || '',
                 image: editingBlog.image || '',
                 published: editingBlog.published,
@@ -653,7 +659,7 @@ const BlogManagement: React.FC = () => {
               } : (formData.title ? {
                 title: formData.title,
                 content: formData.content,
-                author: formData.author,
+                authorId: formData.authorId,
                 topics: formData.topics || '',
                 image: formData.image || '',
                 published: formData.published,

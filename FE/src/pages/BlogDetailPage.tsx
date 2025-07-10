@@ -4,18 +4,31 @@ import { getBlogByIdApi, getAllBlogsApi } from '../api';
 import MainLayout from '../components/layout/MainLayout';
 import BlogDetailView from '../components/blog/BlogDetailView';
 
+interface IComment {
+  _id?: string;
+  userId: string;
+  username: string;
+  content: string;
+  createdAt: string;
+}
+
 interface Blog {
   _id: string;
   title: string;
   content: string;
-  author: string;
+  authorId: {
+    _id: string;
+    fullName: string;
+    username: string;
+  };
   image?: string;
   thumbnail?: string;
   topics?: string[];
   published: 'draft' | 'published' | 'rejected';
-  comments?: any[];
+  comments: IComment[];
   createdAt: string;
   updatedAt: string;
+  anDanh: boolean;
 }
 
 function BlogDetailPage() {

@@ -10,14 +10,18 @@ interface Blog {
   _id: string;
   title: string;
   content: string;
-  author: string;
+  authorId: {
+    _id: string;
+    fullName: string;
+    username: string;
+  };
   image?: string;
   thumbnail?: string;
   topics?: string[];
   published: boolean;
   createdAt: string;
   updatedAt: string;
-  anDanh?: boolean;
+  anDanh: boolean;
 }
 
 function BlogPage() {
@@ -93,7 +97,7 @@ function BlogPage() {
     const matchTitleContentAuthor =
       blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       blog.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      blog.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (blog.authorId?.fullName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (blog.topics && blog.topics.some(topic => topic.toLowerCase().includes(searchTerm.toLowerCase())));
     return matchTitleContentAuthor;
   });
@@ -293,7 +297,7 @@ function BlogPage() {
                     <div className="flex items-center mb-4">
                       <span className="text-sm text-blue-500 bg-blue-50 px-3 py-1 rounded-full">{formatDate(newestBlog.createdAt)}</span>
                       <span className="mx-2 text-blue-200">•</span>
-                      <span className="text-sm text-blue-700 font-medium">{newestBlog.anDanh ? 'Ẩn danh' : newestBlog.author}</span>
+                      <span className="text-sm text-blue-700 font-medium">{newestBlog.anDanh ? 'Ẩn danh' : (newestBlog.authorId?.fullName || 'Không xác định')}</span>
                     </div>
                     <h3 className="text-2xl md:text-3xl font-bold mb-4 text-blue-900 group-hover:text-cyan-700 transition-colors">{newestBlog.title}</h3>
                     <p className="text-blue-700 mb-6 text-base">{truncateContent(newestBlog.content, 300)}</p>
@@ -354,7 +358,7 @@ function BlogPage() {
                     <div className="flex items-center mb-3">
                       <span className="text-xs text-blue-500 bg-blue-50 px-3 py-1 rounded-full">{formatDate(blog.createdAt)}</span>
                       <span className="mx-2 text-blue-200">•</span>
-                      <span className="text-xs text-cyan-700 font-medium">{blog.anDanh ? 'Ẩn danh' : blog.author}</span>
+                      <span className="text-xs text-cyan-700 font-medium">{blog.anDanh ? 'Ẩn danh' : (blog.authorId?.fullName || 'Không xác định')}</span>
                     </div>
                     <h3 className="text-xl font-bold mb-3 text-blue-900 group-hover:text-cyan-700 transition-colors">{blog.title}</h3>
                     <p className="text-blue-700 mb-4 text-sm flex-grow">{truncateContent(blog.content)}</p>

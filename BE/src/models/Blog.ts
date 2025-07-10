@@ -11,7 +11,7 @@ interface IComment {
 export interface IBlog extends Document {
   title: string;
   content: string;
-  author: string;
+  authorId: mongoose.Types.ObjectId;
   image?: string;
   thumbnail?: string;
   topics?: string[];
@@ -19,7 +19,7 @@ export interface IBlog extends Document {
   comments: IComment[];
   createdAt: Date;
   updatedAt: Date;
-  anDanh?: boolean;
+  anDanh: boolean;
 }
 
 const CommentSchema = new Schema({
@@ -33,7 +33,7 @@ const BlogSchema: Schema = new Schema(
   {
     title: { type: String, required: true },
     content: { type: String, required: true },
-    author: { type: String, required: true },
+    authorId: { type: Schema.Types.ObjectId, ref: 'Account', required: true },
     image: { type: String },
     thumbnail: { type: String },
     topics: [{ type: String }],

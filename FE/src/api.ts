@@ -3,7 +3,7 @@ import axios from "axios";
 export interface BlogData {
   title: string;
   content: string;
-  author: string;
+  authorId: string;
   published: "draft" | "published" | "unpublished" | "rejected";
   topics?: string[];
   image?: File | string; // Có thể là File khi upload hoặc URL string khi hiển thị
@@ -385,7 +385,7 @@ export const createBlogApi = async (data: BlogData) => {
     const form = new FormData();
     form.append("title", data.title);
     form.append("content", data.content);
-    form.append("author", data.author);
+    form.append("authorId", data.authorId);
     form.append("published", data.published.toString());
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
     if (data.anDanh !== undefined) form.append("anDanh", String(data.anDanh));
@@ -408,7 +408,7 @@ export const updateBlogApi = async (id: string, data: BlogData) => {
     const form = new FormData();
     form.append("title", data.title);
     form.append("content", data.content);
-    form.append("author", data.author);
+    form.append("authorId", data.authorId);
     form.append("published", data.published.toString());
     if (data.topics) form.append("topics", JSON.stringify(data.topics));
     if (data.anDanh !== undefined) form.append("anDanh", String(data.anDanh));

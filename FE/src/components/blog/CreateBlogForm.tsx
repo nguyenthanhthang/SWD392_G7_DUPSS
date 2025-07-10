@@ -15,7 +15,7 @@ interface CreateBlogFormProps {
   initialData?: {
     title?: string;
     content?: string;
-    author?: string;
+    authorId?: string;
     topics?: string;
     image?: string;
     published?: 'draft' | 'published' | 'unpublished' | 'rejected';
@@ -26,6 +26,7 @@ interface CreateBlogFormProps {
 }
 
 interface UserInfo {
+  _id?: string;
   fullName?: string;
   username?: string;
 }
@@ -51,7 +52,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
     return EditorState.createEmpty();
   });
   const [noiDung, setNoiDung] = useState(initialData?.content || ""); // HTML string
-  const [tacGia, setTacGia] = useState(initialData?.author || "");
+  const [tacGia, setTacGia] = useState(initialData?.authorId || "");
   const [topics, setTopics] = useState(initialData?.topics || "");
   const [hinhAnh, setHinhAnh] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(
@@ -68,18 +69,18 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
 
   useEffect(() => {
     const storedUserInfo = localStorage.getItem("userInfo");
-    if (storedUserInfo && !initialData?.author) {
+    if (storedUserInfo && !initialData?.authorId) {
       const info = JSON.parse(storedUserInfo);
       setUserInfo(info);
-      setTacGia(info.fullName || info.username || "");
+      setTacGia(info._id || "");
     }
   }, [initialData]);
 
   useEffect(() => {
     if (anDanh) {
       // Không thay đổi giá trị lưu vào DB, chỉ dùng để hiển thị
-    } else if (userInfo && !initialData?.author) {
-      setTacGia(userInfo.fullName || userInfo.username || "");
+    } else if (userInfo && !initialData?.authorId) {
+      setTacGia(userInfo._id || "");
     }
   }, [anDanh, userInfo, initialData]);
 
@@ -120,15 +121,9 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
       errors.tieuDe = "Tiêu đề không được quá 150 ký tự";
     }
     
-    // Chỉ validate tác giả nếu không phải ẩn danh
-    if (!anDanh) {
-      if (!tacGia.trim()) {
-        errors.tacGia = "Tác giả không được để trống";
-      } else if (tacGia.trim().length < 3) {
-        errors.tacGia = "Tên tác giả phải có ít nhất 3 ký tự";
-      } else if (tacGia.trim().length > 50) {
-        errors.tacGia = "Tên tác giả không được quá 50 ký tự";
-      }
+    // Validate authorId (tác giả sẽ lấy từ user đăng nhập)
+    if (!tacGia.trim()) {
+      errors.tacGia = "Không tìm thấy thông tin tác giả. Vui lòng đăng nhập lại.";
     }
     
     // Validate nội dung: loại bỏ tag html để đếm ký tự thực
@@ -184,13 +179,13 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
       // Nếu đang trong chế độ ẩn danh và trường tacGia đã bị thay đổi thành "Ẩn danh"
       // thì phục hồi lại giá trị ban đầu từ initialData hoặc userInfo
       if (anDanh && tacGia === "Ẩn danh") {
-        realAuthor = initialData?.author || userInfo?.fullName || userInfo?.username || "";
+        realAuthor = initialData?.authorId || userInfo?._id || "";
       }
       
       const blogData: BlogData = {
         title: tieuDe,
         content: noiDung,
-        author: realAuthor,
+        authorId: realAuthor,
         topics: topics.split(",").map((topic: string) => topic.trim()),
         published: isAdmin ? (trangThai === 'draft' ? 'published' : trangThai === 'rejected' ? 'published' : trangThai) : 'draft',
         anDanh: anDanh
@@ -280,55 +275,11 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
             )}
           </div>
           {/* Ẩn trường tác giả nếu không phải admin */}
-          {isAdmin ? (
-            <div>
-              <label className="block text-sm font-medium text-blue-800">
-                Tác giả
-              </label>
-              <div className="flex items-center gap-3 mb-2">
-                <input
-                  id="anDanhAdmin"
-                  type="checkbox"
-                  checked={anDanh}
-                  onChange={(e) => setAnDanh(e.target.checked)}
-                  className="h-4 w-4 text-cyan-600 border-blue-200 rounded focus:ring-cyan-500"
-                />
-                <label
-                  htmlFor="anDanhAdmin"
-                  className="text-sm text-blue-800 select-none cursor-pointer"
-                >
-                  Đăng ẩn danh
-                </label>
-              </div>
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-base px-4 py-3 bg-blue-50 text-blue-900 placeholder-blue-400"
-                value={anDanh ? "Ẩn danh" : tacGia}
-                onChange={(e) => {
-                  if (!anDanh) {
-                    setTacGia(e.target.value);
-                  }
-                }}
-                onBlur={() => handleBlur("tacGia")}
-                required
-                disabled={anDanh}
-                style={{
-                  borderColor:
-                    touched.tacGia && formErrors.tacGia ? "#f56565" : "#bae6fd",
-                }}
-              />
-              {touched.tacGia && formErrors.tacGia && (
-                <p className="mt-1 text-sm text-red-600 font-medium">
-                  {formErrors.tacGia}
-                </p>
-              )}
-              {anDanh && (
-                <p className="mt-1 text-xs text-cyan-600">
-                  Tên tác giả thực sẽ được lưu trong hệ thống nhưng hiển thị là "Ẩn danh" cho người đọc.
-                </p>
-              )}
-            </div>
-          ) : (
+          {/* Tác giả - ẩn trường vì sẽ lấy từ user đăng nhập */}
+          <div>
+            <label className="block text-sm font-medium text-blue-800">
+              Tác giả
+            </label>
             <div className="flex items-center gap-3 mb-2">
               <input
                 id="anDanh"
@@ -343,13 +294,16 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               >
                 Đăng ẩn danh
               </label>
-              <span className="text-cyan-700 text-sm">
-                {anDanh
-                  ? "Ẩn danh"
-                  : userInfo?.fullName || userInfo?.username || ""}
-              </span>
             </div>
-          )}
+            <div className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm px-4 py-3 bg-blue-50 text-blue-900">
+              {anDanh ? "Ẩn danh" : (userInfo?.fullName || userInfo?.username || "Đang tải...")}
+            </div>
+            {anDanh && (
+              <p className="mt-1 text-xs text-cyan-600">
+                Tên tác giả thực sẽ được lưu trong hệ thống nhưng hiển thị là "Ẩn danh" cho người đọc.
+              </p>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-blue-800">
               Nội dung
