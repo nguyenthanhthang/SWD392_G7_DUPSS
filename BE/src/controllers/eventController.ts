@@ -115,21 +115,40 @@ export const updateEvent = async (req: Request, res: Response) => {
 };
 
 // [DELETE] /api/events/:id - Xóa sự kiện
-export const deleteEvent = async (
-  req: Request<{ id: string }>,
-  res: Response
-): Promise<void> => {
+export const deleteEvent = async (req: Request, res: Response) => {
   try {
-    const deleted = await Event.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      res.status(404).json({ message: "Không tìm thấy sự kiện để xóa" });
-      return;
+    const { id } = req.params;
+
+    // Kiểm tra sự kiện tồn tại
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
     }
-    // Xóa tất cả đăng ký liên quan
-    await EventRegistration.deleteMany({ eventId: req.params.id });
-    res.status(200).json({ message: "Xóa sự kiện thành công" });
+
+    // Kiểm tra xem có ai đăng ký chưa
+    const registrationCount = await EventRegistration.countDocuments({ eventId: id });
+    
+    if (registrationCount > 0) {
+      return res.status(400).json({ 
+        message: "Không thể xóa sự kiện có người đăng ký",
+        registrationCount 
+      });
+    }
+
+    // Nếu chưa có ai đăng ký, tiến hành xóa
+    await Event.findByIdAndDelete(id);
+
+    res.status(200).json({ 
+      message: "Event deleted successfully",
+      deletedEventId: id 
+    });
+
   } catch (error) {
-    res.status(400).json({ message: "Lỗi khi xóa sự kiện", error });
+    console.error('Error in deleteEvent:', error);
+    res.status(500).json({ 
+      message: "Error deleting event",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };
 

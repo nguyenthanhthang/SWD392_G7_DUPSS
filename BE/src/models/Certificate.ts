@@ -15,7 +15,7 @@ export const CertificateSchema: Schema = new Schema({
     consultant_id: { type: Schema.Types.ObjectId, ref: "Consultant", required: true },
     title: { type: String, required: true },
     type: { type: String, required: true },
-    issuedBy: { type: Number, required: true }, // Dựa trên schema ảnh
+    issuedBy: { type: Number, required: true }, 
     issueDate: { type: Date, required: true },
     expireDate: { type: Date, required: false },
     description: { type: String, required: false },

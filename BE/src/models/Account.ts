@@ -6,7 +6,7 @@ export interface IAccount extends Document {
   email: string;
   password: string;
   username: string;
-  role: "consultant" | "customer";
+  role: "consultant" | "customer" | "admin";
   isVerified: boolean;
   isDisabled: boolean;
   photoUrl?: string;
@@ -28,7 +28,7 @@ const accountSchema = new Schema<IAccount>(
     username: { type: String, required: true, unique: true },
     role: {
       type: String,
-      enum: ["consultant", "customer"],
+      enum: ["consultant", "customer", "admin"],
       default: "customer",
     },
     isVerified: { type: Boolean, default: false },

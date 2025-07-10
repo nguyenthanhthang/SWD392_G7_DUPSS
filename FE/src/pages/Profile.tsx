@@ -51,8 +51,12 @@ type Sponsor = {
 type Event = {
   _id: string;
   title: string;
-  startDate?: string;
-  location?: string;
+  startDate: string;
+  endDate: string;
+  registrationStartDate: string;
+  registrationEndDate: string;
+  location: string;
+  status: "upcoming" | "ongoing" | "completed" | "cancelled";
   isCancelled?: boolean;
   sponsors?: Sponsor[];
   qrCode?: string;
@@ -306,13 +310,27 @@ export default function Profile() {
     }
   }, [authUser]);
 
-  const handleUnregister = async (eventId: string) => {
+  const handleUnregister = async (eventId: string, registrationEndDate: string) => {
     if (!authUser) return;
+
+    // Kiểm tra thời gian đăng ký
+    const now = new Date();
+    const regEndDate = new Date(registrationEndDate);
+    
+    if (now > regEndDate) {
+      showToast('error', "Đã quá thời gian cho phép hủy đăng ký!");
+      return;
+    }
+
     try {
       await unregisterEventApi(eventId, authUser._id);
-      setRegisteredEvents(prev => prev.map(event => event._id === eventId ? { ...event, isCancelled: true } : event));
-    } catch {
-      // handle error nếu cần
+      setRegisteredEvents(prev => prev.map(event => 
+        event._id === eventId ? { ...event, isCancelled: true } : event
+      ));
+      showToast('success', "Hủy đăng ký thành công!");
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Không thể hủy đăng ký!";
+      showToast('error', message);
     }
   };
 
@@ -747,11 +765,26 @@ export default function Profile() {
                                 <span className="font-medium">Địa điểm:</span>
                                 <span>{event.location}</span>
                               </div>
+                              {/* Hiển thị trạng thái */}
                               <div className="flex items-center text-base mb-1 gap-2">
                                 <span className="font-medium">Trạng thái:</span>
-                                <span className={event.isCancelled ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
-                                    {event.isCancelled ? 'Đã hủy' : 'Đã đăng ký'}
-                                  </span>
+                                <span className={`font-semibold ${
+                                  event.status === "upcoming" 
+                                    ? "text-blue-600"
+                                    : event.status === "ongoing"
+                                    ? "text-green-600" 
+                                    : event.status === "completed"
+                                    ? "text-gray-600"
+                                    : "text-red-600"
+                                }`}>
+                                  {event.status === "upcoming" 
+                                    ? "Sắp diễn ra"
+                                    : event.status === "ongoing"
+                                    ? "Đang diễn ra"
+                                    : event.status === "completed"
+                                    ? "Đã kết thúc"
+                                    : "Đã hủy"}
+                                </span>
                               </div>
                               {/* Logo sponsor */}
                               {event.sponsors && event.sponsors.length > 0 && event.sponsors.some((s: Sponsor) => s.logo) && (
@@ -778,9 +811,9 @@ export default function Profile() {
                             >
                                 Xem chi tiết
                             </button>
-                              {!event.isCancelled && (
+                              {!event.isCancelled && event.status === "upcoming" && (
                             <button
-                                  onClick={() => handleUnregister(event._id)}
+                                  onClick={() => handleUnregister(event._id, event.registrationEndDate)}
                                   className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
                             >
                                   Hủy đăng ký
