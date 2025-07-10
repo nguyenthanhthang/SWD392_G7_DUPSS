@@ -1,115 +1,135 @@
-# Validation Summary - Event Creation
+# Quy Tắc Nghiệp Vụ Hệ Thống
 
-## Frontend Validation (EventManagement.tsx)
+## 1. Quản Lý Người Dùng
+### Phân Quyền
+- Admin: Quản lý toàn bộ hệ thống
+- Consultant: Quản lý lịch, tư vấn, báo cáo
+- User: Đặt lịch, xem dịch vụ, feedback
 
-### 1. Required Fields Validation
-- ✅ Tiêu đề (title): Bắt buộc
-- ✅ Mô tả (description): Bắt buộc  
-- ✅ Thời gian bắt đầu đăng ký (registrationStartDate): Bắt buộc
-- ✅ Thời gian kết thúc đăng ký (registrationEndDate): Bắt buộc
-- ✅ Thời gian bắt đầu sự kiện (startDate): Bắt buộc
-- ✅ Thời gian kết thúc sự kiện (endDate): Bắt buộc
-- ✅ Địa điểm (location): Bắt buộc
-- ✅ Sức chứa (capacity): Bắt buộc
+### Tài Khoản
+- Email xác thực bắt buộc
+- Mật khẩu: ≥ 8 ký tự, có chữ hoa, số
+- Avatar: ≤ 5MB, jpg/png
+- Thông tin cá nhân bắt buộc: Họ tên, SĐT
 
-### 2. Length Validation
-- ✅ Tiêu đề: 5-100 ký tự
-- ✅ Mô tả: 10-1000 ký tự
-- ✅ Địa điểm: ít nhất 3 ký tự
+## 2. Quản Lý Slot
+### Trạng Thái
+- Available → Booked → Completed/Cancelled
+- Deleted: Ẩn khỏi hệ thống
+- Chỉ đặt slot trống
 
-### 3. Capacity Validation
-- ✅ Sức chứa > 0
-- ✅ Sức chứa ≤ 10,000 người
-- ✅ Khi cập nhật: Không thể giảm sức chứa xuống dưới số người đã đăng ký
+### Cơ Chế Giữ Chỗ
+- Thời gian: 2 phút
+- Mỗi user chỉ giữ 1 slot
+- Hết giờ: Trả slot + quay lại bước 2
+- Chỉ người giữ được thanh toán
 
-### 4. Date/Time Validation
-- ✅ Thời gian kết thúc sự kiện > thời gian bắt đầu sự kiện
-- ✅ Thời gian kết thúc đăng ký > thời gian bắt đầu đăng ký
-- ✅ Thời gian kết thúc đăng ký < thời gian bắt đầu sự kiện
-- ✅ Thời gian bắt đầu đăng ký phải trong tương lai
+## 3. Quy Trình Đặt Lịch
+### Bước 1: Chọn Dịch Vụ
+- Chỉ dịch vụ đang hoạt động
+- Phải có giá niêm yết
 
-### 5. URL Validation
-- ✅ URL hình ảnh (nếu có): Phải là URL hợp lệ
+### Bước 2: Chọn Thời Gian
+- Chỉ xem tuần này + tuần sau
+- Không chọn quá khứ
 
-## Backend Validation (eventController.ts)
+### Bước 3: Chọn Chuyên Gia
+- Hiển thị chuyên gia rảnh
+- Khớp với slot đã chọn
 
-### 1. Create Event Validation
-- ✅ Tất cả validation tương tự frontend
-- ✅ Thêm validation cho capacity > 10,000
+### Bước 4: Thông Tin
+- SĐT: Bắt buộc, định dạng VN
+- Lý do: 10-500 ký tự
+- Ghi chú: Tùy chọn
 
-### 2. Update Event Validation
-- ✅ Kiểm tra sự kiện tồn tại
-- ✅ Validation có điều kiện (chỉ validate các trường được cập nhật)
-- ✅ Logic thời gian tương tự create event
+### Bước 5: Thanh Toán
+- Timeout: 60 giây
+- Hết giờ: Hủy + Trả slot
 
-### 3. Date Logic Validation
-```javascript
-// Logic hợp lệ:
-regStart < regEnd <= eventStart < eventEnd
-regStart > now (thời gian hiện tại)
-```
+## 4. Quản Lý Cuộc Hẹn
+### Tạo Mới
+- Trạng thái: pending → confirmed/cancelled
+- Thông tin bắt buộc:
+  + ID: User, Chuyên gia, Dịch vụ
+  + ID Slot
+  + Lý do
+  + Thời gian đặt
 
-## Model Validation (Event.ts)
+### Cập Nhật
+- Đổi lịch: Chỉ sang slot trống
+- Hủy: Trả slot + xóa người giữ
 
-### 1. Schema Validation
-- ✅ Tất cả trường bắt buộc được định nghĩa
-- ✅ Enum cho status: ["upcoming", "ongoing", "completed", "cancelled"]
-- ✅ Timestamps tự động
+## 5. Quản Lý Thanh Toán
+### Phương Thức
+- PayPal/VNPay/Momo
+- Timeout: 60 giây
 
-### 2. Pre-save Middleware
-- ✅ Tự động cập nhật status dựa trên thời gian:
-  - `startDate > now` → "upcoming"
-  - `endDate < now` → "completed"  
-  - Còn lại → "ongoing"
+### Trạng Thái
+- Thành công: Xác nhận cuộc hẹn
+- Thất bại: Hủy + trả slot
 
-## Error Messages
+## 6. Quản Lý Blog
+### Bài Viết
+- Duyệt trước khi đăng
+- Có thể lên lịch đăng
+- Cho phép ẩn/hiện
 
-### Frontend (Toast Messages)
-- "Vui lòng điền đầy đủ thông tin bắt buộc"
-- "Tiêu đề phải có ít nhất 5 ký tự"
-- "Tiêu đề không được vượt quá 100 ký tự"
-- "Mô tả phải có ít nhất 10 ký tự"
-- "Mô tả không được vượt quá 1000 ký tự"
-- "Địa điểm phải có ít nhất 3 ký tự"
-- "Sức chứa phải lớn hơn 0"
-- "Sức chứa không được vượt quá 10,000 người"
-- "Thời gian kết thúc sự kiện phải sau thời gian bắt đầu"
-- "Thời gian kết thúc đăng ký phải sau thời gian bắt đầu đăng ký"
-- "Thời gian kết thúc đăng ký phải trước khi sự kiện bắt đầu"
-- "Thời gian bắt đầu đăng ký phải trong tương lai"
-- "URL hình ảnh không hợp lệ"
+### Nội Dung
+- Tiêu đề: 10-200 ký tự
+- Nội dung: ≤ 10000 ký tự
+- Ảnh: ≤ 5MB, tối đa 10 ảnh
 
-### Backend (JSON Response)
-- Tương tự frontend nhưng trả về JSON với format: `{ message: "error message" }`
+## 7. Quản Lý Sự Kiện
+### Tạo Sự Kiện
+- Thời gian đăng ký < Thời gian diễn ra
+- Sức chứa: 1-10000 người
+- Địa điểm bắt buộc
 
-## Testing Scenarios
+### Đăng Ký
+- Trong thời hạn đăng ký
+- Không vượt quá sức chứa
+- Có thể hủy trước sự kiện
 
-### Valid Cases
-1. ✅ Tạo sự kiện với tất cả thông tin hợp lệ
-2. ✅ Cập nhật một số trường của sự kiện
-3. ✅ Tạo sự kiện với URL hình ảnh hợp lệ
+## 8. Quản Lý Feedback
+### Đánh Giá
+- Chỉ sau khi hoàn thành dịch vụ
+- Sao: 1-5
+- Comment: ≤ 500 ký tự
 
-### Invalid Cases
-1. ❌ Thiếu thông tin bắt buộc
-2. ❌ Tiêu đề quá ngắn/dài
-3. ❌ Mô tả quá ngắn/dài
-4. ❌ Sức chứa ≤ 0 hoặc > 10,000
-5. ❌ Thời gian không hợp lệ
-6. ❌ URL hình ảnh không hợp lệ
-7. ❌ Giảm sức chứa xuống dưới số người đã đăng ký
+### Hiển Thị
+- Admin duyệt trước
+- Ẩn thông tin nhạy cảm
+- Cho phép reply
 
-## Security Considerations
+## 9. Bảo Mật
+### Xác Thực
+- JWT token
+- Refresh token
+- Session timeout: 24h
 
-1. ✅ Input sanitization (trim whitespace)
-2. ✅ Length limits để tránh DoS
-3. ✅ Date validation để tránh logic errors
-4. ✅ Capacity limits để tránh resource exhaustion
-5. ✅ URL validation để tránh XSS
+### Validation
+- Kiểm tra đầu vào
+- Giới hạn độ dài
+- Chống SQL injection
 
-## Performance Considerations
+## 10. Hiệu Suất
+### Frontend
+- Validate trước
+- Phản hồi realtime
+- Tối ưu loading
 
-1. ✅ Validation được thực hiện ở cả frontend và backend
-2. ✅ Frontend validation giảm tải cho server
-3. ✅ Backend validation đảm bảo data integrity
-4. ✅ Efficient date comparisons
-5. ✅ Minimal database queries trong validation 
+### Backend
+- Cache dữ liệu
+- Query hiệu quả
+- Giới hạn tài nguyên
+
+## 11. Xử Lý Lỗi
+### Thông Báo
+- Tiếng Việt
+- Hướng dẫn rõ ràng
+- Gợi ý khắc phục
+
+### Ghi Log
+- Chi tiết lỗi
+- Ngữ cảnh user
+- Stack trace 
