@@ -4,12 +4,11 @@ import { authMiddleware, roleMiddleware } from "../middleware";
 
 const router = Router();
 
-// Route này chỉ cho ADMIN và CONSULTANT truy cập
-router.get("/", authMiddleware, roleMiddleware(["admin", "consultant"]), getAllConsultants);
+router.get("/", getAllConsultants);
 router.get("/account/:accountId", getConsultantByAccountId);
 router.get("/:id", getConsultantById);
-router.put("/:id", updateConsultant);
-router.delete("/:id", deleteConsultant);
-router.post("/", createConsultant);
+router.put("/:id", authMiddleware, roleMiddleware(["admin", "consultant"]), updateConsultant);
+router.delete("/:id", authMiddleware, roleMiddleware(["admin"]), deleteConsultant);
+router.post("/", authMiddleware, roleMiddleware(["admin"]), createConsultant);
 
 export default router;      

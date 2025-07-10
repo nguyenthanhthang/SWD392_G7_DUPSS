@@ -12,6 +12,7 @@ import {
   updateBlogStatus,
 } from "../controllers/blogController";
 import upload from "../middleware/uploadImage";
+import { authMiddleware, roleMiddleware } from "../middleware";
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.post("/", upload.single("image"), createBlog);
 // Cập nhật blog (có upload ảnh)
 router.put("/:id", upload.single("image"), updateBlog);
 // Cập nhật trạng thái blog (chỉ admin)
-router.patch("/:id/status", updateBlogStatus);
+router.patch("/:id/status", authMiddleware, roleMiddleware(["admin"]), updateBlogStatus);
 // Xóa blog
 router.delete("/:id", deleteBlog);
 // Lấy blog theo userId

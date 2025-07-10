@@ -7,6 +7,7 @@ import {
   deleteAccount,
   changePassword,
 } from "../controllers/accountController";
+import { authMiddleware, roleMiddleware } from "../middleware";
 
 const router = express.Router();
 
@@ -27,10 +28,10 @@ router.get("/", async (req, res, next) => {
 });
 
 router.post("/", createAccount);
-router.get("/", getAllAccounts);
+router.get("/", authMiddleware, roleMiddleware(["admin"]), getAllAccounts);
 router.get("/:id", getAccountById);
 router.put("/:id", updateAccount);
-router.delete("/:id", deleteAccount);
+router.delete("/:id",authMiddleware, roleMiddleware(["admin"]), deleteAccount);
 router.post("/change-password", changePassword);
 
 // Thêm route kiểm tra số điện thoại
