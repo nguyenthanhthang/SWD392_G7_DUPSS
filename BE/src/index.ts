@@ -21,6 +21,7 @@ import reportRoutes from "./routes/reportRoutes";
 import questionRoutes from "./routes/questionRoutes";
 
 import uploadRouter from "./routes/upload";
+import { startEventStatusCron, updateEventStatus } from './utils/eventStatusManager';
 
 // Load biến môi trường
 dotenv.config();
@@ -67,6 +68,12 @@ app.get("/", (_req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(` Server is running on http://localhost:${PORT}`);
+  
+  // Chạy update status ngay khi server start
+  await updateEventStatus();
+  
+  // Bắt đầu cron job
+  startEventStatusCron();
 });

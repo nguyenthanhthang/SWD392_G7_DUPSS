@@ -175,14 +175,14 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
         >
           <FiEdit className="text-gray-600" />
         </button>
-        {event.status === "cancelled" ? (
-          <button
-            onClick={() => onDelete(event)}
-            className="p-2 rounded-xl bg-red-100 hover:bg-red-200 transition-all"
-          >
-            <FiTrash2 className="text-red-600" />
-          </button>
-        ) : (
+        <button
+          onClick={() => onDelete(event)}
+          className="p-2 rounded-xl bg-red-100 hover:bg-red-200 transition-all"
+          title="Xóa sự kiện"
+        >
+          <FiTrash2 className="text-red-600" />
+        </button>
+        {event.status !== "cancelled" && (
           <button
             onClick={() => onCancel(event)}
             className="p-2 rounded-xl bg-orange-100 hover:bg-orange-200 transition-all"
@@ -1230,17 +1230,39 @@ const AdminEventManagement = () => {
   const handleDeleteEvent = async () => {
     if (!deletingEvent) return;
     try {
-      await deleteEventApi(deletingEvent._id);
-      toast.success("Xóa sự kiện thành công!");
+      const response = await fetch(`/api/events/${deletingEvent._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        toast.error(data.message || "Không thể xóa sự kiện");
+        setShowDeleteConfirm(false);
+        setDeletingEvent(null);
+        return;
+      }
+
+      toast.success(data.message || "Xóa sự kiện thành công!");
       setShowDeleteConfirm(false);
       setDeletingEvent(null);
       fetchEvents();
     } catch (error) {
-      toast.error("Không thể xóa sự kiện");
+      toast.error("Lỗi khi xóa sự kiện");
+      setShowDeleteConfirm(false);
+      setDeletingEvent(null);
     }
   };
 
   const handleCancelEvent = async (event: Event) => {
+    // Kiểm tra nếu có người đăng ký
+    if (event.registeredCount && event.registeredCount > 0) {
+      toast.error(`Không thể hủy sự kiện có người đăng ký (${event.registeredCount} người)`);
+      return;
+    }
     setCancellingEvent(event);
     setShowCancelConfirm(true);
   };
@@ -1248,13 +1270,28 @@ const AdminEventManagement = () => {
   const confirmCancelEvent = async () => {
     if (!cancellingEvent) return;
     try {
-      await updateEventApi(cancellingEvent._id, { status: "cancelled" });
-      toast.success("Hủy sự kiện thành công!");
+      const response = await fetch(`/api/events/${cancellingEvent._id}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Không thể hủy sự kiện");
+        return;
+      }
+
+      const data = await response.json();
+      toast.success(data.message || "Hủy sự kiện thành công!");
       setShowCancelConfirm(false);
       setCancellingEvent(null);
       fetchEvents();
-    } catch (error) {
-      toast.error("Không thể hủy sự kiện");
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || "Không thể hủy sự kiện";
+      toast.error(errorMessage);
       setShowCancelConfirm(false);
       setCancellingEvent(null);
     }

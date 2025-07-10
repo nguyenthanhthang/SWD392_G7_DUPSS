@@ -4,7 +4,7 @@ interface PaymentDetails {
     transactionNo?: string;
     amount?: number;
     paymentTime?: Date;
-    paymentMethod?: 'vnpay' | 'momo';
+    paymentMethod?: 'vnpay' | 'momo'|'paypal';
     failureReason?: string;
 }
 
@@ -40,7 +40,7 @@ export const AppointmentSchema: Schema = new Schema({
             paymentTime: Date,
             paymentMethod: {
                 type: String,
-                enum: ['vnpay', 'momo']
+                enum: ['vnpay', 'momo','paypal']
             },
             failureReason: String
         },
