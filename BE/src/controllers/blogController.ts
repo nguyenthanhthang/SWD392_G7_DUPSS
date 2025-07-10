@@ -105,7 +105,7 @@ export const updateBlog = async (req: MulterRequest, res: Response) => {
 
     // Nếu blog đã bị từ chối, không cho phép cập nhật
     if (existingBlog.published === 'rejected') {
-      return res.status(403).json({ message: 'Không thể sửa bài viết đã bị từ chối' });
+      return res.status(403).json({ message: 'Không thể sửa bài viết đã bị từ chối. Vui lòng tạo bài viết mới.' });
     }
 
     const { title, content, author, topics, published, anDanh } = req.body;

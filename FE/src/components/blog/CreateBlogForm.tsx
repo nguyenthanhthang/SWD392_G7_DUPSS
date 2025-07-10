@@ -192,7 +192,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
         content: noiDung,
         author: realAuthor,
         topics: topics.split(",").map((topic: string) => topic.trim()),
-        published: isAdmin ? (trangThai === 'draft' ? 'published' : trangThai) : 'draft',
+        published: isAdmin ? (trangThai === 'draft' ? 'published' : trangThai === 'rejected' ? 'published' : trangThai) : 'draft',
         anDanh: anDanh
       };
       if (hinhAnh) {
