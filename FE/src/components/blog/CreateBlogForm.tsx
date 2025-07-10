@@ -20,6 +20,7 @@ interface CreateBlogFormProps {
     image?: string;
     published?: 'draft' | 'published' | 'unpublished' | 'rejected';
     anDanh?: boolean;
+    authorName?: string; // Added for displaying author name in edit form
   };
   onSubmit?: (data: BlogData) => Promise<void>;
   isAdmin?: boolean;
@@ -296,7 +297,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
               </label>
             </div>
             <div className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm px-4 py-3 bg-blue-50 text-blue-900">
-              {anDanh ? "Ẩn danh" : (userInfo?.fullName || userInfo?.username || "Đang tải...")}
+              {anDanh ? "Ẩn danh" : (initialData?.authorName || userInfo?.fullName || userInfo?.username || "Đang tải...")}
             </div>
             {anDanh && (
               <p className="mt-1 text-xs text-cyan-600">

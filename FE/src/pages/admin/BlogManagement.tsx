@@ -135,6 +135,7 @@ const BlogManagement: React.FC = () => {
       title: blog.title,
       content: blog.content,
       authorId: blog.authorId._id,
+      authorName: blog.authorId.fullName, // Thêm dòng này để truyền tên tác giả
       topics: blog.topics?.join(', ') || '',
       published: blog.published,
       image: blog.image || '',
@@ -604,7 +605,7 @@ const BlogManagement: React.FC = () => {
                             <option value="rejected">Từ chối</option>
                           </select>
                         </div>
-                      ) : isAdminBlog(blog) ? (
+                      ) : (blog.published === 'published' || blog.published === 'unpublished') ? (
                         <div className="flex items-center gap-1">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1 group-hover:text-sky-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -703,6 +704,7 @@ const BlogManagement: React.FC = () => {
                 title: editingBlog.title,
                 content: editingBlog.content,
                 authorId: editingBlog.authorId._id,
+                authorName: editingBlog.authorId.fullName, // Thêm dòng này để truyền tên tác giả
                 topics: editingBlog.topics?.join(', ') || '',
                 image: editingBlog.image || '',
                 published: editingBlog.published,
@@ -711,6 +713,7 @@ const BlogManagement: React.FC = () => {
                 title: formData.title,
                 content: formData.content,
                 authorId: formData.authorId,
+                authorName: formData.authorName, // Thêm dòng này để truyền tên tác giả
                 topics: formData.topics || '',
                 image: formData.image || '',
                 published: formData.published,
