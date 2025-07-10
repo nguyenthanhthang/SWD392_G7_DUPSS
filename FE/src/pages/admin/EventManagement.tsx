@@ -255,7 +255,6 @@ const EventFormModal = ({
     }
 
     try {
-      console.log('Sending sponsor data:', newSponsor); // Debug log
       const response = await fetch('/api/sponsors', {
         method: 'POST',
         headers: {
@@ -445,7 +444,6 @@ const EventFormModal = ({
       toast.warn("Lưu ý: Thời gian bắt đầu đăng ký đã ở trong quá khứ.");
     }
     
-    console.log("Form validation passed, submitting:", formData);
     onSubmit(formData);
   };
 
@@ -985,7 +983,6 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    console.log('File upload:', file);
     if (!file) return;
     try {
       const html5Qr = html5QrcodeRef.current || new Html5Qrcode(qrRegionId);
@@ -1000,7 +997,6 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
       }
       // Scan file
       const result = await html5Qr.scanFile(file, true);
-      console.log('QR result (image):', result);
       onScan(result);
       setTimeout(() => onClose(), 500);
     } catch (err) {
@@ -1012,7 +1008,6 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 300, height: 300 } },
           (decodedText) => {
-            console.log('QR result:', decodedText);
             if (scanningRef.current) {
               scanningRef.current = false;
               onScan(decodedText);
@@ -1042,7 +1037,6 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 300, height: 300 } },
         (decodedText) => {
-          console.log('QR result:', decodedText);
           if (scanningRef.current) {
             scanningRef.current = false;
             onScan(decodedText);
@@ -1176,7 +1170,6 @@ const AdminEventManagement = () => {
 
   const handleCreateEvent = async (formData: EventFormData) => {
     try {
-      console.log("Creating event with data:", formData);
       const payload = {
         title: formData.title,
         description: formData.description,
@@ -1189,7 +1182,6 @@ const AdminEventManagement = () => {
         image: formData.image,
         sponsors: formData.sponsors
       };
-      console.log("API payload:", payload);
       
       await createEventApi(payload);
       toast.success("Tạo sự kiện thành công!");

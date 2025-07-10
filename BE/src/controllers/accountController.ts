@@ -101,7 +101,7 @@ export const updateAccount = async (
         _id: { $ne: req.params.id }
       });
       if (existedPhone) {
-        res.status(400).json({ message: "Số điện thoại đã tồn tại" });
+        res.status(400).json({ message: "Số điện thoại này đã được đăng ký bởi tài khoản khác" });
         return;
       }
       // Validate định dạng
@@ -113,23 +113,7 @@ export const updateAccount = async (
     }
 
     // Validate tên (fullName)
-    if (req.body.fullName) {
-      const name = req.body.fullName.trim();
-      if (name.length < 8 || name.length > 30) {
-        res.status(400).json({ message: "Tên phải từ 8 đến 30 ký tự!" });
-        return;
-      }
-      if (!/^[a-zA-Z0-9_ ]{8,30}$/.test(name)) {
-        res.status(400).json({ message: "Tên chỉ được chứa chữ, số, dấu gạch dưới!" });
-        return;
-      }
-      // Kiểm tra trùng tên với account khác
-      const exists = await Account.findOne({ fullName: name, _id: { $ne: req.params.id } });
-      if (exists) {
-        res.status(400).json({ message: "Tên này đã được sử dụng!" });
-        return;
-      }
-    }
+    
 
     // Kiểm tra nếu đang cố chuyển từ consultant sang customer
     if (currentAccount.role === "consultant" && req.body.role === "customer") {
