@@ -101,6 +101,16 @@ const BlogManagement: React.FC = () => {
     setModalVisible(true);
   };
   const handleEdit = (blog: Blog) => {
+    // Kiểm tra nếu blog bị từ chối thì không cho sửa
+    if (blog.published === 'rejected') {
+      setNotification({
+        type: 'error', 
+        message: 'Không thể sửa bài viết đã bị từ chối. Vui lòng tạo bài viết mới.'
+      });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
     setEditingBlog(blog);
     setFormData({
       title: blog.title,
@@ -316,6 +326,8 @@ const BlogManagement: React.FC = () => {
       }, 3000);
     }
   };
+
+
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-sm mt-4">
@@ -568,15 +580,20 @@ const BlogManagement: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                       </button>
-                      <button
-                        onClick={() => handleEdit(blog)}
-                        className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                        title="Sửa"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
+                      {/* Chỉ hiển thị nút sửa nếu blog không bị từ chối */}
+                      {blog.published !== 'rejected' && (
+                        <button
+                          onClick={() => handleEdit(blog)}
+                          className="p-2 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                          title="Sửa"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                      
+
                     </div>
                   </td>
                 </tr>
@@ -633,9 +650,17 @@ const BlogManagement: React.FC = () => {
                 image: editingBlog.image || '',
                 published: editingBlog.published,
                 anDanh: editingBlog.anDanh
-              } : undefined}
-              isAdmin={true}
-              onCancel={handleCloseModal}
+              } : (formData.title ? {
+                title: formData.title,
+                content: formData.content,
+                author: formData.author,
+                topics: formData.topics || '',
+                image: formData.image || '',
+                published: formData.published,
+                anDanh: formData.anDanh
+              } : undefined)}
+                              isAdmin={true}
+                onCancel={handleCloseModal}
               onSuccess={() => {
                 handleCloseModal();
                 fetchBlogs();
