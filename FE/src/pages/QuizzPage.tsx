@@ -76,7 +76,6 @@ export default function QuizzPage() {
     easy: number;
     total: number;
   } | null>(null);
-  const [maxScore, setMaxScore] = useState<number | null>(null);
 
   // Load available quizzes
   useEffect(() => {
@@ -133,11 +132,6 @@ export default function QuizzPage() {
         setStep("quiz");
         if (response.data.breakdown) {
           setQuestionBreakdown(response.data.breakdown);
-        }
-        if (typeof response.data.maxScore === "number") {
-          setMaxScore(response.data.maxScore);
-        } else {
-          setMaxScore(null);
         }
       } else {
         setError("Không thể tải câu hỏi");
@@ -214,7 +208,6 @@ export default function QuizzPage() {
     setQuizResult(null);
     setError(null);
     setQuestionBreakdown(null);
-    setMaxScore(null);
   };
 
   const getAgeGroupDisplay = (ageGroup: string) => {
@@ -405,21 +398,6 @@ export default function QuizzPage() {
                           {getAgeGroupDisplay(ageGroup)}
                         </span>
                       ))}
-                    </div>
-
-                    <div className="flex justify-between items-center text-sm text-gray-500 bg-gray-50 rounded-xl p-4">
-                      <div className="flex items-center">
-                        <span className="mr-2">📝</span>
-                        <span className="font-semibold">
-                          {quiz.questionCount} câu hỏi
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="mr-2">🎯</span>
-                        <span className="font-semibold">
-                          Tối đa: {maxScore ? maxScore : 10} điểm
-                        </span>
-                      </div>
                     </div>
 
                     <div className="mt-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -764,9 +742,6 @@ export default function QuizzPage() {
                 >
                   {quizResult.percentage}%
                 </motion.div>
-                <div className="text-2xl text-gray-600 font-semibold">
-                  {quizResult.totalScore} / {quizResult.maxScore} điểm
-                </div>
                 <div className="mt-4 w-full bg-gray-200 rounded-full h-4">
                   <motion.div
                     className="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full"
@@ -848,6 +823,59 @@ export default function QuizzPage() {
                 </motion.div>
               )}
             </motion.div>
+
+            {/* Bảng phân tích từng câu trả lời */}
+            <div className="mt-8">
+              <h3 className="text-lg font-bold mb-4">
+                Chi tiết câu trả lời của bạn
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white rounded shadow">
+                  <thead>
+                    <tr>
+                      <th className="px-3 py-2">STT</th>
+                      <th className="px-3 py-2">Câu hỏi</th>
+                      <th className="px-3 py-2">Đáp án đã chọn</th>
+                      <th className="px-3 py-2">Điểm</th>
+                      <th className="px-3 py-2">Mức ảnh hưởng</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {answers.map((ans, idx) => {
+                      const q = questions.find((q) => q._id === ans.questionId);
+                      const selectedOpt = q?.options?.[ans.selectedOption];
+                      let impactColor = "";
+                      let impactText = "";
+                      if (selectedOpt?.score === 0) {
+                        impactColor = "text-green-600";
+                        impactText = "Thấp";
+                      } else if (selectedOpt?.score === 2) {
+                        impactColor = "text-yellow-600";
+                        impactText = "Trung bình";
+                      } else if (selectedOpt?.score === 4) {
+                        impactColor = "text-red-600";
+                        impactText = "Cao";
+                      }
+                      return (
+                        <tr key={ans.questionId}>
+                          <td className="px-3 py-2 text-center">{idx + 1}</td>
+                          <td className="px-3 py-2">{q?.text}</td>
+                          <td className="px-3 py-2">{selectedOpt?.text}</td>
+                          <td className="px-3 py-2 text-center">
+                            {selectedOpt?.score}
+                          </td>
+                          <td
+                            className={`px-3 py-2 text-center font-bold ${impactColor}`}
+                          >
+                            {impactText}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             {/* Enhanced Actions */}
             <motion.div

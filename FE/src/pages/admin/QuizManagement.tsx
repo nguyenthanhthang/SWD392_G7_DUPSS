@@ -57,6 +57,19 @@ const tagLabel = (tag: string) => {
   }
 };
 
+const GENERAL_TAGS = [
+  { value: "risk", label: "Rủi ro" },
+  { value: "substance", label: "Chất gây nghiện" },
+  { value: "screening", label: "Sàng lọc" },
+  { value: "behavior", label: "Hành vi" },
+  { value: "awareness", label: "Nhận thức" },
+  { value: "parenting", label: "Nuôi dạy con" },
+  { value: "education", label: "Giáo dục" },
+  { value: "youth", label: "Thanh thiếu niên" },
+  { value: "parent", label: "Phụ huynh" },
+  { value: "adult", label: "Người lớn" },
+];
+
 const QuizManagement: React.FC = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [filtered, setFiltered] = useState<Quiz[]>([]);
@@ -112,6 +125,8 @@ const QuizManagement: React.FC = () => {
     maxScore: 1,
     isActive: true,
   });
+  // Thêm state điều khiển dropdown cho tags:
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
 
   const navigate = useNavigate();
 
@@ -272,6 +287,16 @@ const QuizManagement: React.FC = () => {
     }
   };
 
+  // Khi mở modal Thêm quiz, set mặc định tags là ['behavior']:
+  useEffect(() => {
+    if (showAddQuiz) {
+      setAddQuizForm((f) => ({
+        ...f,
+        tags: f.tags && f.tags.length > 0 ? f.tags : ["behavior"],
+      }));
+    }
+  }, [showAddQuiz]);
+
   return (
     <div className="p-6 bg-sky-50">
       <div className="p-4 bg-white rounded-lg shadow-sm">
@@ -410,14 +435,29 @@ const QuizManagement: React.FC = () => {
                     ))}
                   </td>
                   <td className="px-3 py-2">
-                    {quiz.tags?.map((t: string) => (
-                      <span
-                        key={t}
-                        className="inline-block bg-green-100 text-green-700 rounded px-2 py-0.5 text-xs mr-1 mb-1"
-                      >
-                        {tagLabel(t)}
-                      </span>
-                    ))}
+                    {(quiz.tags || []).map((tagValue) => {
+                      const tagObj = GENERAL_TAGS.find(
+                        (t) => t.value === tagValue
+                      );
+                      return (
+                        <span
+                          key={tagValue}
+                          style={{
+                            display: "inline-block",
+                            background: "#e0f2fe",
+                            color: "#0369a1",
+                            borderRadius: "999px",
+                            padding: "2px 10px",
+                            fontSize: "13px",
+                            fontWeight: 500,
+                            marginRight: 6,
+                            marginBottom: 4,
+                          }}
+                        >
+                          {tagObj ? tagObj.label : tagValue}
+                        </span>
+                      );
+                    })}
                   </td>
                   <td className="px-3 py-2 text-center">
                     {quiz.questionCount ?? "-"}
@@ -881,7 +921,15 @@ const QuizManagement: React.FC = () => {
               onSubmit={async (e) => {
                 e.preventDefault();
                 try {
-                  await createQuizApi(addQuizForm as Quiz);
+                  await createQuizApi({
+                    ...addQuizForm,
+                    _id: Date.now().toString(),
+                    maxScore: 10,
+                    title: addQuizForm.title || "", // fix type
+                    description: addQuizForm.description || "", // fix type
+                    ageGroups: addQuizForm.ageGroups || [], // fix type
+                    tags: addQuizForm.tags ? [...addQuizForm.tags] : [], // luôn là mảng
+                  });
                   alert("Tạo quiz thành công!");
                   setShowAddQuiz(false);
                   reloadQuizzes();
@@ -891,17 +939,6 @@ const QuizManagement: React.FC = () => {
               }}
               className="space-y-4"
             >
-              <div>
-                <label className="block font-semibold mb-1">Mã quiz (ID)</label>
-                <input
-                  className="w-full border rounded px-3 py-2"
-                  value={addQuizForm._id}
-                  onChange={(e) =>
-                    setAddQuizForm((f) => ({ ...f, _id: e.target.value }))
-                  }
-                  required
-                />
-              </div>
               <div>
                 <label className="block font-semibold mb-1">Tiêu đề</label>
                 <input
@@ -956,39 +993,7 @@ const QuizManagement: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="block font-semibold mb-1">Nhãn</label>
-                <input
-                  className="w-full border rounded px-3 py-2"
-                  value={addQuizForm.tags?.join(",") || ""}
-                  onChange={(e) =>
-                    setAddQuizForm((f) => ({
-                      ...f,
-                      tags: e.target.value
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean),
-                    }))
-                  }
-                  placeholder="Cách nhau bởi dấu phẩy"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold mb-1">Điểm tối đa</label>
-                <input
-                  type="number"
-                  className="w-full border rounded px-3 py-2"
-                  value={addQuizForm.maxScore}
-                  onChange={(e) =>
-                    setAddQuizForm((f) => ({
-                      ...f,
-                      maxScore: Number(e.target.value),
-                    }))
-                  }
-                  min={1}
-                  required
-                />
-              </div>
+              {/* 2. Bỏ hoàn toàn trường điểm tối đa (maxScore) khỏi modal Thêm quiz (xóa cả label, input, logic liên quan) */}
               <div>
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -1003,6 +1008,90 @@ const QuizManagement: React.FC = () => {
                   />
                   <span>Hoạt động</span>
                 </label>
+              </div>
+              {/* Trong modal Thêm quiz, thay thế trường Nhãn: */}
+              <div className="mb-4">
+                <label className="block font-semibold mb-1">Nhãn</label>
+                <div
+                  className="border rounded px-3 py-2 min-h-[40px] flex flex-wrap gap-2 items-center cursor-pointer bg-white"
+                  tabIndex={0}
+                  onClick={() => setShowTagDropdown(true)}
+                  onBlur={() =>
+                    setTimeout(() => setShowTagDropdown(false), 150)
+                  }
+                  style={{ position: "relative" }}
+                >
+                  {(addQuizForm.tags ? [...addQuizForm.tags] : []).length ===
+                  0 ? (
+                    <span className="text-gray-400">Chọn nhãn...</span>
+                  ) : (
+                    (addQuizForm.tags ? [...addQuizForm.tags] : []).map(
+                      (tagValue) => {
+                        const tagObj = GENERAL_TAGS.find(
+                          (t) => t.value === tagValue
+                        );
+                        return (
+                          <span
+                            key={tagValue}
+                            className="inline-flex items-center bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold mr-1 mb-1"
+                          >
+                            {tagObj ? tagObj.label : tagValue}
+                            <button
+                              type="button"
+                              className="ml-1 text-blue-500 hover:text-red-500"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAddQuizForm((f) => ({
+                                  ...f,
+                                  tags: (f.tags || []).filter(
+                                    (t) => t !== tagValue
+                                  ),
+                                }));
+                              }}
+                              title="Bỏ nhãn"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      }
+                    )
+                  )}
+                  <span className="ml-auto text-gray-400">▼</span>
+                  {showTagDropdown && (
+                    <div className="absolute z-10 bg-white border rounded shadow w-full mt-1 max-h-48 overflow-y-auto left-0">
+                      {GENERAL_TAGS.map((tag) => (
+                        <div
+                          key={tag.value}
+                          className={`px-3 py-2 cursor-pointer hover:bg-blue-100 flex items-center gap-2 ${
+                            addQuizForm.tags?.includes(tag.value)
+                              ? "bg-blue-50 font-semibold"
+                              : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            let newTags = addQuizForm.tags || [];
+                            if (newTags.includes(tag.value)) {
+                              newTags = newTags.filter((t) => t !== tag.value);
+                            } else {
+                              newTags = [...newTags, tag.value];
+                            }
+                            setAddQuizForm({ ...addQuizForm, tags: newTags });
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              addQuizForm.tags?.includes(tag.value) || false
+                            }
+                            readOnly
+                          />
+                          <span>{tag.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2 justify-end">
                 <button

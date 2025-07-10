@@ -138,3 +138,10 @@ export const getAllQuizzesApi = async (): Promise<{ data: Quiz[] }> => {
   const response = await axios.get(`${API_URL}/quizzes`);
   return response.data;
 };
+
+export const getQuizResultByIdApi = async (resultId: string) => {
+  const response = await axios.get(
+    `${API_URL}/quizzes/quiz-results/result/${resultId}`
+  );
+  return response.data;
+};
