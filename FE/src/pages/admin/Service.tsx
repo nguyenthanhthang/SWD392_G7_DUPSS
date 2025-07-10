@@ -191,20 +191,12 @@ const Service: React.FC = () => {
       const formData = new FormData();
       formData.append('image', file);
 
-      // Log trước khi upload
-      console.log('Đang upload ảnh...');
-      console.log('File:', file.name, file.type, file.size);
-
-      // Sử dụng API riêng cho upload
       const response = await axios.post('http://localhost:5000/api/uploads/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
-      // Log kết quả upload
-      console.log('Kết quả upload:', response.data);
 
       if (response.data && response.data.imageUrl) {
         setFormData(prev => ({
@@ -220,7 +212,6 @@ const Service: React.FC = () => {
         toast.error('Không nhận được URL ảnh từ server!');
       }
     } catch (error) {
-      console.error('Upload error:', error);
       toast.error('Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.');
     } finally {
       setUploading(false);
@@ -307,7 +298,6 @@ const Service: React.FC = () => {
   // Handle create service
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Bắt đầu xử lý tạo dịch vụ');
     
     // Kiểm tra lỗi các trường khi submit
     let hasError = false;
@@ -321,11 +311,7 @@ const Service: React.FC = () => {
       hasError = true;
     }
     
-    console.log('Form data:', formData);
-    console.log('Validation errors:', errors);
-    
     if (hasError) {
-      console.log('Có lỗi validation, không submit');
       return;
     }
     
@@ -339,11 +325,8 @@ const Service: React.FC = () => {
         status: formData.status
       };
       
-      console.log('Gửi dữ liệu lên API:', serviceData);
-      
       // Gọi API tạo dịch vụ
       const response = await api.post('/services', serviceData);
-      console.log('Kết quả từ API:', response.data);
       
       // Cập nhật danh sách dịch vụ
       setServices(prev => [...prev, response.data]);
@@ -362,9 +345,6 @@ const Service: React.FC = () => {
           backgroundColor: "#0ea5e9",
           color: "white",
           fontSize: "14px",
-          fontWeight: "bold",
-          border: "1px solid #0284c7",
-          borderRadius: "8px"
         }
       });
       
@@ -377,7 +357,7 @@ const Service: React.FC = () => {
       // Tải lại danh sách dịch vụ
       fetchServices();
     } catch (error: any) {
-      console.error('Lỗi khi tạo dịch vụ:', error);
+      toast.error('Có lỗi xảy ra khi tạo dịch vụ. Vui lòng thử lại.');
       
       // Xử lý lỗi từ API
       const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi tạo dịch vụ!';
@@ -460,11 +440,8 @@ const Service: React.FC = () => {
     }
     
     setErrors(newErrors);
-    console.log('Update form data:', formData);
-    console.log('Validation errors:', newErrors);
     
     if (hasError) {
-      console.log('Có lỗi validation, không submit');
       toast.error('Vui lòng điền đầy đủ thông tin trước khi lưu thay đổi');
       return;
     }
@@ -513,7 +490,6 @@ const Service: React.FC = () => {
         }, 5000);
       }, 300);
     } catch (err) {
-      console.error('Lỗi khi cập nhật dịch vụ:', err);
       toast.error('Có lỗi xảy ra khi cập nhật dịch vụ');
     }
   };

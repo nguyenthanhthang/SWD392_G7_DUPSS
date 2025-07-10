@@ -1,15 +1,19 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByUserIdApi, updateBlogApi, getRegisteredEventsApi, unregisterEventApi } from '../api';
 import whaleLogo from '../assets/whale.png';
 import AppointmentsPage from './Appointments';
-import PaymentsTable  from './PaymentHistory';
 import type { AxiosError } from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
 import BlogDetailView from '../components/blog/BlogDetailView';
 import CreateBlogForm from '../components/blog/CreateBlogForm';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
+import { FiCamera } from 'react-icons/fi';
+import Modal from '../components/Modal';
+import defaultAvatar from '../assets/images/admin-avatar.jpg';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 
 interface User {
   _id?: string;
@@ -76,8 +80,6 @@ export default function Profile() {
   const [user, setUser] = useState<User | null>(null);
   const [editData, setEditData] = useState<User>({});
   const [editMode, setEditMode] = useState(false);
-  const [editPhoneOnly, setEditPhoneOnly] = useState(false);
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [fieldError, setFieldError] = useState<{ fullName?: string; phoneNumber?: string }>({});
   const [showPwdModal, setShowPwdModal] = useState(false);
   const [pwdStep, setPwdStep] = useState<'email'|'otp'|'newpass'>('email');
@@ -96,14 +98,23 @@ export default function Profile() {
   const [modalEdit, setModalEdit] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterKeyword, setFilterKeyword] = useState('');
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user: authUser } = useAuth();
+  const { user: authUser, updateUser } = useAuth();
   const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
   const [showQR, setShowQR] = useState<{ open: boolean; qr?: string } | null>(null);
   const handleOpenQR = (qr: string) => setShowQR({ open: true, qr });
   const handleCloseQR = () => setShowQR(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [formData, setFormData] = useState({
+    name: user?.fullName || '',
+    phone: user?.phoneNumber || '',
+    gender: user?.gender || '',
+    birthYear: user?.yearOfBirth?.toString() || ''
+  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -128,11 +139,6 @@ export default function Profile() {
 
   const handleEdit = () => setEditMode(true);
 
-  const showToast = (type: 'success' | 'error', message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 2000);
-  };
-
   const validateProfile = async () => {
     if (!user?._id) return false;
     if (!editData.fullName) {
@@ -147,30 +153,24 @@ export default function Profile() {
     try {
       await updateAccountApi(user._id, {
         fullName: editData.fullName,
+        phoneNumber: editData.phoneNumber,
+        gender: editData.gender,
+        yearOfBirth: editData.yearOfBirth
       });
       const updated = await getAccountByIdApi(user._id);
       setUser(updated);
       setEditData(updated);
       setEditMode(false);
-      showToast('success', 'Cập nhật thành công!');
-    } catch {
-      showToast('error', 'Cập nhật thất bại!');
-    }
-  };
-
-  const handleUpdatePhoneOnly = async () => {
-    if (!user?._id) return;
-    try {
-      await updateAccountApi(user._id, {
-        phoneNumber: editData.phoneNumber,
-      });
-      const updated = await getAccountByIdApi(user._id);
-      setUser(updated);
-      setEditData(updated);
-      setEditPhoneOnly(false);
-      showToast('success', 'Cập nhật số điện thoại thành công!');
-    } catch {
-      showToast('error', 'Cập nhật số điện thoại thất bại!');
+      setFieldError({}); // Clear any previous errors
+    } catch (error: any) {
+      // Extract error message from response
+      const errorMessage = error.response?.data?.message;
+      if (errorMessage?.toLowerCase().includes('số điện thoại')) {
+        setFieldError(prev => ({
+          ...prev,
+          phoneNumber: errorMessage
+        }));
+      }
     }
   };
 
@@ -179,7 +179,6 @@ export default function Profile() {
     try {
       await updateAccountApi(user._id, { [field]: value });
       setFieldError((prev) => ({ ...prev, [field]: undefined }));
-      showToast('success', 'Cập nhật thành công!');
       const updated = await getAccountByIdApi(user._id);
       setUser(updated);
       setEditData(updated);
@@ -197,22 +196,36 @@ export default function Profile() {
     try {
       await sendResetPasswordEmailApi(pwdEmail);
       setPwdStep('otp');
-    } catch {
+      setPwdOtp(''); // Clear OTP when resending
+      setPwdError(''); // Clear any previous errors
+    } catch (error) {
       setPwdError('Không gửi được OTP, kiểm tra email!');
-    }
+    } finally {
     setPwdLoading(false);
+    }
   };
 
   const handleVerifyOtp = async () => {
     setPwdError('');
     setPwdLoading(true);
     try {
-      await fetch('/api/auth/check-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyCode: pwdOtp }) });
+      const response = await fetch('/api/auth/check-otp', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ verifyCode: pwdOtp }) 
+      });
+      
+      if (!response.ok) {
+        throw new Error('OTP không đúng hoặc đã hết hạn!');
+      }
+      
       setPwdStep('newpass');
-    } catch {
+    } catch (error) {
       setPwdError('OTP không đúng hoặc đã hết hạn!');
-    }
+      setPwdOtp(''); // Clear OTP input when wrong
+    } finally {
     setPwdLoading(false);
+    }
   };
 
   const handleChangePassword = async () => {
@@ -224,7 +237,6 @@ export default function Profile() {
       setShowPwdModal(false);
       setPwdStep('email');
       setPwdEmail(''); setPwdOtp(''); setPwdNew(''); setPwdConfirm('');
-      showToast('success', 'Đổi mật khẩu thành công!');
     } catch (err: unknown) {
       const axiosErr = err as AxiosError<{ message?: string }>;
       setPwdError(axiosErr?.response?.data?.message || 'Đổi mật khẩu thất bại!');
@@ -251,46 +263,68 @@ export default function Profile() {
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user?._id) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // Preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAvatarPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    const file = files[0];
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Chỉ chấp nhận file hình ảnh (JPG, PNG, GIF)');
+      return;
+    }
 
-    // Upload
-    setIsUploadingAvatar(true);
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước file không được vượt quá 5MB');
+      return;
+    }
+
     try {
-      // First, upload the image to Cloudinary
+      setIsUploading(true);
+      setUploadProgress(0);
       const formData = new FormData();
       formData.append('image', file);
       
-      const uploadResponse = await fetch('http://localhost:5000/api/uploads/upload', {
-        method: 'POST',
+      // Sử dụng API upload của backend với progress tracking
+      const response = await axios.post('http://localhost:5000/api/uploads/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: formData,
+        onUploadProgress: (progressEvent) => {
+          const progress = progressEvent.total 
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0;
+          setUploadProgress(progress);
+        }
       });
 
-      if (!uploadResponse.ok) throw new Error('Failed to upload image');
-      const { imageUrl } = await uploadResponse.json();
-
-      // Then, update user's photoUrl
-      await updateAccountApi(user._id, { photoUrl: imageUrl });
-
-      // Update local user state
-      setUser(prev => prev ? { ...prev, photoUrl: imageUrl } : null);
-      showToast('success', 'Cập nhật ảnh đại diện thành công!');
-    } catch {
-      console.error('Error uploading avatar:');
-      showToast('error', 'Không thể cập nhật ảnh đại diện!');
-      setAvatarPreview(null); // Reset preview on error
+      if (response.data && response.data.imageUrl) {
+        // Cập nhật avatar URL trong database
+        if (user?._id) {
+          await updateAccountApi(user._id, { photoUrl: response.data.imageUrl });
+        }
+        
+        // Cập nhật user context
+        if (updateUser && user) {
+          updateUser({
+            ...user,
+            photoUrl: response.data.imageUrl
+          });
+        }
+        
+        toast.success('Cập nhật ảnh đại diện thành công!');
+      } else {
+        toast.error('Không nhận được URL ảnh từ server!');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.');
     } finally {
-      setIsUploadingAvatar(false);
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -318,7 +352,7 @@ export default function Profile() {
     const regEndDate = new Date(registrationEndDate);
     
     if (now > regEndDate) {
-      showToast('error', "Đã quá thời gian cho phép hủy đăng ký!");
+      alert("Đã quá thời gian cho phép hủy đăng ký!");
       return;
     }
 
@@ -327,10 +361,10 @@ export default function Profile() {
       setRegisteredEvents(prev => prev.map(event => 
         event._id === eventId ? { ...event, isCancelled: true } : event
       ));
-      showToast('success', "Hủy đăng ký thành công!");
+      alert("Hủy đăng ký thành công!");
     } catch (error: any) {
       const message = error?.response?.data?.message || "Không thể hủy đăng ký!";
-      showToast('error', message);
+      alert(message);
     }
   };
 
@@ -413,171 +447,198 @@ export default function Profile() {
           {/* Main content */}
           <div className="flex-1">
             <div className="max-w-4xl mx-auto">
-              {tab === 'profile' && (
-                <div className="p-7">
-                  <h2 className="text-2xl font-bold mb-2 text-gray-800">Hồ sơ người dùng</h2>
-                  <p className="text-gray-500 mb-8">Quản lý thông tin cá nhân, xem trạng thái và thay đổi mật khẩu.</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Avatar + Name */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-8 flex flex-col items-center">
-                      <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-                        <div className="w-24 h-24 rounded-full overflow-hidden">
+              {tab === "profile" && (
+                <div className="bg-white rounded-lg shadow-lg p-8">
+                  <div className="flex flex-col md:flex-row gap-8">
+                    {/* Phần Avatar */}
+                    <div className="flex flex-col items-center space-y-4 w-full md:w-1/3">
+                      <div className="relative w-48 h-48">
                           <img 
-                            src={avatarPreview || user?.photoUrl || 'https://i.pravatar.cc/150?img=3'} 
-                            alt="avatar" 
-                            className="w-full h-full object-cover" 
+                          src={avatarPreview || user?.photoUrl || whaleLogo}
+                          alt="Avatar"
+                          className="w-full h-full object-cover rounded-full border-4 border-blue-500"
                           />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
-                          <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <button
+                          onClick={handleAvatarClick}
+                          className="absolute bottom-2 right-2 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                           </svg>
-                        </div>
-                      </div>
+                        </button>
                       <input 
                         type="file" 
                         ref={fileInputRef} 
+                          onChange={handleAvatarChange}
                         className="hidden" 
                         accept="image/*"
-                        onChange={handleAvatarChange}
-                      />
-                      {isUploadingAvatar && (
-                        <div className="text-sm text-blue-500 animate-pulse">Đang tải ảnh lên...</div>
-                      )}
-                      <div className="font-bold text-lg text-gray-800 mb-1">{user?.fullName || '---'}</div>
-                      <div className="text-gray-500 text-sm mb-2 flex items-center gap-2">
-                        {editPhoneOnly ? (
-                          <div className="flex items-center gap-2">
-                            <input 
-                              id="edit-phone-input"
-                              className="border border-gray-300 rounded px-2 py-1 text-sm w-32"
-                              value={editData.phoneNumber || ''}
-                              onChange={e => setEditData({ ...editData, phoneNumber: e.target.value })}
-                              placeholder="Số điện thoại"
-                              onBlur={e => handleBlurField('phoneNumber', e.target.value)}
-                            />
-                            {fieldError.phoneNumber && <div className="text-red-500 text-xs mt-1">{fieldError.phoneNumber}</div>}
+                        />
+                      </div>
+                      <h2 className="text-2xl font-bold text-center">{user?.fullName}</h2>
+                      <p className="text-gray-600 text-center">{user?.role === 'consultant' ? 'Tư vấn viên' : 'Khách hàng'}</p>
+                    </div>
+
+                    {/* Phần thông tin */}
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-semibold">Thông tin cá nhân</h3>
+                        <div className="flex items-center gap-4">
+                          {!editMode ? (
                             <button 
-                              onClick={handleUpdatePhoneOnly}
-                              className="text-green-600 hover:text-green-700"
+                              onClick={handleEdit}
+                              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                               </svg>
+                              Chỉnh sửa
                             </button>
+                          ) : (
+                            <>
                             <button 
                               onClick={() => {
-                                setEditPhoneOnly(false);
-                                setEditData({ ...user }); // Reset edit data
-                              }}
-                              className="text-red-600 hover:text-red-700"
+                                  setEditMode(false);
+                                  setEditData(user || {});
+                                }}
+                                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                              >
+                                Hủy
+                              </button>
+                              <button
+                                onClick={handleUpdate}
+                                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
+                                Lưu thay đổi
                             </button>
-                          </div>
-                        ) : (
-                          <span>{user?.phoneNumber || 'Chưa có số điện thoại'}</span>
+                            </>
                         )}
                       </div>
-                      {!editPhoneOnly && (
-                        <div className="text-blue-500 font-medium text-sm cursor-pointer">
-                          <button type="button" onClick={() => {
-                            setEditPhoneOnly(true);
-                            setEditData({ ...user }); // Initialize edit data with current user data
-                            setTimeout(() => {
-                              const phoneInput = document.getElementById('edit-phone-input');
-                              if (phoneInput) phoneInput.focus();
-                            }, 100);
-                          }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                            </svg>
-                            Sửa SĐT
-                          </button>
                         </div>
+
+                      {/* Form fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Họ và tên
+                          </label>
+                          <input
+                            type="text"
+                            value={editData.fullName || ''}
+                            onChange={(e) => setEditData({ ...editData, fullName: e.target.value })}
+                            disabled={!editMode}
+                            className={`w-full px-4 py-2 rounded-lg border ${
+                              editMode 
+                                ? 'border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' 
+                                : 'bg-gray-50 border-gray-200'
+                            } transition-colors`}
+                            placeholder="Nhập họ và tên"
+                          />
+                          {fieldError.fullName && (
+                            <p className="text-red-500 text-sm mt-1">{fieldError.fullName}</p>
                       )}
                     </div>
                     
-                    {/* General info */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-8">
-                      <div className="font-semibold text-gray-700">Thông tin chung</div>
-                      
-                      <div className="mt-4">
-                        <label className="block text-gray-500 text-sm mb-2">Họ và tên</label>
-                        <div className="flex items-center gap-4">
-                            <input
-                                disabled={!editMode}
-                                className={`flex-grow border border-gray-200 rounded-md px-4 py-2 text-gray-700 ${!editMode ? 'bg-gray-50' : 'bg-white'}`}
-                                value={editMode ? (editData.fullName || '') : user?.fullName || ''}
-                                onChange={e => setEditData({ ...editData, fullName: e.target.value })}
-                            />
-                            <div className="text-gray-500 p-2 whitespace-nowrap">
-                                {user?.yearOfBirth ? `(${user.yearOfBirth})` : ''}
-                            </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            value={editData.email || ''}
+                            disabled
+                            className="w-full px-4 py-2 rounded-lg bg-gray-50 border border-gray-200"
+                          />
                         </div>
-                        {fieldError.fullName && <div className="text-red-500 text-xs mt-1">{fieldError.fullName}</div>}
+                      
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Số điện thoại
+                          </label>
+                            <input
+                            type="tel"
+                            value={editData.phoneNumber || ''}
+                            onChange={(e) => {
+                              setEditData({ ...editData, phoneNumber: e.target.value });
+                              // Clear error when user starts typing
+                              if (fieldError.phoneNumber) {
+                                setFieldError(prev => ({
+                                  ...prev,
+                                  phoneNumber: undefined
+                                }));
+                              }
+                            }}
+                                disabled={!editMode}
+                            className={`w-full px-4 py-2 rounded-lg border ${
+                              fieldError.phoneNumber 
+                                ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                                : editMode 
+                                  ? 'border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' 
+                                  : 'bg-gray-50 border-gray-200'
+                            } transition-colors`}
+                            placeholder="0xxxxxxxxx"
+                          />
+                          {fieldError.phoneNumber && (
+                            <p className="text-red-500 text-sm mt-1">{fieldError.phoneNumber}</p>
+                          )}
                       </div>
 
-                      <div className="mt-6 flex items-center gap-4">
-                        {editMode ? (
-                          <>
-                            <button
-                                className="px-6 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700"
-                                onClick={handleUpdate}
-                            >
-                                Lưu thay đổi
-                            </button>
-                            <button 
-                                onClick={() => { setEditMode(false); setEditData({ ...user }); }}
-                                className="text-gray-600 hover:text-gray-800 text-sm font-medium"
-                            >
-                                Hủy
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                                className="px-6 py-2 rounded-lg font-medium bg-gray-200 text-gray-500"
-                                disabled
-                            >
-                                Cập nhật
-                            </button>
-                            <button
-                                onClick={() => { handleEdit(); setEditPhoneOnly(false); }}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                            >
-                                Chỉnh sửa
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Giới tính
+                          </label>
+                          <select
+                            value={editData.gender || ''}
+                            onChange={(e) => setEditData({ ...editData, gender: e.target.value as "male" | "female" | "other" })}
+                            disabled={!editMode}
+                            className={`w-full px-4 py-2 rounded-lg border ${
+                              editMode 
+                                ? 'border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' 
+                                : 'bg-gray-50 border-gray-200'
+                            } transition-colors`}
+                          >
+                            <option value="">Chọn giới tính</option>
+                            <option value="male">Nam</option>
+                            <option value="female">Nữ</option>
+                            <option value="other">Khác</option>
+                          </select>
                   </div>
                   
-                  {/* Security */}
-                  <div className="mt-8">
-                    <div className="font-semibold text-gray-700 mb-6">Bảo mật</div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="bg-gray-50 rounded-md p-4">
-                        <label className="block text-gray-500 text-sm mb-2">Email</label>
-                        <div className="text-gray-700 font-medium">{user?.email || ''}</div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Năm sinh
+                          </label>
+                          <input
+                            type="number"
+                            value={editData.yearOfBirth || ''}
+                            onChange={(e) => setEditData({ ...editData, yearOfBirth: parseInt(e.target.value) })}
+                            disabled={!editMode}
+                            className={`w-full px-4 py-2 rounded-lg border ${
+                              editMode 
+                                ? 'border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' 
+                                : 'bg-gray-50 border-gray-200'
+                            } transition-colors`}
+                            min="1900"
+                            max={new Date().getFullYear()}
+                            placeholder="Nhập năm sinh"
+                          />
                       </div>
-                      <div className="bg-gray-50 rounded-md p-4">
-                        <label className="block text-gray-500 text-sm mb-2">Mật khẩu</label>
-                        <div className="text-gray-700 font-medium">••••••</div>
                       </div>
-                    </div>
-                    <div className="flex gap-4 mt-6">
+
+                      {/* Nút đổi mật khẩu */}
+                      <div className="col-span-2">
                       <button
-                        className="w-50 border border-blue-600 text-blue-600 px-6 py-2 rounded-lg font-medium bg-white transition-colors hover:bg-blue-50 hover:border-blue-700 hover:text-blue-800 focus:outline-none"
                         onClick={() => setShowPwdModal(true)}
+                          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
                       >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
                         Đổi mật khẩu
                       </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -722,11 +783,6 @@ export default function Profile() {
                   <AppointmentsPage />
                 </div>
               )}
-              {tab === 'payments' && (
-                <div className="w-full">
-                  <PaymentsTable />
-                </div>
-              )}
               {tab === 'registeredEvents' && (
                 <div className="w-full">
                   {/* Sự kiện đã đăng ký */}
@@ -867,63 +923,183 @@ export default function Profile() {
           </div>
         </div>
       </div>
-      {toast && (
-        <div className={`fixed top-6 right-6 z-50 px-6 py-3 rounded-lg shadow-lg text-white text-base font-semibold transition-all ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
-          {toast.message}
-        </div>
-      )}
       {showPwdModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900">Đổi mật khẩu</h3>
-            {pwdStep==='email' && (
-              <>
-                <label className="block text-gray-500 text-sm mb-2">Email</label>
-                <input className="w-full border border-gray-300 rounded px-3 py-2 mb-3" value={pwdEmail} onChange={e=>setPwdEmail(e.target.value)} placeholder="Nhập email đã đăng ký" />
-                {pwdError && <div className="text-red-500 text-xs mb-2">{pwdError}</div>}
-                <button className="w-full bg-blue-600 text-white py-2 rounded font-medium" onClick={handleSendOtp} disabled={pwdLoading}>{pwdLoading?'Đang gửi...':'Gửi mã OTP'}</button>
-              </>
+          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Đổi mật khẩu</h3>
+              <button 
+                onClick={() => {
+                  setShowPwdModal(false);
+                  setPwdStep('email');
+                  setPwdEmail('');
+                  setPwdOtp('');
+                  setPwdNew('');
+                  setPwdConfirm('');
+                  setPwdError('');
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Email Step */}
+            {pwdStep === 'email' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email xác thực
+                  </label>
+                  <input
+                    type="email"
+                    value={pwdEmail}
+                    onChange={(e) => setPwdEmail(e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200"
+                    placeholder="Nhập email của bạn"
+                    disabled={pwdLoading}
+                  />
+                </div>
+                {pwdError && (
+                  <p className="text-red-500 text-sm">{pwdError}</p>
+                )}
+                <button
+                  onClick={handleSendOtp}
+                  disabled={pwdLoading || !pwdEmail}
+                  className={`w-full py-2 rounded-lg font-medium ${
+                    pwdLoading || !pwdEmail
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                >
+                  {pwdLoading ? 'Đang gửi...' : 'Gửi mã OTP'}
+                </button>
+              </div>
             )}
-            {pwdStep==='otp' && (
-              <>
-                <label className="block text-gray-500 text-sm mb-2">Mã OTP</label>
-                <input className="w-full border border-gray-300 rounded px-3 py-2 mb-3" value={pwdOtp} onChange={e=>setPwdOtp(e.target.value)} placeholder="Nhập mã OTP" />
-                {pwdError && <div className="text-red-500 text-xs mb-2">{pwdError}</div>}
-                <button className="w-full bg-blue-600 text-white py-2 rounded font-medium" onClick={handleVerifyOtp} disabled={pwdLoading}>{pwdLoading?'Đang xác thực...':'Xác nhận OTP'}</button>
-              </>
+
+            {/* OTP Step */}
+            {pwdStep === 'otp' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mã OTP
+                  </label>
+                  <input
+                    type="text"
+                    value={pwdOtp}
+                    onChange={(e) => {
+                      setPwdOtp(e.target.value);
+                      if (pwdError) setPwdError(''); // Clear error when user types
+                    }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 ${
+                      pwdError ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Nhập mã OTP"
+                    disabled={pwdLoading}
+                  />
+                </div>
+                {pwdError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-500 text-sm">{pwdError}</p>
+                  </div>
+                )}
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleVerifyOtp}
+                    disabled={pwdLoading || !pwdOtp}
+                    className={`flex-1 py-2 rounded-lg font-medium ${
+                      pwdLoading || !pwdOtp
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
+                  >
+                    {pwdLoading ? 'Đang xác thực...' : 'Xác nhận'}
+                  </button>
+                  <button
+                    onClick={handleSendOtp}
+                    disabled={pwdLoading}
+                    className={`px-4 py-2 border rounded-lg ${
+                      pwdLoading 
+                        ? 'border-gray-300 text-gray-300 cursor-not-allowed'
+                        : 'border-blue-500 text-blue-500 hover:bg-blue-50'
+                    }`}
+                  >
+                    Gửi lại OTP
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 text-center">
+                  Không nhận được mã? Bấm "Gửi lại OTP"
+                </p>
+              </div>
             )}
-            {pwdStep==='newpass' && (
-              <>
-                <label className="block text-gray-500 text-sm mb-2">Mật khẩu mới</label>
-                <div className="relative mb-2">
+
+            {/* New Password Step */}
+            {pwdStep === 'newpass' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mật khẩu mới
+                  </label>
+                  <div className="relative">
                   <input
                     type={showPwdNew ? 'text' : 'password'}
-                    className="w-full border border-gray-300 rounded px-3 py-2 pr-10"
                     value={pwdNew}
-                    onChange={e=>setPwdNew(e.target.value)}
-                    placeholder="Mật khẩu mới"
+                      onChange={(e) => setPwdNew(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200"
+                      placeholder="Nhập mật khẩu mới"
+                      disabled={pwdLoading}
                   />
-                  <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" onClick={()=>setShowPwdNew(v=>!v)}>
-                    {showPwdNew ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    <button
+                      type="button"
+                      onClick={() => setShowPwdNew(!showPwdNew)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                    >
+                      {showPwdNew ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                <div className="relative mb-3">
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Xác nhận mật khẩu
+                  </label>
+                  <div className="relative">
                   <input
                     type={showPwdConfirm ? 'text' : 'password'}
-                    className="w-full border border-gray-300 rounded px-3 py-2 pr-10"
                     value={pwdConfirm}
-                    onChange={e=>setPwdConfirm(e.target.value)}
-                    placeholder="Xác nhận mật khẩu"
+                      onChange={(e) => setPwdConfirm(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200"
+                      placeholder="Nhập lại mật khẩu mới"
+                      disabled={pwdLoading}
                   />
-                  <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" onClick={()=>setShowPwdConfirm(v=>!v)}>
-                    {showPwdConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    <button
+                      type="button"
+                      onClick={() => setShowPwdConfirm(!showPwdConfirm)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                    >
+                      {showPwdConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                {pwdError && <div className="text-red-500 text-xs mb-2">{pwdError}</div>}
-                <button className="w-full bg-blue-600 text-white py-2 rounded font-medium" onClick={handleChangePassword} disabled={pwdLoading}>{pwdLoading?'Đang đổi...':'Đổi mật khẩu'}</button>
-              </>
+                </div>
+                {pwdError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-500 text-sm">{pwdError}</p>
+                  </div>
+                )}
+                <button
+                  onClick={handleChangePassword}
+                  disabled={pwdLoading || !pwdNew || !pwdConfirm}
+                  className={`w-full py-2 rounded-lg font-medium ${
+                    pwdLoading || !pwdNew || !pwdConfirm
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                >
+                  {pwdLoading ? 'Đang cập nhật...' : 'Đổi mật khẩu'}
+                </button>
+              </div>
             )}
-            <button className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm" onClick={()=>setShowPwdModal(false)}>Hủy</button>
           </div>
         </div>
       )}
@@ -954,7 +1130,7 @@ export default function Profile() {
               onSubmit={async (data) => {
                 // Kiểm tra nếu blog đang chỉnh sửa đã xuất bản thì không cho phép
                 if (blogDangSua.published === 'published') {
-                  showToast('error', 'Không thể chỉnh sửa bài viết đã xuất bản.');
+                  alert('Không thể chỉnh sửa bài viết đã xuất bản.');
                   return;
                 }
                 
