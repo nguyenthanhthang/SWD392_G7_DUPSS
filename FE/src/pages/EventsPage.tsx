@@ -173,6 +173,12 @@ export default function EventsPage() {
       navigate("/login");
       return;
     }
+
+    if (!user.isVerified) {
+      navigate("/verify-otp");
+      return;
+    }
+
     // Kiểm tra lại thời gian đăng ký trước khi submit
     const event = events.find(e => e._id === eventId);
     if (event && event.registrationStartDate && event.registrationEndDate) {

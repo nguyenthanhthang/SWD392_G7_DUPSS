@@ -165,6 +165,12 @@ export const registerEvent = async (
       return;
     }
 
+    // Kiểm tra tài khoản đã xác thực chưa
+    if (!account.isVerified) {
+      res.status(403).json({ message: "Vui lòng xác thực tài khoản trước khi đăng ký sự kiện" });
+      return;
+    }
+
     const event = await Event.findById(req.params.id);
     if (!event) {
       res.status(404).json({ message: "Không tìm thấy sự kiện" });

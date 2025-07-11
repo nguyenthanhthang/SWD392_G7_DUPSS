@@ -240,7 +240,7 @@ export const handleMomoCallback = async (req: Request, res: Response) => {
 
         if (resultCode === 0) {
             // Thanh toán thành công
-            appointment.status = "completed";
+            appointment.status = "confirmed";
             await appointment.save();
             console.log(`MoMo Callback: Appointment ${appointmentId} status updated to completed.`);
             // Phản hồi cho MoMo với HTTP 204 để xác nhận đã nhận và xử lý thành công
@@ -300,7 +300,7 @@ export const handleVnpayIpn = async (req: Request, res: Response) => {
         // Handle payment result
         if (vnpResponseCode === '00') {
             // Payment successful
-            appointment.status = "completed";
+            appointment.status = "confirmed";
             appointment.paymentDetails = {
                 transactionNo,
                 amount,

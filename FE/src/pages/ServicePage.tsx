@@ -414,6 +414,8 @@ export default function ServicePage() {
   const handleStartConsulting = () => {
     if (!user) {
       navigate('/login');
+    } else if (!user.isVerified) {
+      navigate('/verify-otp');
     } else {
       setShowIntro(false);
     }
@@ -861,18 +863,24 @@ export default function ServicePage() {
     };
   }, [slotHoldTime]);
 
-  // Cleanup on unmount or navigation
+  // Cleanup khi component unmount - giải phóng slot nếu đang giữ
   useEffect(() => {
-    return () => {
-      // Chỉ giải phóng slot nếu chưa thanh toán thành công
-      if (heldSlotId && slotHoldTime !== null) {
+    // Xử lý khi user đóng tab hoặc thoát trang
+    const handleBeforeUnload = () => {
+      if (heldSlotId) {
         void releaseSlot();
       }
-      if (slotHoldInterval.current) {
-        clearInterval(slotHoldInterval.current);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (heldSlotId) {
+        void releaseSlot();
       }
     };
-  }, []);
+  }, [heldSlotId]);
 
   const handleStartPayment = async () => {
     if (!validateForm()) {

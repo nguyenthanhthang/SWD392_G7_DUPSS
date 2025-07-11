@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { useEffect, useState } from 'react';
@@ -64,6 +64,7 @@ const defaultCertificateImg = 'https://pvccardprinting.in/wp-content/uploads/202
 
 function ConsultantDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [consultant, setConsultant] = useState<Consultant | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +167,16 @@ function ConsultantDetailPage() {
   }, [showModal]);
 
   const handleOpenModal = (day: string, time: string) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    if (!user.isVerified) {
+      navigate('/verify-otp');
+      return;
+    }
+
     // Tìm slotObj tương ứng
     const slotObj = slotTimesOfWeek.find(st => {
       let dayOfWeek, hour;

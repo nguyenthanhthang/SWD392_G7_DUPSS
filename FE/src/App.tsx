@@ -38,6 +38,7 @@ import AppointmentManagement from "./pages/admin/AppointmentManagement";
 import QuizManagement from "./pages/admin/QuizManagement";
 import QuizResultsManagement from "./pages/admin/QuizResultsManagement";
 import EventDetailPage from "./pages/EventDetailPage";
+import VerifyOTP from "./pages/VerifyOTP";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -103,6 +104,7 @@ function AppContent() {
         <Route path="/about-us" element={<AboutUsPage />} />
         <Route path="/service" element={<ServicePage />} />
         <Route path="/events/:id" element={<EventDetailPage />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
 
         {/* Protected Routes */}
         <Route

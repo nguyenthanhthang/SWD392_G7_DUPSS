@@ -26,6 +26,7 @@ interface AuthContextType {
   ) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  updateUserInfo: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +38,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const updateUserInfo = async () => {
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+
+    if (token && userId) {
+      try {
+        const userData = await getAccountByIdApi(userId);
+        setUser(userData);
+        localStorage.setItem("userInfo", JSON.stringify(userData));
+      } catch (err) {
+        console.error("Lỗi khi cập nhật thông tin user:", err);
+      }
+    }
+  };
+
   useEffect(() => {
     // Kiểm tra token và lấy thông tin user khi component mount
     const token = localStorage.getItem("token");
@@ -47,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         try {
           const userData = await getAccountByIdApi(userId);
           setUser(userData);
+          localStorage.setItem("userInfo", JSON.stringify(userData));
         } catch (err) {
           console.error("Lỗi khi lấy thông tin user:", err);
           localStorage.removeItem("token");
@@ -117,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     loginWithGoogle,
     logout,
     isAuthenticated: !!user,
+    updateUserInfo
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

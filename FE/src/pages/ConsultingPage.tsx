@@ -49,8 +49,13 @@ function ConsultingPage() {
 
   const handleBookAppointment = (consultantId: string) => {
     const userId = localStorage.getItem("userId");
+    const userInfo = localStorage.getItem("userInfo");
+    const user = userInfo ? JSON.parse(userInfo) : null;
+    
     if (!userId) {
       navigate('/login');
+    } else if (!user?.isVerified) {
+      navigate('/verify-otp');
     } else {
       navigate(`/consultant/${consultantId}`);
     }

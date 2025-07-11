@@ -8,6 +8,7 @@ import AdminHeader from './AdminHeader';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
 import { useAuth } from '../../contexts/AuthContext';
+import VerificationAlert from '../VerificationAlert';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -23,6 +24,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       {isAdminPage ? <AdminHeader isSidebarCollapsed={isSidebarCollapsed} /> : <Header />}
+
+      {/* Verification Alert */}
+      <VerificationAlert />
 
       {/* Main Content */}
       <div className="flex flex-grow">
