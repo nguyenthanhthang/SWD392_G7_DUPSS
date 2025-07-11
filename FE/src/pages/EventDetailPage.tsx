@@ -81,6 +81,12 @@ export default function EventDetailPage() {
       navigate("/login");
       return;
     }
+    
+    if (!user.isVerified) {
+      navigate("/verify-otp");
+      return;
+    }
+
     if (!event?._id) return;
     setIsRegistering(true);
     setRegisterError(null);

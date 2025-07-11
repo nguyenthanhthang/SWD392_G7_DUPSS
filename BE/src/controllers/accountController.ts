@@ -58,7 +58,7 @@ export const getAccountById = async (
 ): Promise<void> => {
   try {
     const account = await Account.findById(req.params.id).select(
-      "fullName email role photoUrl gender yearOfBirth phoneNumber address"
+      "fullName email role photoUrl gender yearOfBirth phoneNumber address isVerified"
     );
     if (!account) {
       res.status(404).json({ message: "Không tìm thấy tài khoản" });

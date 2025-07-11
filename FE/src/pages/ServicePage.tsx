@@ -414,6 +414,8 @@ export default function ServicePage() {
   const handleStartConsulting = () => {
     if (!user) {
       navigate('/login');
+    } else if (!user.isVerified) {
+      navigate('/verify-otp');
     } else {
       setShowIntro(false);
     }
