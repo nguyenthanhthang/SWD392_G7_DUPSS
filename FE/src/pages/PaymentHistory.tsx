@@ -232,8 +232,8 @@ const PaymentHistory = () => {
                       <div>
                         <div className="font-medium">
                               {app.dateBooking ? new Date(app.dateBooking).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' }) : '--'}
-                            </div>
-                          </div>
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="py-2 px-2 align-top">

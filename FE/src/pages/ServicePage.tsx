@@ -1752,17 +1752,6 @@ export default function ServicePage() {
                       <div>
                         <label className="block text-gray-700 mb-3 text-base font-medium">Phương thức thanh toán</label>
                         <div className="space-y-4">
-                          <label className="flex items-center p-4 border border-sky-100 rounded-xl cursor-pointer hover:bg-sky-50/30 transition-all text-base hover:border-sky-300">
-                            <input
-                              type="radio"
-                              name="paymentMethod"
-                              value="card"
-                              checked={form.paymentMethod === 'card'}
-                              onChange={handleChange}
-                              className="mr-3 w-5 h-5 text-sky-600 focus:ring-sky-500"
-                            />
-                            <span>Thanh toán tại quầy</span>
-                          </label>
                           <label className={`flex items-center p-4 border rounded-xl cursor-pointer hover:bg-fuchsia-50/30 transition-all text-base hover:border-fuchsia-300 ${form.paymentMethod === 'momo' ? 'border-fuchsia-300' : 'border-sky-100'}`}>
                             <input
                               type="radio"

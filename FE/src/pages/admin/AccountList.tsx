@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import api, { checkPhoneNumberExistsApi } from '../../api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -191,7 +191,7 @@ const AccountList: React.FC = () => {
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   // State cho upload ảnh đại diện
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  // const [avatarFile, setAvatarFile] = useState<File | null>(null); // Không dùng
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   // Pagination state
@@ -213,9 +213,9 @@ const AccountList: React.FC = () => {
         if (adminUser) {
           setCurrentUser(adminUser);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Lỗi khi lấy danh sách tài khoản:', err);
-        setError(err.response?.data?.message || 'Đã xảy ra lỗi khi tải dữ liệu');
+        setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu');
         setLoading(false);
       }
     };
@@ -292,7 +292,7 @@ const AccountList: React.FC = () => {
       
       toast.success(isDisabled ? 'Đã mở khóa tài khoản thành công!' : 'Đã khóa tài khoản thành công!');
       closeConfirmToggleModal();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Lỗi khi cập nhật trạng thái:', err);
       toast.error('Không thể cập nhật trạng thái tài khoản');
       closeConfirmToggleModal();
@@ -306,9 +306,9 @@ const AccountList: React.FC = () => {
       setAccountDetail(response.data);
       setIsDetailModalOpen(true);
       setLoadingDetail(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Lỗi khi lấy chi tiết tài khoản:', err);
-      toast.error(err.response?.data?.message || 'Không thể lấy chi tiết tài khoản');
+      toast.error(err instanceof Error ? err.message : 'Không thể lấy chi tiết tài khoản');
       setLoadingDetail(false);
     }
   };
@@ -377,9 +377,9 @@ const AccountList: React.FC = () => {
       setAccounts(accounts.map(acc => acc._id === selectedAccount._id ? response.data : acc));
       toast.success('Cập nhật tài khoản thành công!');
       handleCloseUpdateModal();
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        setFormErrors({ submit: error.response.data.message });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setFormErrors({ submit: error.message });
       } else {
         setFormErrors({ submit: 'Có lỗi xảy ra khi cập nhật tài khoản' });
       }
@@ -421,46 +421,6 @@ const AccountList: React.FC = () => {
 
     setConsultantFormErrors(errors);
     return Object.keys(errors).length === 0;
-  };
-
-  // Hàm xử lý submit form consultant
-  const handleConsultantSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedAccount) return;
-
-    if (!validateConsultantForm()) {
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const response = await api.put(`/accounts/${selectedAccount._id}`, {
-        ...updateForm,
-        ...consultantForm
-      });
-      setAccounts(accounts.map(acc => acc._id === selectedAccount._id ? response.data : acc));
-      toast.success('Nâng cấp tài khoản lên tư vấn viên thành công!');
-      handleCloseUpdateModal();
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        setConsultantFormErrors({ submit: error.response.data.message });
-      } else {
-        setConsultantFormErrors({ submit: 'Có lỗi xảy ra khi nâng cấp tài khoản' });
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Hàm đóng modal consultant
-  const handleCloseConsultantModal = () => {
-    setConsultantForm({
-      introduction: '',
-      contact: '',
-      experience: 0,
-      startDateofWork: new Date().toISOString().split('T')[0]
-    });
-    setConsultantFormErrors({});
   };
 
   const handleOpenCreateModal = () => {
@@ -581,20 +541,20 @@ const AccountList: React.FC = () => {
       // Đóng modal và hiện thông báo thành công
       handleCloseCreateModal();
       toast.success('Tạo tài khoản thành công!');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Lỗi khi tạo tài khoản:', err);
       
       // Xử lý lỗi từ server nếu có
-      if (err.response?.data?.error?.code === 11000) {
+      if (err instanceof Error && err.message.includes('duplicate key')) {
         // Lỗi trùng lặp (duplicate key)
-        if (err.response.data.error.keyPattern?.username) {
+        if (err.message.includes('username')) {
           setFormErrors(prev => ({ ...prev, username: 'Tên đăng nhập đã tồn tại' }));
         }
-        if (err.response.data.error.keyPattern?.email) {
+        if (err.message.includes('email')) {
           setFormErrors(prev => ({ ...prev, email: 'Email đã tồn tại' }));
         }
       } else {
-        toast.error(err.response?.data?.message || 'Không thể tạo tài khoản');
+        toast.error(err instanceof Error ? err.message : 'Không thể tạo tài khoản');
       }
     } finally {
       setIsSubmitting(false);
@@ -605,7 +565,7 @@ const AccountList: React.FC = () => {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setAvatarFile(file);
+    // setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
     setIsUploadingAvatar(true);
     try {
@@ -620,11 +580,11 @@ const AccountList: React.FC = () => {
       setUpdateForm(prev => ({ ...prev, photoUrl: url }));
       setIsUploadingAvatar(false);
       toast.success('Tải ảnh lên thành công!');
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsUploadingAvatar(false);
       console.error('Upload error:', err);
-      if (err.response) {
-        console.error('Error response:', err.response);
+      if (err instanceof Error) {
+        console.error('Error response:', err.message);
       }
       toast.error('Tải ảnh lên thất bại!');
     }
@@ -684,8 +644,9 @@ const AccountList: React.FC = () => {
     return matchesSearch && matchesRole && matchesStatus && matchesGender;
   });
 
-  const paginatedAccounts = filteredAccounts.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  // Tính toán phân trang sau khi đã có filteredAccounts
   const totalPages = Math.ceil(filteredAccounts.length / rowsPerPage);
+  const paginatedAccounts = filteredAccounts.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   if (loading) {
     return (
@@ -708,844 +669,810 @@ const AccountList: React.FC = () => {
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg mt-4">
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
-      <div className="px-4 py-5 sm:px-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Quản lý tài khoản</h1>
-      </div>
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 w-full flex flex-col justify-center items-center">
+        <div className="w-full max-w-6xl mx-auto bg-white rounded-lg shadow-sm p-6 mb-8">
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="colored"
+          />
+          <div className="px-4 py-5 sm:px-6">
+            <h1 className="text-2xl font-semibold text-gray-800">Quản lý tài khoản</h1>
+          </div>
 
-      {/* Phần tìm kiếm và lọc */}
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-medium text-gray-800 mb-4">Tìm kiếm và Lọc</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Tìm kiếm */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
-            <div className="relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={handleSearch}
-                placeholder="Tìm theo tên, email..."
-                className="focus:ring-sky-500 focus:border-sky-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-              />
-            </div>
-          </div>
-          {/* Lọc theo vai trò */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò</label>
-            <select
-              value={roleFilter}
-              onChange={handleRoleFilter}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
-            >
-              <option value="">Tất cả vai trò</option>
-              <option value="admin">Admin</option>
-              <option value="consultant">Tư vấn viên</option>
-              <option value="customer">Khách hàng</option>
-            </select>
-          </div>
-          {/* Lọc theo trạng thái */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-            <select
-              value={statusFilter}
-              onChange={handleStatusFilter}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="active">Đang hoạt động</option>
-              <option value="disabled">Đã bị khóa</option>
-            </select>
-          </div>
-          {/* Lọc theo giới tính */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
-            <select
-              value={genderFilter}
-              onChange={handleGenderFilter}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
-            >
-              <option value="">Tất cả giới tính</option>
-              <option value="male">Nam</option>
-              <option value="female">Nữ</option>
-              <option value="other">Khác</option>
-            </select>
-          </div>
-        </div>
-        <div className="mt-4 flex justify-between items-center">
-          <div>
-            <span className="text-sm text-gray-500">
-              Kết quả: {filteredAccounts.length} tài khoản
-            </span>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={handleResetFilters}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
-            >
-              <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Đặt lại
-            </button>
-            <button
-              onClick={handleOpenCreateModal}
-              className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
-            >
-              <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Thêm tài khoản
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Bảng danh sách tài khoản */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
-          </div>
-        ) : error ? (
-          <div className="p-6 text-center text-red-500">{error}</div>
-        ) : (
-          <>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-sky-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tài khoản
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Thông tin
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vai trò
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Trạng thái
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ngày tạo
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Thao tác
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedAccounts.map((account) => (
-                  <tr key={account._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <img
-                            className="h-10 w-10 rounded-full object-cover"
-                            src={account.photoUrl || '/avarta.png'}
-                            alt={account.username}
-                          />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{account.fullName || 'Chưa cập nhật'}</div>
-                          <div className="text-sm text-gray-500">{account.gender || 'Chưa cập nhật'}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{account.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{account.username}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(account.role)}`}>
-                        {account.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${account.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                        {account.isDisabled ? 'Đã bị khóa' : 'Đang hoạt động'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${account.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {account.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex space-x-2 justify-end">
-                        <Tooltip text="Khóa/Mở khóa">
-                          <button
-                            onClick={() => openConfirmToggleModal(account._id, account.isDisabled)}
-                            disabled={isAdminAccount(account)}
-                            className={`text-gray-400 hover:text-gray-500 ${isAdminAccount(account) ? 'cursor-not-allowed opacity-50' : ''}`}
-                          >
-                            {account.isDisabled ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                            )}
-                          </button>
-                        </Tooltip>
-                        <Tooltip text="Cập nhật">
-                          <button
-                            onClick={() => handleOpenUpdateModal(account)}
-                            className="text-yellow-400 hover:text-yellow-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                        </Tooltip>
-                        <Tooltip text="Chi tiết">
-                          <button
-                            onClick={() => handleOpenDetailModal(account._id)}
-                            className="text-sky-400 hover:text-sky-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                        </Tooltip>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Phân trang */}
-            {filteredAccounts.length > rowsPerPage && (
-              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm text-gray-700">
-                      Hiển thị <span className="font-medium">{(currentPage - 1) * rowsPerPage + 1}</span> đến{" "}
-                      <span className="font-medium">
-                        {Math.min(currentPage * rowsPerPage, filteredAccounts.length)}
-                      </span>{" "}
-                      trong tổng số <span className="font-medium">{filteredAccounts.length}</span> kết quả
-                    </p>
+          {/* Phần tìm kiếm và lọc */}
+          <div className="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 className="text-lg font-medium text-gray-800 mb-4">Tìm kiếm và Lọc</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Tìm kiếm */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                   </div>
-                  <div>
-                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                      <button
-                        onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
-                        disabled={currentPage === 1}
-                        className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                          currentPage === 1 
-                            ? 'text-gray-300 cursor-not-allowed' 
-                            : 'text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span className="sr-only">Previous</span>
-                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      
-                      {/* Hiển thị các nút số trang */}
-                      {Array.from({ length: Math.ceil(filteredAccounts.length / rowsPerPage) }).map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setCurrentPage(index + 1)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            currentPage === index + 1
-                              ? 'z-10 bg-sky-50 border-sky-500 text-sky-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {index + 1}
-                        </button>
-                      ))}
-                      
-                      <button
-                        onClick={() => setCurrentPage(currentPage < Math.ceil(filteredAccounts.length / rowsPerPage) ? currentPage + 1 : currentPage)}
-                        disabled={currentPage >= Math.ceil(filteredAccounts.length / rowsPerPage)}
-                        className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                          currentPage >= Math.ceil(filteredAccounts.length / rowsPerPage)
-                            ? 'text-gray-300 cursor-not-allowed'
-                            : 'text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span className="sr-only">Next</span>
-                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </nav>
-                  </div>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={handleSearch}
+                    placeholder="Tìm theo tên, email..."
+                    className="focus:ring-sky-500 focus:border-sky-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                  />
                 </div>
               </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Modal Cập nhật tài khoản */}
-      {isUpdateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-0 w-full max-w-md">
-            <div className="p-6 max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-semibold">Cập nhật tài khoản</h2>
-                <button
-                  onClick={handleCloseUpdateModal}
-                  className="text-gray-500 hover:text-gray-700"
+              {/* Lọc theo vai trò */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò</label>
+                <select
+                  value={roleFilter}
+                  onChange={handleRoleFilter}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  <option value="">Tất cả vai trò</option>
+                  <option value="admin">Admin</option>
+                  <option value="consultant">Tư vấn viên</option>
+                  <option value="customer">Khách hàng</option>
+                </select>
+              </div>
+              {/* Lọc theo trạng thái */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+                <select
+                  value={statusFilter}
+                  onChange={handleStatusFilter}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="active">Đang hoạt động</option>
+                  <option value="disabled">Đã bị khóa</option>
+                </select>
+              </div>
+              {/* Lọc theo giới tính */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
+                <select
+                  value={genderFilter}
+                  onChange={handleGenderFilter}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
+                >
+                  <option value="">Tất cả giới tính</option>
+                  <option value="male">Nam</option>
+                  <option value="female">Nữ</option>
+                  <option value="other">Khác</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+              <div>
+                <span className="text-sm text-gray-500">
+                  Kết quả: {filteredAccounts.length} tài khoản
+                </span>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleResetFilters}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+                >
+                  <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
+                  Đặt lại
+                </button>
+                <button
+                  onClick={handleOpenCreateModal}
+                  className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+                >
+                  <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Thêm tài khoản
                 </button>
               </div>
-              <form onSubmit={handleUpdateAccount}>
-                <div className="space-y-4">
-                  {/* Ảnh đại diện */}
-                  <div className="flex flex-col items-center">
-                    <img
-                      src={avatarPreview || updateForm.photoUrl || selectedAccount?.photoUrl || '/avarta.png'}
-                      alt="avatar"
-                      className="w-24 h-24 rounded-full object-cover border-2 border-indigo-200 mb-2"
-                    />
-                    <label className="block text-sm font-medium text-gray-700">Ảnh đại diện</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="mt-1 block w-full text-sm"
-                      disabled={isUploadingAvatar}
-                    />
-                    {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Họ tên</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={updateForm.fullName}
-                      onChange={handleUpdateFormChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Tên tài khoản</label>
-                    <input
-                      type="text"
-                      name="username"
-                      value={updateForm.username}
-                      disabled
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-gray-100 cursor-not-allowed"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={updateForm.email}
-                      disabled
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-gray-100 cursor-not-allowed"
-                      required
-                    />
-                  </div>
-                  <PhoneNumberInput
-                    value={updateForm.phoneNumber}
-                    onChange={handleUpdateFormChange}
-                    excludeId={selectedAccount?._id}
-                  />
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Giới tính</label>
-                    <select
-                      name="gender"
-                      value={updateForm.gender}
-                      onChange={handleUpdateFormChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+            </div>
+          </div>
+
+          {/* Bảng danh sách tài khoản */}
+          <div className="bg-white shadow rounded-lg w-full mb-6">
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
+              </div>
+            ) : error ? (
+              <div className="p-6 text-center text-red-500">{error}</div>
+            ) : (
+              <>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-sky-50">
+                    <tr>
+                      <th scope="col" className="w-1/4 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tài khoản
+                      </th>
+                      <th scope="col" className="w-1/4 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thông tin
+                      </th>
+                      <th scope="col" className="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Vai trò
+                      </th>
+                      <th scope="col" className="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Trạng thái
+                      </th>
+                      <th scope="col" className="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Xác thực
+                      </th>
+                      <th scope="col" className="w-1/6 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thao tác
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {paginatedAccounts.map((account) => (
+                      <tr key={account._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <img
+                                className="h-10 w-10 rounded-full object-cover"
+                                src={account.photoUrl || '/avarta.png'}
+                                alt={account.username}
+                              />
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900 max-w-[180px] truncate" title={account.username}>{account.username}</div>
+                              <div className="text-sm text-gray-500">{account.gender || 'Chưa cập nhật'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{account.fullName || 'Chưa cập nhật'}</div>
+                          <div className="text-sm text-gray-500">{account.email}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(account.role)}`}>
+                            {account.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${account.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                            {account.isDisabled ? 'Đã bị khóa' : 'Đang hoạt động'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${account.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {account.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex space-x-2 justify-end">
+                            <Tooltip text="Khóa/Mở khóa">
+                              <button
+                                onClick={() => openConfirmToggleModal(account._id, account.isDisabled)}
+                                disabled={isAdminAccount(account)}
+                                className={`text-gray-400 hover:text-gray-500 ${isAdminAccount(account) ? 'cursor-not-allowed opacity-50' : ''}`}
+                              >
+                                {account.isDisabled ? (
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                  </svg>
+                                ) : (
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                  </svg>
+                                )}
+                              </button>
+                            </Tooltip>
+                            <Tooltip text="Cập nhật">
+                              <button
+                                onClick={() => handleOpenUpdateModal(account)}
+                                className="text-yellow-400 hover:text-yellow-500"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                            </Tooltip>
+                            <Tooltip text="Chi tiết">
+                              <button
+                                onClick={() => handleOpenDetailModal(account._id)}
+                                className="text-sky-400 hover:text-sky-500"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </button>
+                            </Tooltip>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* PHÂN TRANG KIỂU CONSULTANT */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center mt-4 gap-2">
+                    <button
+                      className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
                     >
-                      <option value="">Chọn giới tính</option>
-                      <option value="male">Nam</option>
-                      <option value="female">Nữ</option>
-                      <option value="other">Khác</option>
-                    </select>
-                  </div>
-
-                  {/* Thêm trường role */}
-                  {selectedAccount && canModifyRole(selectedAccount) && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Vai trò</label>
-                      <select
-                        name="role"
-                        value={updateForm.role}
-                        onChange={handleUpdateFormChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                      Trước
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <button
+                        key={i}
+                        className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                        onClick={() => setCurrentPage(i + 1)}
                       >
-                        {/* Nếu là consultant thì không cho phép chọn customer */}
-                        {selectedAccount.role !== 'consultant' && (
-                          <option value="customer">Customer</option>
-                        )}
-                        <option value="consultant">Consultant</option>
-                        {selectedAccount.role === 'admin' && (
-                          <option value="admin">Admin</option>
-                        )}
-                      </select>
-                      {selectedAccount.role === 'admin' && currentUser && currentUser._id === selectedAccount._id && (
-                        <p className="mt-1 text-xs text-red-500">Admin không thể thay đổi vai trò của chính mình</p>
-                      )}
-                    </div>
-                  )}
+                        {i + 1}
+                      </button>
+                    ))}
+                    <button
+                      className="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Sau
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
-                  {/* Nếu chuyển từ customer sang consultant thì hiện form tư vấn viên */}
-                  {selectedAccount && selectedAccount.role === 'customer' && updateForm.role === 'consultant' && (
-                    <div className="border-t pt-4 mt-4">
-                      <h3 className="text-base font-semibold mb-2 text-sky-600">Thông tin tư vấn viên</h3>
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700">Giới thiệu</label>
-                        <textarea
-                          name="introduction"
-                          value={consultantForm.introduction}
-                          onChange={handleConsultantFormChange}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
-                          rows={2}
+          {/* Modal Cập nhật tài khoản */}
+          {isUpdateModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-0 w-full max-w-md">
+                <div className="p-6 max-h-[80vh] overflow-y-auto">
+                  <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-xl font-semibold">Cập nhật tài khoản</h2>
+                    <button
+                      onClick={handleCloseUpdateModal}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <form onSubmit={handleUpdateAccount}>
+                    <div className="space-y-4">
+                      {/* Ảnh đại diện */}
+                      <div className="flex flex-col items-center">
+                        <img
+                          src={avatarPreview || updateForm.photoUrl || selectedAccount?.photoUrl || '/avarta.png'}
+                          alt="avatar"
+                          className="w-24 h-24 rounded-full object-cover border-2 border-indigo-200 mb-2"
                         />
-                        {consultantFormErrors.introduction && (
-                          <p className="mt-1 text-sm text-red-600">{consultantFormErrors.introduction}</p>
-                        )}
+                        <label className="block text-sm font-medium text-gray-700">Ảnh đại diện</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarChange}
+                          className="mt-1 block w-full text-sm"
+                          disabled={isUploadingAvatar}
+                        />
+                        {isUploadingAvatar && <div className="text-xs text-blue-500 mt-1">Đang tải ảnh lên...</div>}
                       </div>
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700">Thông tin liên hệ</label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Họ tên</label>
                         <input
                           type="text"
-                          name="contact"
-                          value={consultantForm.contact}
-                          onChange={handleConsultantFormChange}
+                          name="fullName"
+                          value={updateForm.fullName}
+                          onChange={handleUpdateFormChange}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                         />
-                        {consultantFormErrors.contact && (
-                          <p className="mt-1 text-sm text-red-600">{consultantFormErrors.contact}</p>
-                        )}
                       </div>
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu làm việc</label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Tên tài khoản</label>
                         <input
-                          type="date"
-                          name="startDateofWork"
-                          value={consultantForm.startDateofWork}
-                          onChange={handleConsultantFormChange}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                          type="text"
+                          name="username"
+                          value={updateForm.username}
+                          disabled
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-gray-100 cursor-not-allowed"
+                          required
                         />
-                        {consultantFormErrors.startDateofWork && (
-                          <p className="mt-1 text-sm text-red-600">{consultantFormErrors.startDateofWork}</p>
-                        )}
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Email</label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={updateForm.email}
+                          disabled
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-gray-100 cursor-not-allowed"
+                          required
+                        />
+                      </div>
+                      <PhoneNumberInput
+                        value={updateForm.phoneNumber}
+                        onChange={handleUpdateFormChange}
+                        excludeId={selectedAccount?._id}
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Giới tính</label>
+                        <select
+                          name="gender"
+                          value={updateForm.gender}
+                          onChange={handleUpdateFormChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                        >
+                          <option value="">Chọn giới tính</option>
+                          <option value="male">Nam</option>
+                          <option value="female">Nữ</option>
+                          <option value="other">Khác</option>
+                        </select>
+                      </div>
+
+                      {/* Thêm trường role */}
+                      {selectedAccount && canModifyRole(selectedAccount) && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Vai trò</label>
+                          <select
+                            name="role"
+                            value={updateForm.role}
+                            onChange={handleUpdateFormChange}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                          >
+                            {/* Nếu là consultant thì không cho phép chọn customer */}
+                            {selectedAccount.role !== 'consultant' && (
+                              <option value="customer">Customer</option>
+                            )}
+                            <option value="consultant">Consultant</option>
+                            {selectedAccount.role === 'admin' && (
+                              <option value="admin">Admin</option>
+                            )}
+                          </select>
+                          {selectedAccount.role === 'admin' && currentUser && currentUser._id === selectedAccount._id && (
+                            <p className="mt-1 text-xs text-red-500">Admin không thể thay đổi vai trò của chính mình</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Nếu chuyển từ customer sang consultant thì hiện form tư vấn viên */}
+                      {selectedAccount && selectedAccount.role === 'customer' && updateForm.role === 'consultant' && (
+                        <div className="border-t pt-4 mt-4">
+                          <h3 className="text-base font-semibold mb-2 text-sky-600">Thông tin tư vấn viên</h3>
+                          <div className="mb-3">
+                            <label className="block text-sm font-medium text-gray-700">Giới thiệu</label>
+                            <textarea
+                              name="introduction"
+                              value={consultantForm.introduction}
+                              onChange={handleConsultantFormChange}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                              rows={2}
+                            />
+                            {consultantFormErrors.introduction && (
+                              <p className="mt-1 text-sm text-red-600">{consultantFormErrors.introduction}</p>
+                            )}
+                          </div>
+                          <div className="mb-3">
+                            <label className="block text-sm font-medium text-gray-700">Thông tin liên hệ</label>
+                            <input
+                              type="text"
+                              name="contact"
+                              value={consultantForm.contact}
+                              onChange={handleConsultantFormChange}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                            />
+                            {consultantFormErrors.contact && (
+                              <p className="mt-1 text-sm text-red-600">{consultantFormErrors.contact}</p>
+                            )}
+                          </div>
+                          <div className="mb-3">
+                            <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu làm việc</label>
+                            <input
+                              type="date"
+                              name="startDateofWork"
+                              value={consultantForm.startDateofWork}
+                              onChange={handleConsultantFormChange}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                            />
+                            {consultantFormErrors.startDateofWork && (
+                              <p className="mt-1 text-sm text-red-600">{consultantFormErrors.startDateofWork}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                    <div className="mt-6 flex justify-end space-x-3">
+                      <button
+                        type="button"
+                        onClick={handleCloseUpdateModal}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700"
+                      >
+                        Cập nhật
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <div className="mt-6 flex justify-end space-x-3">
+              </div>
+            </div>
+          )}
+
+          {/* Modal Xác nhận khóa/mở khóa tài khoản */}
+          {isConfirmModalOpen && accountToToggle && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-xl font-semibold">Xác nhận</h2>
                   <button
-                    type="button"
-                    onClick={handleCloseUpdateModal}
+                    onClick={closeConfirmToggleModal}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div className="mb-6 flex items-center">
+                  <div className={`mr-4 p-3 rounded-full ${accountToToggle.isDisabled ? 'bg-green-100' : 'bg-red-100'}`}>
+                    {accountToToggle.isDisabled ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    )}
+                  </div>
+                  <p>
+                    {accountToToggle.isDisabled 
+                      ? 'Bạn có chắc chắn muốn mở khóa tài khoản này?' 
+                      : 'Bạn có chắc chắn muốn khóa tài khoản này?'}
+                  </p>
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={closeConfirmToggleModal}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                   >
                     Hủy
                   </button>
                   <button
-                    type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700"
+                    onClick={handleToggleStatus}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center ${
+                      accountToToggle.isDisabled 
+                        ? 'bg-green-600 hover:bg-green-700' 
+                        : 'bg-red-600 hover:bg-red-700'
+                    }`}
                   >
-                    Cập nhật
+                    {accountToToggle.isDisabled ? (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                        Mở khóa
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Khóa
+                      </>
+                    )}
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Modal Xác nhận khóa/mở khóa tài khoản */}
-      {isConfirmModalOpen && accountToToggle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Xác nhận</h2>
-              <button
-                onClick={closeConfirmToggleModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-            <div className="mb-6 flex items-center">
-              <div className={`mr-4 p-3 rounded-full ${accountToToggle.isDisabled ? 'bg-green-100' : 'bg-red-100'}`}>
-                {accountToToggle.isDisabled ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                  </svg>
+          {/* Modal Chi tiết tài khoản */}
+          {isDetailModalOpen && accountDetail && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-xl font-semibold">Chi tiết tài khoản</h2>
+                  <button
+                    onClick={handleCloseDetailModal}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                {loadingDetail ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
+                  </div>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col items-center">
+                      <div className="w-32 h-32 mb-4">
+                        <img
+                          className="h-32 w-32 rounded-full object-cover"
+                          src={accountDetail.photoUrl || '/avarta.png'}
+                          alt={accountDetail.username}
+                        />
+                      </div>
+                      <span className={`px-3 py-1 text-sm rounded-full ${getRoleBadgeClass(accountDetail.role)}`}>
+                        {accountDetail.role}
+                      </span>
+                      <span className={`mt-2 px-3 py-1 text-sm rounded-full ${accountDetail.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                        {accountDetail.isDisabled ? 'Đã bị khóa' : 'Đang hoạt động'}
+                      </span>
+                      <span className={`mt-2 px-3 py-1 text-sm rounded-full ${accountDetail.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {accountDetail.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">ID</p>
+                        <p className="mt-1">{accountDetail._id}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Họ tên</p>
+                        <p className="mt-1">{accountDetail.fullName || 'Chưa cập nhật'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Tên tài khoản</p>
+                        <p className="mt-1">{accountDetail.username}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Email</p>
+                        <p className="mt-1">{accountDetail.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Số điện thoại</p>
+                        <p className="mt-1">{accountDetail.phoneNumber || 'Chưa cập nhật'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Giới tính</p>
+                        <p className="mt-1">{accountDetail.gender || 'Chưa cập nhật'}</p>
+                      </div>
+                    </div>
+
+                    <div className="col-span-1 md:col-span-2 space-y-4 border-t border-gray-200 pt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Ngày tạo</p>
+                          <p className="mt-1">{formatDate(accountDetail.createdAt)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Lần cập nhật cuối</p>
+                          <p className="mt-1">{formatDate(accountDetail.updatedAt)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end space-x-3 pt-4">
+                        <button
+                          onClick={() => {
+                            handleCloseDetailModal();
+                            handleOpenUpdateModal(accountDetail);
+                          }}
+                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-yellow-500 rounded-md hover:bg-yellow-600"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Cập nhật
+                        </button>
+                        {/* Ẩn nút khóa/mở khóa đối với tài khoản admin */}
+                        {!isAdminAccount(accountDetail) && (
+                          <button
+                            onClick={() => {
+                              handleCloseDetailModal();
+                              openConfirmToggleModal(accountDetail._id, accountDetail.isDisabled);
+                            }}
+                            className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-md ${
+                              accountDetail.isDisabled 
+                                ? 'bg-green-600 hover:bg-green-700' 
+                                : 'bg-red-600 hover:bg-red-700'
+                            }`}
+                          >
+                            {accountDetail.isDisabled ? (
+                              <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                </svg>
+                                Mở khóa
+                              </>
+                            ) : (
+                              <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                Khóa
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              <p>
-                {accountToToggle.isDisabled 
-                  ? 'Bạn có chắc chắn muốn mở khóa tài khoản này?' 
-                  : 'Bạn có chắc chắn muốn khóa tài khoản này?'}
-              </p>
             </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={closeConfirmToggleModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleToggleStatus}
-                className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center ${
-                  accountToToggle.isDisabled 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
-              >
-                {accountToToggle.isDisabled ? (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
-                    Mở khóa
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    Khóa
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Modal Chi tiết tài khoản */}
-      {isDetailModalOpen && accountDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-semibold">Chi tiết tài khoản</h2>
-              <button
-                onClick={handleCloseDetailModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            {loadingDetail ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex flex-col items-center">
-                  <div className="w-32 h-32 mb-4">
-                    <img
-                      className="h-32 w-32 rounded-full object-cover"
-                      src={accountDetail.photoUrl || '/avarta.png'}
-                      alt={accountDetail.username}
+          {/* Modal Tạo tài khoản mới */}
+          {isCreateModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg w-full max-w-md p-6">
+                <h2 className="text-xl font-semibold mb-4">Tạo tài khoản mới</h2>
+                <form onSubmit={handleCreateAccount} className="space-y-4">
+                  {/* Full Name field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={createForm.fullName}
+                      onChange={handleCreateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      required
                     />
                   </div>
-                  <span className={`px-3 py-1 text-sm rounded-full ${getRoleBadgeClass(accountDetail.role)}`}>
-                    {accountDetail.role}
-                  </span>
-                  <span className={`mt-2 px-3 py-1 text-sm rounded-full ${accountDetail.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                    {accountDetail.isDisabled ? 'Đã bị khóa' : 'Đang hoạt động'}
-                  </span>
-                  <span className={`mt-2 px-3 py-1 text-sm rounded-full ${accountDetail.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {accountDetail.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
-                  </span>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">ID</p>
-                    <p className="mt-1">{accountDetail._id}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Họ tên</p>
-                    <p className="mt-1">{accountDetail.fullName || 'Chưa cập nhật'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Tên tài khoản</p>
-                    <p className="mt-1">{accountDetail.username}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Email</p>
-                    <p className="mt-1">{accountDetail.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Số điện thoại</p>
-                    <p className="mt-1">{accountDetail.phoneNumber || 'Chưa cập nhật'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Giới tính</p>
-                    <p className="mt-1">{accountDetail.gender || 'Chưa cập nhật'}</p>
-                  </div>
-                </div>
 
-                <div className="col-span-1 md:col-span-2 space-y-4 border-t border-gray-200 pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Ngày tạo</p>
-                      <p className="mt-1">{formatDate(accountDetail.createdAt)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Lần cập nhật cuối</p>
-                      <p className="mt-1">{formatDate(accountDetail.updatedAt)}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <button
-                      onClick={() => {
-                        handleCloseDetailModal();
-                        handleOpenUpdateModal(accountDetail);
-                      }}
-                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-yellow-500 rounded-md hover:bg-yellow-600"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Cập nhật
-                    </button>
-                    {/* Ẩn nút khóa/mở khóa đối với tài khoản admin */}
-                    {!isAdminAccount(accountDetail) && (
-                      <button
-                        onClick={() => {
-                          handleCloseDetailModal();
-                          openConfirmToggleModal(accountDetail._id, accountDetail.isDisabled);
-                        }}
-                        className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-md ${
-                          accountDetail.isDisabled 
-                            ? 'bg-green-600 hover:bg-green-700' 
-                            : 'bg-red-600 hover:bg-red-700'
-                        }`}
-                      >
-                        {accountDetail.isDisabled ? (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                            </svg>
-                            Mở khóa
-                          </>
-                        ) : (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                            Khóa
-                          </>
-                        )}
-                      </button>
+                  {/* Username field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Tên đăng nhập</label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={createForm.username}
+                      onChange={handleCreateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      required
+                    />
+                    {formErrors.username && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
                     )}
                   </div>
-                </div>
+
+                  {/* Email field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={createForm.email}
+                      onChange={handleCreateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      required
+                    />
+                    {formErrors.email && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                    )}
+                  </div>
+
+                  {/* Password field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={createForm.password}
+                      onChange={handleCreateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      required
+                    />
+                    {formErrors.password && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
+                    )}
+                  </div>
+
+                  {/* Confirm Password field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Xác nhận mật khẩu</label>
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      value={createForm.confirmPassword}
+                      onChange={handleCreateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      required
+                    />
+                    {formErrors.confirmPassword && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.confirmPassword}</p>
+                    )}
+                  </div>
+
+                  {/* Phone Number field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                    <input
+                      type="tel"
+                      name="phoneNumber"
+                      value={createForm.phoneNumber}
+                      onChange={handleCreateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      required
+                    />
+                  </div>
+
+                  {/* Gender field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Giới tính</label>
+                    <select
+                      name="gender"
+                      value={createForm.gender}
+                      onChange={handleCreateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      required
+                    >
+                      <option value="">Chọn giới tính</option>
+                      <option value="male">Nam</option>
+                      <option value="female">Nữ</option>
+                    </select>
+                  </div>
+
+                  {/* Role field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Vai trò</label>
+                    <select
+                      name="role"
+                      value={createForm.role}
+                      onChange={handleCreateFormChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+                      required
+                    >
+                      {AVAILABLE_ROLES.map(role => (
+                        <option key={role.value} value={role.value}>
+                          {role.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end space-x-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={handleCloseCreateModal}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-sky-300"
+                    >
+                      {isSubmitting ? 'Đang tạo...' : 'Tạo tài khoản'}
+                    </button>
+                  </div>
+                </form>
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Nút thêm tài khoản mới */}
+          <div className="fixed bottom-8 right-8">
+            <button
+              onClick={handleOpenCreateModal}
+              className="bg-sky-600 hover:bg-sky-700 text-white p-4 rounded-full shadow-lg flex items-center justify-center"
+              aria-label="Thêm tài khoản mới"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </button>
           </div>
         </div>
-      )}
-
-      {/* Modal Tạo tài khoản mới */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Tạo tài khoản mới</h2>
-            <form onSubmit={handleCreateAccount} className="space-y-4">
-              {/* Full Name field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={createForm.fullName}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                  required
-                />
-              </div>
-
-              {/* Username field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tên đăng nhập</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={createForm.username}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                  required
-                />
-                {formErrors.username && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
-                )}
-              </div>
-
-              {/* Email field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={createForm.email}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                  required
-                />
-                {formErrors.email && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
-                )}
-              </div>
-
-              {/* Password field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={createForm.password}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                  required
-                />
-                {formErrors.password && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
-                )}
-              </div>
-
-              {/* Confirm Password field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Xác nhận mật khẩu</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={createForm.confirmPassword}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                  required
-                />
-                {formErrors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.confirmPassword}</p>
-                )}
-              </div>
-
-              {/* Phone Number field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  value={createForm.phoneNumber}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                  required
-                />
-              </div>
-
-              {/* Gender field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Giới tính</label>
-                <select
-                  name="gender"
-                  value={createForm.gender}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                  required
-                >
-                  <option value="">Chọn giới tính</option>
-                  <option value="male">Nam</option>
-                  <option value="female">Nữ</option>
-                </select>
-              </div>
-
-              {/* Role field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Vai trò</label>
-                <select
-                  name="role"
-                  value={createForm.role}
-                  onChange={handleCreateFormChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500"
-                  required
-                >
-                  {AVAILABLE_ROLES.map(role => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCloseCreateModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-sky-300"
-                >
-                  {isSubmitting ? 'Đang tạo...' : 'Tạo tài khoản'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Nút thêm tài khoản mới */}
-      <div className="fixed bottom-8 right-8">
-        <button
-          onClick={handleOpenCreateModal}
-          className="bg-sky-600 hover:bg-sky-700 text-white p-4 rounded-full shadow-lg flex items-center justify-center"
-          aria-label="Thêm tài khoản mới"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-        </button>
       </div>
     </div>
   );

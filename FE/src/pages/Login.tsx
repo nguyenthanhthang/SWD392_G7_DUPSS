@@ -121,11 +121,20 @@ function LoginPage() {
         setForgotError('Mã OTP phải có 6 chữ số!');
         return;
       }
-      await fetch('/api/auth/check-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyCode: forgotOtp }) });
+      const response = await fetch('/api/auth/check-otp', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ verifyCode: forgotOtp }) 
+      });
+      
+      if (!response.ok) {
+        throw new Error('OTP không đúng hoặc đã hết hạn!');
+      }
+      
       setForgotStep('newpass');
-    } catch (err: unknown) {
-      const axiosErr = err as AxiosError<{ message?: string }>;
-      setForgotError(axiosErr?.response?.data?.message || 'OTP không đúng hoặc đã hết hạn!');
+    } catch (error) {
+      setForgotError('OTP không đúng hoặc đã hết hạn!');
+      setForgotOtp(''); // Clear OTP input when wrong
     }
     setForgotLoading(false);
   };
