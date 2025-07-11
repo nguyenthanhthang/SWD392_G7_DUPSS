@@ -492,7 +492,15 @@ export const submitQuizResult = async (
     });
 
     // Tính toán risk level
-    const percentage = (totalScore / quiz.maxScore) * 100;
+    // Tính tổng max score thực tế từ các câu hỏi
+    let totalMaxScore = 0;
+    questions.forEach(question => {
+      const maxScoreForQuestion = Math.max(...question.options.map(opt => opt.score));
+      totalMaxScore += maxScoreForQuestion;
+    });
+    
+    const percentage = (totalScore / totalMaxScore) * 100;
+    
     let riskLevel: string;
     let suggestedAction: string;
 
@@ -533,7 +541,7 @@ export const submitQuizResult = async (
       data: {
         resultId: quizResult._id,
         totalScore,
-        maxScore: quiz.maxScore,
+        maxScore: totalMaxScore,
         percentage: Math.round(percentage),
         riskLevel,
         riskLevelDescription: (quizResult as any).riskLevelDescription,

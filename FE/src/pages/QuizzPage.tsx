@@ -10,6 +10,7 @@ import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import BubbleBackground from "../components/BubbleBackground";
 import QuizHistory from "../components/quiz/QuizHistory";
+import QuizRecommendation from '../components/QuizRecommendation';
 
 // Types for Quiz System
 interface Quiz {
@@ -777,21 +778,8 @@ export default function QuizzPage() {
                 </div>
               </motion.div>
 
-              {/* Enhanced Suggested Action */}
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.9 }}
-                className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-8 mb-8 border border-gray-200"
-              >
-                <h4 className="flex items-center text-2xl font-bold text-gray-900 mb-4">
-                  <span className="text-3xl mr-3">💡</span>
-                  Khuyến nghị cho bạn
-                </h4>
-                <p className="text-lg text-gray-700 leading-relaxed">
-                  {quizResult.suggestedAction}
-                </p>
-              </motion.div>
+              {/* Enhanced Suggested Action - Replace with QuizRecommendation */}
+              <QuizRecommendation quizResult={quizResult} />
 
               {/* Enhanced Consultant Suggestion */}
               {quizResult.shouldSeeConsultant && (
@@ -818,7 +806,7 @@ export default function QuizzPage() {
                     onClick={() => (window.location.href = "/consulting")}
                     className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-bold text-lg shadow-lg"
                   >
-                    �� Tìm chuyên viên tư vấn
+                    🩺 Tìm chuyên viên tư vấn
                   </motion.button>
                 </motion.div>
               )}
