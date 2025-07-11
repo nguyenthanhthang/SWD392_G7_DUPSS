@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { CheckCircle, XCircle } from 'lucide-react';
-import { createPaymentApi, createAppointmentApi, updateAppointmentStatusApi } from '../api';
+import { createPaymentApi, createAppointmentApi, updateAppointmentStatusApi, deleteAppointmentApi } from '../api';
 
 interface Payment {
   service?: {
@@ -108,7 +108,16 @@ export default function PaymentResultPage() {
             .catch((err) => {
               console.error('[FE] updateAppointmentStatusApi error:', err);
             });
-        } // Nếu thất bại thì không làm gì, giữ nguyên trạng thái pending
+        } else {
+          // Nếu thất bại thì xóa luôn appointment và trả slot
+          deleteAppointmentApi(paymentObj.appointmentId)
+            .then(() => {
+              console.log('[FE] Đã xóa appointment thất bại momo:', paymentObj.appointmentId);
+            })
+            .catch((err) => {
+              console.error('[FE] deleteAppointmentApi error:', err);
+            });
+        }
       } else {
         // Card giữ nguyên logic cũ
         if (paymentObj.appointmentId) {
@@ -226,12 +235,6 @@ export default function PaymentResultPage() {
               </button>
             ) : (
               <>
-                <button 
-                  className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-10 py-4 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                  onClick={() => navigate('/profile?tab=payments')}
-                >
-                  Thử lại
-                </button>
                 <button 
                   className="bg-gray-100 text-gray-700 px-10 py-4 rounded-2xl font-medium hover:bg-gray-200 transition-all duration-200 shadow border border-gray-200"
                   onClick={() => navigate('/')}

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, deleteAppointmentApi, createMomoPaymentApi, updateStatusSlotTimeApi } from '../api';
+import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, createMomoPaymentApi, updateStatusSlotTimeApi } from '../api';
 import { ChevronLeft, ChevronRight, User, Sparkles, Calendar, Banknote, Star, MessageCircle, ChevronDown } from 'lucide-react';
 import { addDays, startOfWeek, isSameWeek } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -407,11 +407,8 @@ export default function ServicePage() {
   const [userAppointments, setUserAppointments] = useState<Appointment[]>([]);
   const [weekSchedule, setWeekSchedule] = useState<Record<string, { time: string; availableConsultants: AvailableConsultant[] }[]>>({});
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
-  const [countdownTime, setCountdownTime] = useState<number | null>(null);
-  const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
   const [slotHoldTime, setSlotHoldTime] = useState<number | null>(null);
   const [heldSlotId, setHeldSlotId] = useState<string | null>(null);
-  const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const slotHoldInterval = useRef<NodeJS.Timeout | null>(null);
 
   const handleStartConsulting = () => {
@@ -821,42 +818,6 @@ export default function ServicePage() {
     return 'no-consultant';
   };
 
-  // Add cleanup function for appointment
-  const cleanupPendingAppointment = async (showError = false) => {
-    if (pendingAppointmentId) {
-      try {
-        await deleteAppointmentApi(pendingAppointmentId);
-        setPendingAppointmentId(null);
-        if (showError) {
-          setShowError('Hết thời gian thanh toán. Vui lòng thử lại.');
-        }
-      } catch (error) {
-        console.error("Error cleaning up appointment:", error);
-      }
-    }
-    
-    // Giải phóng slot khi thanh toán thất bại hoặc hết thời gian
-    if (heldSlotId) {
-      try {
-        await updateStatusSlotTimeApi(heldSlotId, 'available');
-        
-        // Cập nhật lại danh sách slot times
-        const updatedSlotTimes = allSlotTimes.map(st => 
-          st._id === heldSlotId ? { ...st, status: 'available' } : st
-        );
-        setAllSlotTimes(updatedSlotTimes);
-        
-        setHeldSlotId(null);
-        setSlotHoldTime(null);
-        if (slotHoldInterval.current) {
-          clearInterval(slotHoldInterval.current);
-        }
-      } catch (error) {
-        console.error("Error releasing slot on payment failure:", error);
-      }
-    }
-  };
-
   // Function to release held slot
   const releaseSlot = async () => {
     if (heldSlotId) {
@@ -875,26 +836,6 @@ export default function ServicePage() {
       }
     }
   };
-
-  // Handle countdown timer for payment
-  useEffect(() => {
-    if (countdownTime === null) return;
-
-    if (countdownTime > 0) {
-      countdownInterval.current = setInterval(() => {
-        setCountdownTime(prev => prev !== null ? prev - 1 : null);
-      }, 1000);
-    } else if (countdownTime === 0) {
-      void cleanupPendingAppointment(true);
-      setCountdownTime(null);
-    }
-
-    return () => {
-      if (countdownInterval.current) {
-        clearInterval(countdownInterval.current);
-      }
-    };
-  }, [countdownTime]);
 
   // Handle slot hold countdown timer
   useEffect(() => {
@@ -923,13 +864,9 @@ export default function ServicePage() {
   // Cleanup on unmount or navigation
   useEffect(() => {
     return () => {
-      void cleanupPendingAppointment(false);
       // Chỉ giải phóng slot nếu chưa thanh toán thành công
       if (heldSlotId && slotHoldTime !== null) {
         void releaseSlot();
-      }
-      if (countdownInterval.current) {
-        clearInterval(countdownInterval.current);
       }
       if (slotHoldInterval.current) {
         clearInterval(slotHoldInterval.current);
@@ -982,8 +919,6 @@ export default function ServicePage() {
 
       // Tạo appointment (status mặc định là pending)
       const newAppointment = await createAppointmentApi(payload);
-      setPendingAppointmentId(newAppointment._id);
-      setCountdownTime(60); // Start 60 seconds countdown
 
       // Store payment data
       const paymentData = {
@@ -1032,13 +967,6 @@ export default function ServicePage() {
 
   return (
     <div className="bg-gradient-to-b from-sky-50 to-[#f0f7fa] min-h-screen flex flex-col">
-      {/* Countdown timer always visible when active */}
-      {countdownTime !== null && (
-        <div className="fixed top-6 right-6 z-[9999] bg-red-100 text-red-800 px-6 py-3 rounded-xl font-semibold shadow-lg text-lg">
-          Thời gian thanh toán còn: {countdownTime}s
-        </div>
-      )}
-      
       {/* Slot hold countdown timer */}
       {slotHoldTime !== null && (
         <div className="fixed top-6 left-6 z-[9999] bg-amber-100 text-amber-800 px-6 py-3 rounded-xl font-semibold shadow-lg text-lg">
@@ -1787,12 +1715,6 @@ export default function ServicePage() {
                       <h2 className="text-3xl font-semibold text-gray-800 mb-2 tracking-tight">Thanh toán & xác nhận</h2>
                       <p className="text-gray-600 text-lg">Kiểm tra lại thông tin và chọn phương thức thanh toán</p>
                     </div>
-
-                    {countdownTime !== null && (
-                      <div className="fixed top-4 right-4 bg-red-100 text-red-800 px-4 py-2 rounded-lg font-semibold shadow-lg">
-                        Thời gian thanh toán còn: {countdownTime}s
-                      </div>
-                    )}
 
                     <div className="flex flex-col gap-5">
                       <div className="flex justify-between items-center bg-sky-50/80 rounded-xl px-6 py-4 shadow-sm">

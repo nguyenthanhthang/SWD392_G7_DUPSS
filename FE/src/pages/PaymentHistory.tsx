@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Eye, List, CheckCircle2, Clock } from 'lucide-react';
-import { getAllAppointmentsApi, getPaymentByAppointmentIdApi, createMomoPaymentApi, deleteAppointmentApi } from '../api';
-import { toast } from 'react-toastify';
+import { getAllAppointmentsApi, getPaymentByAppointmentIdApi } from '../api';
 
 interface Appointment {
   _id: string;
@@ -44,20 +43,7 @@ const PaymentHistory = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        let apps = await getAllAppointmentsApi();
-        // Xóa các appointment pending nếu đã quá 2 phút kể từ dateBooking
-        const now = new Date();
-        const nowUTCms = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
-        const expiredPending = apps.filter((app: Appointment) => {
-          const bookingUTC = new Date(app.dateBooking).getTime();
-          const diffMs = nowUTCms - (bookingUTC + 2 * 60 * 1000);
-          return app.status === 'pending' && diffMs > 0;
-        });
-        if (expiredPending.length > 0) {
-          await Promise.all(expiredPending.map((app: Appointment) => deleteAppointmentApi(app._id)));
-          // Sau khi xóa, reload lại danh sách
-          apps = await getAllAppointmentsApi();
-        }
+        const apps = await getAllAppointmentsApi();
         setAppointments(apps);
         // Lấy payment cho từng appointment
         const paymentResults: Record<string, Payment | null> = {};
@@ -114,35 +100,6 @@ const PaymentHistory = () => {
 
   const dateFromProps = dateTo ? { max: dateTo } : {};
   const dateToProps = dateFrom ? { min: dateFrom } : {};
-
-  const handleRetryPayment = async (app: Appointment, payment: Payment | null) => {
-    try {
-      if (!payment || !payment.paymentMethod) {
-        toast.error('Không xác định được phương thức thanh toán!');
-        return;
-      }
-      if (payment.paymentMethod === 'momo') {
-        // Gọi lại API tạo payment momo
-        const res = await createMomoPaymentApi({
-          amount: app.service_id.price,
-          orderInfo: `Thanh toán lại cho lịch hẹn ${app._id}`,
-        });
-        if (res && res.payUrl) {
-          window.open(res.payUrl, '_blank');
-        } else {
-          toast.error('Không tạo được link thanh toán MoMo!');
-        }
-      } else if (payment.paymentMethod === 'paypal') {
-        toast.info('Vui lòng thanh toán lại qua PayPal trên trang chi tiết lịch hẹn hoặc liên hệ hỗ trợ.');
-      } else if (payment.paymentMethod === 'cash') {
-        toast.info('Vui lòng thanh toán tại quầy.');
-      } else {
-        toast.info('Phương thức thanh toán này chưa hỗ trợ thanh toán lại.');
-      }
-    } catch {
-      toast.error('Có lỗi khi tạo lại thanh toán!');
-    }
-  };
 
   return (
     <div className="px-3 py-3">
@@ -240,9 +197,9 @@ const PaymentHistory = () => {
       {/* Payments Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
         <div className="p-3 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900">
             Lịch sử giao dịch ({filteredAppointments.length})
-          </h2>
+            </h2>
         </div>
         <div className="overflow-x-auto max-w-full">
           <table className="w-full text-xs">
@@ -266,66 +223,49 @@ const PaymentHistory = () => {
                   const payment = payments[app._id];
                   return (
                     <tr key={app._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-2 px-2 align-top">
+                  <td className="py-2 px-2 align-top">
                         <div className="font-medium text-gray-900 truncate max-w-[120px]">{app.service_id?.name}</div>
-                      </td>
-                      <td className="py-2 px-2 align-top">
-                        <div className="flex items-center text-gray-900">
-                          <Calendar className="w-3 h-3 mr-1 text-gray-400" />
-                          <div>
-                            <div className="font-medium">
+                  </td>
+                  <td className="py-2 px-2 align-top">
+                    <div className="flex items-center text-gray-900">
+                      <Calendar className="w-3 h-3 mr-1 text-gray-400" />
+                      <div>
+                        <div className="font-medium">
                               {app.dateBooking ? new Date(app.dateBooking).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' }) : '--'}
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-2 px-2 align-top">
-                        <div className="text-base font-semibold text-gray-900">
+                    </div>
+                  </td>
+                  <td className="py-2 px-2 align-top">
+                    <div className="text-base font-semibold text-gray-900">
                           {app.service_id?.price?.toLocaleString('vi-VN')}đ
-                        </div>
-                      </td>
-                      <td className="py-2 px-2 align-top">
+                    </div>
+                  </td>
+                  <td className="py-2 px-2 align-top">
                         <div className="font-medium text-gray-900 truncate max-w-[120px]">
                           {app.consultant_id?.accountId?.fullName || '--'}
-                        </div>
-                      </td>
-                      <td className="py-2 px-2 align-top">
+                    </div>
+                  </td>
+                  <td className="py-2 px-2 align-top">
                         <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${payment && payment.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}`}
-                          style={{minWidth: 70}}>
+                      style={{minWidth: 70}}>
                           {payment ? (payment.status === 'completed' ? 'Đã thanh toán' : payment.status) : 'Chưa thanh toán'}
-                        </div>
-                      </td>
-                      <td className="py-2 px-2 align-top">
-                        <div className="flex items-center space-x-1">
+                    </div>
+                  </td>
+                  <td className="py-2 px-2 align-top">
+                    <div className="flex items-center space-x-1">
                           {payment && (
-                            <button 
-                              className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-                              onClick={() => setSelectedPayment(payment)}
-                            >
-                              <Eye className="w-3 h-3 text-gray-400" />
-                            </button>
-                          )}
-                          {/* Nút thanh toán lại nếu pending < 5 phút */}
-                          {(!payment || payment.status !== 'completed') && (() => {
-                            const created = new Date(app.dateBooking);
-                            const now = new Date();
-                            const diffMs = now.getTime() - created.getTime();
-                            if (diffMs < 5 * 60 * 1000) {
-                              return (
-                                <button
-                                  className="ml-2 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 text-xs font-semibold transition-all"
-                                  onClick={() => handleRetryPayment(app, payment)}
-                                  title="Thanh toán lại"
-                                >
-                                  Thanh toán lại
-                                </button>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
-                      </td>
-                    </tr>
+                      <button 
+                        className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                        onClick={() => setSelectedPayment(payment)}
+                      >
+                        <Eye className="w-3 h-3 text-gray-400" />
+                        </button>
+                      )}
+
+                    </div>
+                  </td>
+                </tr>
                   );
                 })
               )}
@@ -338,7 +278,7 @@ const PaymentHistory = () => {
         // Tìm appointment liên quan
         const appointment = appointments.find(app => app._id === selectedPayment.appointmentId);
         return (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-xl relative animate-fadeIn">
               <button 
                 onClick={() => setSelectedPayment(null)}
@@ -359,12 +299,12 @@ const PaymentHistory = () => {
                   <div>
                     <div className="text-xs text-gray-500 font-medium">Dịch vụ</div>
                     <div className="text-base text-gray-900">{appointment?.service_id?.name || '--'}</div>
-                  </div>
-                  <div>
+            </div>
+                <div>
                     <div className="text-xs text-gray-500 font-medium">Chuyên viên</div>
                     <div className="text-base text-gray-900">{appointment?.consultant_id?.accountId?.fullName || '--'}</div>
-                  </div>
-                  <div>
+                </div>
+                <div>
                     <div className="text-xs text-gray-500 font-medium">Thời gian đặt</div>
                     <div className="text-base text-gray-900">{appointment?.dateBooking ? new Date(appointment.dateBooking).toLocaleString('vi-VN') : '--'}</div>
                   </div>
@@ -373,18 +313,18 @@ const PaymentHistory = () => {
                   <div>
                     <div className="text-xs text-gray-500 font-medium">Phương thức thanh toán</div>
                     <div className="text-base text-gray-900 capitalize">{selectedPayment.paymentMethod || '--'}</div>
-                  </div>
-                  <div>
+              </div>
+              <div>
                     <div className="text-xs text-gray-500 font-medium">Trạng thái</div>
                     <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border mt-1 ${selectedPayment.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}`}>
                       {selectedPayment.status === 'completed' ? 'Đã thanh toán' : selectedPayment.status}
                     </div>
-                  </div>
-                  <div>
+              </div>
+                <div>
                     <div className="text-xs text-gray-500 font-medium">Số tiền</div>
                     <div className="text-xl font-bold text-blue-700">{selectedPayment.totalPrice?.toLocaleString('vi-VN')}đ</div>
-                  </div>
-                  <div>
+                </div>
+                <div>
                     <div className="text-xs text-gray-500 font-medium">Thời gian thanh toán</div>
                     <div className="text-base text-gray-900">{selectedPayment.date ? new Date(selectedPayment.date).toLocaleString('vi-VN') : '--'}</div>
                   </div>
