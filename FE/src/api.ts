@@ -913,4 +913,9 @@ export const deleteQuestionApi = async (id: string) => {
   return res.data;
 };
 
+export const getPaymentByAppointmentIdApi = async (appointmentId: string) => {
+  const res = await api.get(`/payment/by-appointment/${appointmentId}`);
+  return res.data;
+};
+
 export default api;

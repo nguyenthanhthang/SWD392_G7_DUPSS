@@ -370,6 +370,18 @@ export const getPaymentById = async (req: Request, res: Response) => {
   }
 };
 
+// Thêm API lấy payment theo appointmentId
+export const getPaymentByAppointmentId = async (req: Request, res: Response) => {
+  try {
+    const { appointmentId } = req.params;
+    const payment = await Payment.findOne({ appointmentId });
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    res.status(200).json(payment);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Sửa payment
 export const updatePayment = async (req: Request, res: Response) => {
   try {

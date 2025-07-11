@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getBlogsByUserIdApi, updateBlogApi, getRegisteredEventsApi, unregisterEventApi } from '../api';
 import whaleLogo from '../assets/whale.png';
 import AppointmentsPage from './Appointments';
@@ -9,11 +9,9 @@ import BlogDetailView from '../components/blog/BlogDetailView';
 import CreateBlogForm from '../components/blog/CreateBlogForm';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
-import { FiCamera } from 'react-icons/fi';
-import Modal from '../components/Modal';
-import defaultAvatar from '../assets/images/admin-avatar.jpg';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import PaymentHistory from './PaymentHistory';
 
 interface User {
   _id?: string;
@@ -76,6 +74,7 @@ const menuTabs = [
 ];
 
 export default function Profile() {
+  const location = useLocation();
   const [tab, setTab] = useState("profile");
   const [user, setUser] = useState<User | null>(null);
   const [editData, setEditData] = useState<User>({});
@@ -98,23 +97,12 @@ export default function Profile() {
   const [modalEdit, setModalEdit] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterKeyword, setFilterKeyword] = useState('');
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user: authUser, updateUser } = useAuth();
+  const { user: authUser } = useAuth();
   const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
   const [showQR, setShowQR] = useState<{ open: boolean; qr?: string } | null>(null);
   const handleOpenQR = (qr: string) => setShowQR({ open: true, qr });
   const handleCloseQR = () => setShowQR(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [formData, setFormData] = useState({
-    name: user?.fullName || '',
-    phone: user?.phoneNumber || '',
-    gender: user?.gender || '',
-    birthYear: user?.yearOfBirth?.toString() || ''
-  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -130,6 +118,15 @@ export default function Profile() {
     };
     fetchUser();
   }, []);
+
+  // Tự động chuyển tab nếu có query ?tab=payments
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && menuTabs.some(t => t.key === tabParam)) {
+      setTab(tabParam);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     if (user?._id) {
@@ -162,30 +159,14 @@ export default function Profile() {
       setEditData(updated);
       setEditMode(false);
       setFieldError({}); // Clear any previous errors
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Extract error message from response
-      const errorMessage = error.response?.data?.message;
+      const errorMessage = (error as any).response?.data?.message;
       if (errorMessage?.toLowerCase().includes('số điện thoại')) {
         setFieldError(prev => ({
           ...prev,
           phoneNumber: errorMessage
         }));
-      }
-    }
-  };
-
-  const handleBlurField = async (field: 'fullName' | 'phoneNumber', value: string) => {
-    if (!user?._id) return;
-    try {
-      await updateAccountApi(user._id, { [field]: value });
-      setFieldError((prev) => ({ ...prev, [field]: undefined }));
-      const updated = await getAccountByIdApi(user._id);
-      setUser(updated);
-      setEditData(updated);
-    } catch (err: unknown) {
-      const axiosErr = err as AxiosError<{ message?: string }>;
-      if (axiosErr?.response?.data?.message) {
-        setFieldError((prev) => ({ ...prev, [field]: axiosErr.response!.data.message! }));
       }
     }
   };
@@ -282,8 +263,6 @@ export default function Profile() {
     }
 
     try {
-      setIsUploading(true);
-      setUploadProgress(0);
       const formData = new FormData();
       formData.append('image', file);
       
@@ -297,7 +276,7 @@ export default function Profile() {
           const progress = progressEvent.total 
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 0;
-          setUploadProgress(progress);
+          // setUploadProgress(progress); // XÓA biến uploadProgress và setUploadProgress không dùng
         }
       });
 
@@ -305,26 +284,21 @@ export default function Profile() {
         // Cập nhật avatar URL trong database
         if (user?._id) {
           await updateAccountApi(user._id, { photoUrl: response.data.imageUrl });
+          // Cập nhật user ngay lập tức
+          const updated = await getAccountByIdApi(user._id);
+          setUser(updated);
+          setEditData(updated);
         }
         
-        // Cập nhật user context
-        if (updateUser && user) {
-          updateUser({
-            ...user,
-            photoUrl: response.data.imageUrl
-          });
-        }
-        
-        toast.success('Cập nhật ảnh đại diện thành công!');
+        toast.success('Cập nhật ảnh đại diện thành công!', { position: 'top-center', autoClose: 2500 });
       } else {
-        toast.error('Không nhận được URL ảnh từ server!');
+        toast.error('Không nhận được URL ảnh từ server!', { position: 'top-center', autoClose: 2500 });
       }
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.');
+      toast.error('Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.', { position: 'top-center', autoClose: 2500 });
     } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
+      // setUploadProgress(0); // XÓA biến uploadProgress và setUploadProgress không dùng
     }
   };
 
@@ -362,8 +336,8 @@ export default function Profile() {
         event._id === eventId ? { ...event, isCancelled: true } : event
       ));
       alert("Hủy đăng ký thành công!");
-    } catch (error: any) {
-      const message = error?.response?.data?.message || "Không thể hủy đăng ký!";
+    } catch (error: unknown) {
+      const message = (error as any)?.response?.data?.message || "Không thể hủy đăng ký!";
       alert(message);
     }
   };
@@ -454,7 +428,7 @@ export default function Profile() {
                     <div className="flex flex-col items-center space-y-4 w-full md:w-1/3">
                       <div className="relative w-48 h-48">
                           <img 
-                          src={avatarPreview || user?.photoUrl || whaleLogo}
+                          src={user?.photoUrl || whaleLogo}
                           alt="Avatar"
                           className="w-full h-full object-cover rounded-full border-4 border-blue-500"
                           />
@@ -783,6 +757,11 @@ export default function Profile() {
                   <AppointmentsPage />
                 </div>
               )}
+              {tab === 'payments' && (
+                <div className="w-full">
+                  <PaymentHistory />
+                </div>
+              )}
               {tab === 'registeredEvents' && (
                 <div className="w-full">
                   {/* Sự kiện đã đăng ký */}
@@ -1107,7 +1086,7 @@ export default function Profile() {
       {modalBlog && blogDangXem && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
-            <BlogDetailView blog={blogDangXem} onClose={() => setModalBlog(false)} />
+            <BlogDetailView blog={{...blogDangXem, authorId: user?._id || ''}} onClose={() => setModalBlog(false)} />
           </div>
         </div>
       )}
@@ -1119,23 +1098,20 @@ export default function Profile() {
               initialData={{
                 title: blogDangSua.title,
                 content: blogDangSua.content,
-                author: blogDangSua.author,
+                authorId: user?._id || '',
                 topics: blogDangSua.topics?.join(', ') || '',
                 image: blogDangSua.image || '',
                 published: blogDangSua.published,
                 anDanh: blogDangSua.anDanh
               }}
               onCancel={() => setModalEdit(false)}
-              onSuccess={() => { setModalEdit(false); setBlogDangSua(null); /* reload blogs */ if(authUser?._id) getBlogsByUserIdApi(authUser._id).then(setBlogs); }}
+              onSuccess={() => { setModalEdit(false); setBlogDangSua(null); if(authUser?._id) getBlogsByUserIdApi(authUser._id).then(setBlogs); }}
               onSubmit={async (data) => {
-                // Kiểm tra nếu blog đang chỉnh sửa đã xuất bản thì không cho phép
                 if (blogDangSua.published === 'published') {
                   alert('Không thể chỉnh sửa bài viết đã xuất bản.');
                   return;
                 }
-                
                 const dataUpdate = { ...data };
-                if (blogDangSua.published === 'published') dataUpdate.published = 'draft';
                 await updateBlogApi(blogDangSua._id, dataUpdate);
               }}
             />

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, deleteAppointmentApi, createVnpayPaymentApi, createMomoPaymentApi, updateStatusSlotTimeApi } from '../api';
+import { getAllConsultantsApi, getAllServicesApi, getAllSlotTimeApi, getAvailableConsultantsByDayApi, createAppointmentApi, getAppointmentByUserIdApi, getFeedbackByServiceIdApi, getServiceRatingApi, deleteAppointmentApi, createMomoPaymentApi, updateStatusSlotTimeApi } from '../api';
 import { ChevronLeft, ChevronRight, User, Sparkles, Calendar, Banknote, Star, MessageCircle, ChevronDown } from 'lucide-react';
 import { addDays, startOfWeek, isSameWeek } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -1002,23 +1002,6 @@ export default function ServicePage() {
       };
       localStorage.setItem('pendingBill', JSON.stringify(paymentData));
 
-      // Nếu chọn VNPay thì gọi API tạo link thanh toán và redirect
-      if (form.paymentMethod === 'vnpay') {
-        const vnpayRes = await createVnpayPaymentApi({
-          amount: service.price,
-          orderInfo: `Thanh toán cho lịch hẹn ${newAppointment._id}`,
-          orderId: newAppointment._id,
-        });
-        if (vnpayRes && vnpayRes.payUrl) {
-          // Không giải phóng slot khi redirect - slot sẽ được xử lý ở PaymentResultPage
-          window.location.href = vnpayRes.payUrl;
-          return;
-        } else {
-          setShowError('Không tạo được link thanh toán VNPay. Vui lòng thử lại!');
-          return;
-        }
-      }
-
       // Nếu chọn MoMo thì gọi API tạo link thanh toán và redirect
       if (form.paymentMethod === 'momo') {
         const momoRes = await createMomoPaymentApi({
@@ -1870,18 +1853,6 @@ export default function ServicePage() {
                             <img src="/logo-momo-png-2.png" alt="Ví MoMo" className="h-6 object-contain mr-2" />
                             <span>Ví điện tử MoMo</span>
                           </label>
-                          <label className={`flex items-center p-4 border rounded-xl cursor-pointer hover:bg-blue-50/30 transition-all text-base hover:border-blue-300 ${form.paymentMethod === 'vnpay' ? 'border-blue-400' : 'border-sky-100'}`}>
-                            <input
-                              type="radio"
-                              name="paymentMethod"
-                              value="vnpay"
-                              checked={form.paymentMethod === 'vnpay'}
-                              onChange={handleChange}
-                              className="mr-3 w-5 h-5 text-blue-600 focus:ring-blue-500"
-                            />
-                            <img src="/vnpay-logo-inkythuatso-01.png" alt="VNPay" className="h-6 object-contain mr-2" />
-                            <span>VNPay (ATM/QR/Thẻ nội địa)</span>
-                          </label>
                           <div className={`p-4 border rounded-xl transition-all ${form.paymentMethod === 'paypal' ? 'border-blue-400 bg-blue-50/10' : 'border-sky-100'}`}>
                             <label className="flex items-center cursor-pointer mb-4">
                               <input
@@ -1921,27 +1892,27 @@ export default function ServicePage() {
                                         setShowError('Lỗi thanh toán PayPal. Vui lòng thử lại.');
                                         return;
                                       }
-                                                            try {
-                        await actions.order.capture();
-                        // Lưu pendingBill vào localStorage và điều hướng sang PaymentResultPage
-                        const userInfo = localStorage.getItem('userInfo');
-                        const currentUser = userInfo ? JSON.parse(userInfo) : null;
-                        if (!selectedSlot || !currentUser) {
-                          setShowError('Thiếu thông tin đặt lịch!');
-                          return;
-                        }
-                        
-                        // Kiểm tra slot đang được hold
-                        if (!heldSlotId || slotHoldTime === null) {
-                          setShowError('Slot đã hết thời gian giữ. Vui lòng chọn lại slot!');
-                          return;
-                        }
-                        
-                        const slotTimeObj = allSlotTimes.find(st => st._id === heldSlotId);
-                        if (!slotTimeObj || slotTimeObj.status !== 'booked') {
-                          setShowError('Không tìm thấy slot time phù hợp hoặc slot không còn được giữ!');
-                          return;
-                        }
+                                      try {
+                                        await actions.order.capture();
+                                        // Lưu pendingBill vào localStorage và điều hướng sang PaymentResultPage
+                                        const userInfo = localStorage.getItem('userInfo');
+                                        const currentUser = userInfo ? JSON.parse(userInfo) : null;
+                                        if (!selectedSlot || !currentUser) {
+                                          setShowError('Thiếu thông tin đặt lịch!');
+                                          return;
+                                        }
+                                        
+                                        // Kiểm tra slot đang được hold
+                                        if (!heldSlotId || slotHoldTime === null) {
+                                          setShowError('Slot đã hết thời gian giữ. Vui lòng chọn lại slot!');
+                                          return;
+                                        }
+                                        
+                                        const slotTimeObj = allSlotTimes.find(st => st._id === heldSlotId);
+                                        if (!slotTimeObj || slotTimeObj.status !== 'booked') {
+                                          setShowError('Không tìm thấy slot time phù hợp hoặc slot không còn được giữ!');
+                                          return;
+                                        }
                                         const service = services.find(s => s._id === form.serviceId);
                                         if (!service || !service.price) {
                                           setShowError('Dịch vụ không hợp lệ hoặc không có giá!');

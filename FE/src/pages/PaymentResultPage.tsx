@@ -41,9 +41,8 @@ export default function PaymentResultPage() {
   const navigate = useNavigate();
   const [payment, setPayment] = useState<Payment | null>(null);
 
-  // VNPay response parameters
-  const vnp_ResponseCode = searchParams.get('vnp_ResponseCode');
-  const vnp_TransactionStatus = searchParams.get('vnp_TransactionStatus');
+  // Lấy thêm tham số momoResultCode từ URL
+  const momoResultCode = searchParams.get('resultCode');
 
   useEffect(() => {
     // Get pending bill from localStorage
@@ -51,7 +50,6 @@ export default function PaymentResultPage() {
     if (pendingBill) {
       const paymentObj = JSON.parse(pendingBill);
       setPayment(paymentObj);
-      
       // PAYPAL FLOW
       if (paymentObj.paymentMethod === 'paypal') {
         // Tạo appointment với status mặc định (pending)
@@ -89,10 +87,31 @@ export default function PaymentResultPage() {
         .catch((err) => {
           console.error('[FE] createAppointmentApi error:', err);
         });
+      } else if (paymentObj.paymentMethod === 'momo' && paymentObj.appointmentId) {
+        // MOMO FLOW: chỉ xử lý khi thanh toán momo thành công (resultCode === '0')
+        if (momoResultCode === '0') {
+          updateAppointmentStatusApi(paymentObj.appointmentId, 'confirmed')
+            .then(() => {
+              createPaymentApi({
+                accountId: paymentObj.user_id,
+                appointmentId: paymentObj.appointmentId,
+                date: new Date().toISOString(),
+                description: `Thanh toán cho lịch hẹn ${paymentObj.appointmentId}`,
+                paymentLinkId: paymentObj.appointmentId,
+                totalPrice: paymentObj.price || 0,
+                status: 'completed',
+                paymentMethod: paymentObj.paymentMethod || 'momo',
+              }).catch((err) => {
+                console.error('[FE] createPaymentApi error:', err);
+              });
+            })
+            .catch((err) => {
+              console.error('[FE] updateAppointmentStatusApi error:', err);
+            });
+        } // Nếu thất bại thì không làm gì, giữ nguyên trạng thái pending
       } else {
-        // VNPay, momo, card giữ nguyên logic cũ
-        if ((vnp_ResponseCode === '00' && vnp_TransactionStatus === '00' || !vnp_ResponseCode) && paymentObj.appointmentId) {
-          // Tạo payment record
+        // Card giữ nguyên logic cũ
+        if (paymentObj.appointmentId) {
           createPaymentApi({
             accountId: paymentObj.user_id,
             appointmentId: paymentObj.appointmentId,
@@ -116,8 +135,10 @@ export default function PaymentResultPage() {
     }
   }, []);
 
+  // Cập nhật điều kiện thành công/thất bại:
   const isPaypalSuccess = payment?.paymentMethod === 'paypal' && payment?.paypalStatus === 'COMPLETED';
-  const isPaymentSuccess = isPaypalSuccess || (vnp_ResponseCode === '00' && vnp_TransactionStatus === '00');
+  const isMomoSuccess = payment?.paymentMethod === 'momo' && momoResultCode === '0';
+  const isPaymentSuccess = isPaypalSuccess || isMomoSuccess;
 
   return (
     <div className="bg-gradient-to-b from-sky-50 to-[#f0f7fa] min-h-screen flex flex-col">
@@ -207,7 +228,7 @@ export default function PaymentResultPage() {
               <>
                 <button 
                   className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-10 py-4 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate('/profile?tab=payments')}
                 >
                   Thử lại
                 </button>
