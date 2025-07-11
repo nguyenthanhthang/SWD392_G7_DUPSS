@@ -101,7 +101,7 @@ const weekData = [
   { weekName: "Tuần này", days: generateWeekData(0) },
   { weekName: "Tuần sau", days: generateWeekData(1) },
   { weekName: "Tuần sau nữa", days: generateWeekData(2) },
-  { weekName: "Tuần sau nữa", days: generateWeekData(3) }
+  { weekName: "Tuần thứ 4", days: generateWeekData(3) }
 ];
 
 // Tạo dữ liệu cho 2 tuần kế tiếp (dùng cho modal đăng ký ca làm)
@@ -241,6 +241,7 @@ export default function ScheduleManagement() {
       // Lấy slot time của consultant
       getSlotTimeByConsultantIdApi(consultant._id)
         .then(data => {
+          console.log('[SLOT TIMES API]', data);
           setSlotTimes(Array.isArray(data) ? data : []);
         })
         .catch(() => setSlotTimes([]));
@@ -744,16 +745,28 @@ export default function ScheduleManagement() {
               <span className="ml-2 text-gray-400 text-sm">({weekData[weekIndex].days[0].dateString} - {weekData[weekIndex].days[6].dateString})</span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setWeekIndex(weekIndex === 0 ? 1 : 0)} className="p-1 hover:bg-gray-100 rounded">
-                <ChevronLeft size={22} className="text-[#283593]" />
+              <button 
+                onClick={() => setWeekIndex(weekIndex === 0 ? 3 : weekIndex - 1)} 
+                className="p-1 hover:bg-gray-100 rounded"
+                disabled={weekIndex === 0}
+              >
+                <ChevronLeft size={22} className={`${weekIndex === 0 ? 'text-gray-300' : 'text-[#283593]'}`} />
               </button>
-              <button onClick={() => setWeekIndex(weekIndex === 1 ? 0 : 1)} className="p-1 hover:bg-gray-100 rounded">
-                <ChevronRight size={22} className="text-[#283593]" />
+              <span className="text-sm text-gray-500 px-2">
+                {weekIndex + 1}/4
+              </span>
+              <button 
+                onClick={() => setWeekIndex(weekIndex === 3 ? 0 : weekIndex + 1)} 
+                className="p-1 hover:bg-gray-100 rounded"
+                disabled={weekIndex === 3}
+              >
+                <ChevronRight size={22} className={`${weekIndex === 3 ? 'text-gray-300' : 'text-[#283593]'}`} />
               </button>
             </div>
           </div>
           <div className="grid grid-cols-7 border-t border-gray-100">
             {weekData[weekIndex].days.map((day, idx) => {
+
               // Lấy slot time của ngày này
               let filteredTimeSlots = timeSlots;
               if (shift === 'morning') filteredTimeSlots = ["08:00", "09:00", "10:00", "11:00"];
@@ -763,12 +776,14 @@ export default function ScheduleManagement() {
                 // Tìm slot time object đúng ngày/giờ
                 const slotTimeObj = slotTimes.find(st => {
                   const stDate = new Date(st.start_time);
-                  return (
+                  const match = (
                     stDate.getFullYear() === day.date.getFullYear() &&
                     stDate.getMonth() === day.date.getMonth() &&
                     stDate.getDate() === day.date.getDate() &&
                     stDate.getHours() === parseInt(slot)
                   );
+
+                  return match;
                 });
                 // Tìm appointment cho slot này
                 const appointment = appointments.find(app => {
@@ -823,16 +838,7 @@ export default function ScheduleManagement() {
                           const isCompleted = appointment.status === 'completed';
                           const isConfirmed = appointment.status === 'confirmed' || appointment.status === 'scheduled';
                           
-                          // Debug log
-                          console.log('Appointment:', appointment._id, {
-                            status: appointment.status,
-                            slotDateTime: slotDateTime.toISOString(),
-                            slotEndTime: slotEndTime.toISOString(),
-                            now: now.toISOString(),
-                            isSlotPassed,
-                            isCompleted,
-                            isConfirmed
-                          });
+
                           
                           return (
                             <div 
