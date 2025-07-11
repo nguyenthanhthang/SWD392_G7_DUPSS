@@ -309,6 +309,12 @@ const ReportsDetails = () => {
     e.preventDefault();
     if (!appointment) return;
     
+    // Kiểm tra đã tới giờ khám chưa
+    if (!isAppointmentTime()) {
+      alert('Chưa tới giờ khám! Vui lòng đợi đến 10 phút trước giờ hẹn.');
+      return;
+    }
+
     // Kiểm tra xem có thể chỉnh sửa không
     if (!canEditReport()) {
       alert('Không thể chỉnh sửa báo cáo sau thời gian cuộc hẹn kết thúc!');
@@ -398,56 +404,80 @@ const ReportsDetails = () => {
 
   const ageDisplay = appointment?.user_id?.yearOfBirth ? `${calculateAge(appointment.user_id.yearOfBirth)} tuổi` : "Chưa rõ tuổi";
 
-  // Kiểm tra thời gian cuộc hẹn
-  const getAppointmentEndTime = () => {
-    // Thử nhiều cách để lấy thời gian kết thúc appointment
-    let endTime = null;
-    
-    // Cách 1: Từ slotTime_id.end_time
-    if (appointment?.slotTime_id?.end_time) {
-      endTime = new Date(appointment.slotTime_id.end_time);
-    }
-    // Cách 2: Từ dateBooking + 1 giờ
-    else if (appointment?.dateBooking) {
-      const startTime = new Date(appointment.dateBooking);
-      endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1 giờ
-    }
-    // Cách 3: Từ slotTime_id.start_time + 1 giờ
-    else if (appointment?.slotTime_id?.start_time) {
-      const startTime = new Date(appointment.slotTime_id.start_time);
-      endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1 giờ
-    }
-    
-    return endTime;
-  };
+// Kiểm tra đã tới giờ khám chưa (cho phép trước 10 phút)
+const isAppointmentTime = () => {
+  if (!appointment?.slotTime_id?.start_time) return true; // Nếu không có thời gian thì cho phép
+  
+  const appointmentTime = new Date(appointment.slotTime_id.start_time);
+  const now = new Date();
+  const tenPhutTruoc = new Date(appointmentTime.getTime() - 10 * 60 * 1000); // 10 phút trước
+  
+  console.log('Time check:', {
+    now: now.toISOString(),
+    appointmentTime: appointmentTime.toISOString(),
+    tenPhutTruoc: tenPhutTruoc.toISOString(),
+    isTime: now >= tenPhutTruoc
+  });
+  
+  return now >= tenPhutTruoc;
+};
 
-  // Kiểm tra xem cuộc hẹn đã kết thúc chưa
-  const isAppointmentEnded = () => {
-    const endTime = getAppointmentEndTime();
-    if (!endTime) return false; // Nếu không có thông tin thời gian thì cho phép chỉnh sửa
-    
-    const now = new Date();
-    const isEnded = now > endTime;
-    
-    console.log('Appointment end check:', {
-      now: now.toISOString(),
-      endTime: endTime.toISOString(),
-      isEnded,
-      canEdit: !isEnded
-    });
-    
-    return isEnded;
-  };
+// Kiểm tra thời gian cuộc hẹn
+const getAppointmentEndTime = () => {
+  // Thử nhiều cách để lấy thời gian kết thúc appointment
+  let endTime = null;
+  
+  // Cách 1: Từ slotTime_id.end_time
+  if (appointment?.slotTime_id?.end_time) {
+    endTime = new Date(appointment.slotTime_id.end_time);
+  }
+  // Cách 2: Từ dateBooking + 1 giờ
+  else if (appointment?.dateBooking) {
+    const startTime = new Date(appointment.dateBooking);
+    endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1 giờ
+  }
+  // Cách 3: Từ slotTime_id.start_time + 1 giờ
+  else if (appointment?.slotTime_id?.start_time) {
+    const startTime = new Date(appointment.slotTime_id.start_time);
+    endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1 giờ
+  }
+  
+  return endTime;
+};
 
-  // Kiểm tra xem có nên hiển thị lịch sử tư vấn không
-  const shouldShowHistory = () => {
-    return !isAppointmentEnded(); // Chỉ hiện khi appointment chưa kết thúc
-  };
+// Kiểm tra xem cuộc hẹn đã kết thúc chưa
+const isAppointmentEnded = () => {
+  const endTime = getAppointmentEndTime();
+  if (!endTime) return false; // Nếu không có thông tin thời gian thì cho phép chỉnh sửa
+  
+  const now = new Date();
+  const isEnded = now > endTime;
+  
+  console.log('Appointment end check:', {
+    now: now.toISOString(),
+    endTime: endTime.toISOString(),
+    isEnded,
+    canEdit: !isEnded
+  });
+  
+  return isEnded;
+};
 
-  // Kiểm tra có thể chỉnh sửa report không
-  const canEditReport = () => {
-    return !isAppointmentEnded(); // Chỉ cho chỉnh sửa khi appointment chưa kết thúc
-  };
+// Kiểm tra có thể chỉnh sửa report không
+const canEditReport = () => {
+  return !isAppointmentEnded(); // Chỉ cho chỉnh sửa khi appointment chưa kết thúc
+};
+
+// Kiểm tra có thể tạo Meet link hay không (cho phép trước 10 phút)
+const canCreateMeetLink = (): boolean => {
+  if (!appointment) return false;
+  return appointment.status === 'confirmed' && isAppointmentTime();
+};
+
+// Kiểm tra xem có nên hiển thị lịch sử tư vấn không
+const shouldShowHistory = () => {
+  return !isAppointmentEnded(); // Chỉ hiện khi appointment chưa kết thúc
+};
 
   // Hàm mở modal tạo Meet link
   const handleCreateMeetLink = () => {
@@ -493,12 +523,6 @@ const ReportsDetails = () => {
     setMeetLinkLoading(false);
   };
 
-  // Kiểm tra có thể tạo Meet link hay không
-  const canCreateMeetLink = (): boolean => {
-    if (!appointment) return false;
-    return appointment.status === 'confirmed';
-  };
-
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -538,7 +562,7 @@ const ReportsDetails = () => {
             </div>
 
             {/* Google Meet Link Section */}
-            {canCreateMeetLink() && (
+            {appointment?.status === 'confirmed' && (
               <div className="bg-white rounded-2xl shadow border border-[#DBE8FA] overflow-hidden">
                 <div className="p-4 flex items-center gap-4 border-b border-[#DBE8FA]">
                   <Video className="w-6 h-6 text-[#283593]" />
@@ -555,6 +579,21 @@ const ReportsDetails = () => {
                       <p><strong>Thời gian:</strong> {appointment?.dateBooking ? new Date(appointment.dateBooking).toLocaleString('vi-VN') : 'N/A'}</p>
                     </div>
                   </div>
+
+                  {/* Thông báo chưa tới giờ */}
+                  {!isAppointmentTime() && (
+                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <div className="flex items-center gap-3 text-orange-800">
+                        <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
+                          <Clock className="w-3 h-3 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Chưa tới giờ khám</p>
+                          <p className="text-xs text-orange-700 mt-1">Vui lòng đợi đến 10 phút trước giờ hẹn để tạo Google Meet link.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Hướng dẫn */}
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -582,7 +621,12 @@ const ReportsDetails = () => {
                         </div>
                         <button
                           onClick={handleCreateMeetLink}
-                          className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                          disabled={!canCreateMeetLink()}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            canCreateMeetLink() 
+                              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
                         >
                           Cập nhật
                         </button>
@@ -594,7 +638,12 @@ const ReportsDetails = () => {
                   ) : (
                     <button
                       onClick={handleCreateMeetLink}
-                      className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                      disabled={!canCreateMeetLink()}
+                      className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                        canCreateMeetLink() 
+                          ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
                     >
                       <Video className="w-5 h-5" />
                       Tạo Google Meet Link
@@ -733,18 +782,36 @@ const ReportsDetails = () => {
                 <h2 className="text-lg font-semibold text-[#283593]">Tạo Ghi Nhận Mới</h2>
               </div>
               <form onSubmit={handleFormSubmit} className="p-4 space-y-4">
+                {/* Thông báo chưa tới giờ */}
+                {!isAppointmentTime() && (
+                  <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                    <div className="flex items-center gap-3 text-orange-800">
+                      <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
+                        <Clock className="w-3 h-3 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Chưa tới giờ khám</p>
+                        <p className="text-xs text-orange-700 mt-1">Vui lòng đợi đến 10 phút trước giờ hẹn để bắt đầu tạo báo cáo.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Thông báo đã quá giờ khám */}
                 {!canEditReport() && (
                   <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
                     <div className="flex items-center gap-3 text-amber-800">
                       <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
                         <span className="text-white text-xs font-bold">!</span>
                       </div>
-                      <p className="text-sm font-medium">
-                        Cuộc hẹn đã kết thúc. Không thể chỉnh sửa báo cáo.
-                      </p>
+                      <div>
+                        <p className="text-sm font-medium">Cuộc hẹn đã kết thúc</p>
+                        <p className="text-xs text-amber-700 mt-1">Không thể chỉnh sửa báo cáo sau thời gian cuộc hẹn kết thúc.</p>
+                      </div>
                     </div>
                   </div>
                 )}
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Buổi tư vấn</label>
                   <div className="w-full p-2 border border-gray-300 rounded-md text-sm bg-gray-100">
@@ -758,13 +825,27 @@ const ReportsDetails = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tên bệnh nhân <span className="text-red-500">*</span>
                     </label>
-                    <input type="text" value={tenBenhNhan} onChange={e => setTenBenhNhan(e.target.value)} className={`w-full p-2 border ${getFieldErrorClass(tenBenhNhan, true)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()} />
+                    <input 
+                      type="text" 
+                      value={tenBenhNhan} 
+                      onChange={e => setTenBenhNhan(e.target.value)} 
+                      className={`w-full p-2 border ${getFieldErrorClass(tenBenhNhan, true)} rounded-md text-sm ${!isAppointmentTime() || !canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} 
+                      readOnly={daGhiNhan && !dangChinhSua || !isAppointmentTime() || !canEditReport()} 
+                      disabled={!isAppointmentTime() || !canEditReport()} 
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tuổi bệnh nhân <span className="text-red-500">*</span>
                     </label>
-                    <input type="text" value={tuoiBenhNhan} onChange={e => setTuoiBenhNhan(e.target.value)} className={`w-full p-2 border ${getFieldErrorClass(tuoiBenhNhan, true)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()} />
+                    <input 
+                      type="text" 
+                      value={tuoiBenhNhan} 
+                      onChange={e => setTuoiBenhNhan(e.target.value)} 
+                      className={`w-full p-2 border ${getFieldErrorClass(tuoiBenhNhan, true)} rounded-md text-sm ${!isAppointmentTime() || !canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} 
+                      readOnly={daGhiNhan && !dangChinhSua || !isAppointmentTime() || !canEditReport()} 
+                      disabled={!isAppointmentTime() || !canEditReport()} 
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -773,8 +854,8 @@ const ReportsDetails = () => {
                     <select
                       value={gioiTinhBenhNhan}
                       onChange={e => setGioiTinhBenhNhan(e.target.value)}
-                      className={`w-full p-2 border ${getFieldErrorClass(gioiTinhBenhNhan, true)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-                      disabled={daGhiNhan && !dangChinhSua || !canEditReport()}
+                      className={`w-full p-2 border ${getFieldErrorClass(gioiTinhBenhNhan, true)} rounded-md text-sm ${!isAppointmentTime() || !canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                      disabled={daGhiNhan && !dangChinhSua || !isAppointmentTime() || !canEditReport()}
                     >
                       <option value="">Chọn giới tính</option>
                       <option value="Nam">Nam</option>
@@ -787,17 +868,47 @@ const ReportsDetails = () => {
                   <label htmlFor="condition" className="block text-sm font-medium text-gray-700 mb-1">
                     Tình trạng / Chủ đề <span className="text-red-500">*</span>
                   </label>
-                  <input type="text" id="condition" name="condition" value={newRecord.condition} onChange={handleInputChange} placeholder="VD: Stress, Lo âu..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.condition, true)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()} />
+                  <input 
+                    type="text" 
+                    id="condition" 
+                    name="condition" 
+                    value={newRecord.condition} 
+                    onChange={handleInputChange} 
+                    placeholder="VD: Stress, Lo âu..." 
+                    className={`w-full p-2 border ${getFieldErrorClass(newRecord.condition, true)} rounded-md text-sm ${!isAppointmentTime() || !canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} 
+                    readOnly={daGhiNhan && !dangChinhSua || !isAppointmentTime() || !canEditReport()} 
+                    disabled={!isAppointmentTime() || !canEditReport()} 
+                  />
                 </div>
                 <div>
                   <label htmlFor="consultation_notes" className="block text-sm font-medium text-gray-700 mb-1">Ghi chú buổi tư vấn</label>
-                  <textarea id="consultation_notes" name="consultation_notes" value={newRecord.consultation_notes} onChange={handleInputChange} rows={4} placeholder="Chi tiết về buổi tư vấn..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.consultation_notes, false)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()}></textarea>
+                  <textarea 
+                    id="consultation_notes" 
+                    name="consultation_notes" 
+                    value={newRecord.consultation_notes} 
+                    onChange={handleInputChange} 
+                    rows={4} 
+                    placeholder="Chi tiết về buổi tư vấn..." 
+                    className={`w-full p-2 border ${getFieldErrorClass(newRecord.consultation_notes, false)} rounded-md text-sm ${!isAppointmentTime() || !canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} 
+                    readOnly={daGhiNhan && !dangChinhSua || !isAppointmentTime() || !canEditReport()} 
+                    disabled={!isAppointmentTime() || !canEditReport()}
+                  ></textarea>
                 </div>
                 <div>
                   <label htmlFor="recommendations" className="block text-sm font-medium text-gray-700 mb-1">Khuyến nghị</label>
-                  <textarea id="recommendations" name="recommendations" value={newRecord.recommendations} onChange={handleInputChange} rows={3} placeholder="Các bước tiếp theo cho bệnh nhân..." className={`w-full p-2 border ${getFieldErrorClass(newRecord.recommendations, false)} rounded-md text-sm ${!canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} readOnly={daGhiNhan && !dangChinhSua || !canEditReport()} disabled={!canEditReport()}></textarea>
+                  <textarea 
+                    id="recommendations" 
+                    name="recommendations" 
+                    value={newRecord.recommendations} 
+                    onChange={handleInputChange} 
+                    rows={3} 
+                    placeholder="Các bước tiếp theo cho bệnh nhân..." 
+                    className={`w-full p-2 border ${getFieldErrorClass(newRecord.recommendations, false)} rounded-md text-sm ${!isAppointmentTime() || !canEditReport() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} 
+                    readOnly={daGhiNhan && !dangChinhSua || !isAppointmentTime() || !canEditReport()} 
+                    disabled={!isAppointmentTime() || !canEditReport()}
+                  ></textarea>
                 </div>
-                {canEditReport() && daGhiNhan && !dangChinhSua ? (
+                {isAppointmentTime() && canEditReport() && daGhiNhan && !dangChinhSua ? (
                   <button
                     type="button"
                     className="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-yellow-500 text-white font-semibold hover:bg-yellow-600"
@@ -807,7 +918,7 @@ const ReportsDetails = () => {
                   >
                     Chỉnh sửa ghi nhận
                   </button>
-                ) : canEditReport() ? (
+                ) : isAppointmentTime() && canEditReport() ? (
                   <div className="flex gap-2">
                     {dangChinhSua && (
                       <button
@@ -815,7 +926,6 @@ const ReportsDetails = () => {
                         className="flex-1 flex items-center justify-center gap-2 p-2 rounded-lg bg-gray-500 text-white font-semibold hover:bg-gray-600"
                         onClick={() => {
                           setDangChinhSua(false);
-                          // Reset form về giá trị ban đầu nếu cần
                         }}
                       >
                         Hủy
@@ -830,7 +940,7 @@ const ReportsDetails = () => {
                   </div>
                 ) : (
                   <div className="text-center text-gray-500 py-4">
-                    <p className="text-sm">Không thể chỉnh sửa sau thời gian cuộc hẹn kết thúc</p>
+                    <p className="text-sm">Chưa tới giờ khám. Vui lòng đợi đến 10 phút trước giờ hẹn.</p>
                   </div>
                 )}
               </form>
