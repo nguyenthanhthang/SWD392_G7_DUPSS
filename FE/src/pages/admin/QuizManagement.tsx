@@ -11,6 +11,8 @@ import {
 } from "../../api/index";
 import type { Quiz, Question, QuestionOption } from "../../types/global";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ageGroupOptions = [
   { value: "teen", label: "Thanh thiếu niên" },
@@ -162,10 +164,13 @@ const QuizManagement: React.FC = () => {
         (q) => q.ageGroups && ageGroups.some((ag) => q.ageGroups.includes(ag))
       );
     }
+    // Mặc định chỉ hiển thị quiz hoạt động
     if (status) {
       result = result.filter((q) =>
         status === "active" ? q.isActive : !q.isActive
       );
+    } else {
+      result = result.filter((q) => q.isActive);
     }
     if (tags.length) {
       result = result.filter(
@@ -202,23 +207,22 @@ const QuizManagement: React.FC = () => {
     if (!editQuiz?._id) return;
     try {
       await updateQuizApi(editQuiz._id, editQuizForm);
-      alert("Cập nhật quiz thành công!");
+      toast.success("Cập nhật quiz thành công!");
       setEditQuiz(null);
       reloadQuizzes();
     } catch {
-      alert("Cập nhật quiz thất bại!");
+      toast.error("Cập nhật quiz thất bại!");
     }
   };
 
-  // Xóa quiz
+  // Xóa quiz (soft delete)
   const handleDeleteQuiz = async (quiz: Quiz) => {
-    if (!window.confirm("Bạn có chắc muốn xóa quiz này?")) return;
     try {
       await deleteQuizApi(quiz._id);
-      alert("Đã xóa quiz thành công!");
+      toast.success("Quiz đã được xóa!");
       reloadQuizzes();
     } catch {
-      alert("Xóa quiz thất bại!");
+      toast.error("Ẩn quiz thất bại!");
     }
   };
 
@@ -242,11 +246,11 @@ const QuizManagement: React.FC = () => {
     if (!viewQuiz?._id) return;
     try {
       await createQuestionApi({ ...questionForm, quizId: viewQuiz._id });
-      alert("Thêm câu hỏi thành công!");
+      toast.success("Thêm câu hỏi thành công!");
       setShowAddQuestion(false);
       handleViewQuiz(viewQuiz);
     } catch {
-      alert("Thêm câu hỏi thất bại!");
+      toast.error("Thêm câu hỏi thất bại!");
     }
   };
 
@@ -267,31 +271,32 @@ const QuizManagement: React.FC = () => {
     if (!editQuestion?._id) return;
     try {
       await updateQuestionApi(editQuestion._id, editQuestionForm);
-      alert("Cập nhật câu hỏi thành công!");
+      toast.success("Cập nhật câu hỏi thành công!");
       setEditQuestion(null);
       if (viewQuiz) handleViewQuiz(viewQuiz);
     } catch {
-      alert("Cập nhật câu hỏi thất bại!");
+      toast.error("Cập nhật câu hỏi thất bại!");
     }
   };
 
   // Xóa câu hỏi
   const handleDeleteQuestion = async (q: Question) => {
-    if (!window.confirm("Bạn có chắc muốn xóa câu hỏi này?")) return;
     try {
       await deleteQuestionApi(q._id);
-      alert("Đã xóa câu hỏi thành công!");
+      toast.success("Đã ẩn câu hỏi thành công!");
       if (viewQuiz) handleViewQuiz(viewQuiz);
     } catch {
-      alert("Xóa câu hỏi thất bại!");
+      toast.error("Ẩn câu hỏi thất bại!");
     }
   };
 
-  // Khi mở modal Thêm quiz, set mặc định tags là ['behavior']:
+  // Khi mở modal Thêm quiz, set mặc định ageGroups là ['teen'] nếu chưa có giá trị nào
   useEffect(() => {
     if (showAddQuiz) {
       setAddQuizForm((f) => ({
         ...f,
+        ageGroups:
+          f.ageGroups && f.ageGroups.length > 0 ? f.ageGroups : ["teen"],
         tags: f.tags && f.tags.length > 0 ? f.tags : ["behavior"],
       }));
     }
@@ -299,6 +304,18 @@ const QuizManagement: React.FC = () => {
 
   return (
     <div className="p-6 bg-sky-50">
+      <ToastContainer
+        position="top-right"
+        autoClose={2500}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
       <div className="p-4 bg-white rounded-lg shadow-sm">
         {/* Thêm nút ở đầu trang */}
         <div className="flex justify-between items-center mb-4">
@@ -715,7 +732,9 @@ const QuizManagement: React.FC = () => {
                   questionForm.options.length < 2 ||
                   questionForm.options.some((opt) => !opt.text.trim())
                 ) {
-                  alert("Vui lòng nhập đầy đủ nội dung và ít nhất 2 đáp án!");
+                  toast.error(
+                    "Vui lòng nhập đầy đủ nội dung và ít nhất 2 đáp án!"
+                  );
                   return;
                 }
                 handleAddQuestionSave();
@@ -930,11 +949,11 @@ const QuizManagement: React.FC = () => {
                     ageGroups: addQuizForm.ageGroups || [], // fix type
                     tags: addQuizForm.tags ? [...addQuizForm.tags] : [], // luôn là mảng
                   });
-                  alert("Tạo quiz thành công!");
+                  toast.success("Tạo quiz thành công!");
                   setShowAddQuiz(false);
                   reloadQuizzes();
                 } catch {
-                  alert("Tạo quiz thất bại!");
+                  toast.error("Tạo quiz thất bại!");
                 }
               }}
               className="space-y-4"
@@ -977,15 +996,30 @@ const QuizManagement: React.FC = () => {
                         checked={
                           addQuizForm.ageGroups?.includes(opt.value) || false
                         }
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          let newAgeGroups = addQuizForm.ageGroups || [];
+                          if (checked) {
+                            newAgeGroups = [...newAgeGroups, opt.value];
+                          } else {
+                            // Chỉ cho phép bỏ chọn nếu còn nhiều hơn 1 giá trị
+                            if (newAgeGroups.length > 1) {
+                              newAgeGroups = newAgeGroups.filter(
+                                (a) => a !== opt.value
+                              );
+                            } else {
+                              // Nếu chỉ còn 1, không cho bỏ chọn
+                              return;
+                            }
+                          }
                           setAddQuizForm((f) => ({
                             ...f,
-                            ageGroups: e.target.checked
-                              ? [...(f.ageGroups || []), opt.value]
-                              : (f.ageGroups || []).filter(
-                                  (a) => a !== opt.value
-                                ),
-                          }))
+                            ageGroups: newAgeGroups,
+                          }));
+                        }}
+                        disabled={
+                          addQuizForm.ageGroups?.includes(opt.value) &&
+                          addQuizForm.ageGroups?.length === 1
                         }
                       />
                       <span>{opt.label}</span>

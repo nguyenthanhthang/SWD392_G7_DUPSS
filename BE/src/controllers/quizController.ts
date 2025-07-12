@@ -86,17 +86,20 @@ export const updateQuiz = async (req: Request, res: Response) => {
 export const deleteQuiz = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const quiz = await Quiz.findByIdAndDelete(id);
+    // Soft delete: chỉ cập nhật isActive thành false
+    const quiz = await Quiz.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true }
+    );
     if (!quiz) {
       return res
         .status(404)
         .json({ success: false, message: "Quiz không tồn tại" });
     }
-    res.json({ success: true, message: "Đã xóa quiz thành công" });
+    res.json({ success: true, message: "Quiz đã được ẩn (soft delete)" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Lỗi server khi xóa quiz" });
+    res.status(500).json({ success: false, message: "Lỗi server khi ẩn quiz" });
   }
 };
 
