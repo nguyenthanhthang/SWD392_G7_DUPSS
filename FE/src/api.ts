@@ -330,13 +330,15 @@ export const updateAccountApi = async (
 
 // Đổi mật khẩu
 export const changePasswordApi = async (
-  email: string,
-  password: string,
+  userId: string,
+  oldPassword: string,
+  newPassword: string,
   confirmPassword: string
 ) => {
   const res = await api.post(`/accounts/change-password`, {
-    email,
-    password,
+    userId,
+    oldPassword,
+    newPassword,
     confirmPassword,
   });
   return res.data;

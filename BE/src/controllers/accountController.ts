@@ -212,31 +212,38 @@ export const deleteAccount = async (
   }
 };
 
-// [POST] /api/accounts/change-password – Đổi mật khẩu bằng email
+// [POST] /api/accounts/change-password – Đổi mật khẩu bằng userId và oldPassword
 export const changePassword = async (
-  req: Request<{}, {}, { email: string; password: string; confirmPassword: string }>,
+  req: Request<{}, {}, { userId: string; oldPassword: string; newPassword: string; confirmPassword: string }>,
   res: Response
 ): Promise<void> => {
   try {
-    const { email, password, confirmPassword } = req.body;
-    if (!email || !password || !confirmPassword) {
-      res.status(400).json({ message: "Vui lòng nhập đầy đủ email, mật khẩu mới và xác nhận!" });
+    const { userId, oldPassword, newPassword, confirmPassword } = req.body;
+    if (!userId || !oldPassword || !newPassword || !confirmPassword) {
+      res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin!" });
       return;
     }
-    if (password !== confirmPassword) {
+    if (newPassword !== confirmPassword) {
       res.status(400).json({ message: "Mật khẩu xác nhận không khớp!" });
       return;
     }
-    if (!isStrongPassword(password)) {
+    if (!isStrongPassword(newPassword)) {
       res.status(400).json({ message: "Mật khẩu phải mạnh (ít nhất 8 ký tự, chữ hoa, thường, số, ký tự đặc biệt)!" });
       return;
     }
-    const account = await Account.findOne({ email });
+    const account = await Account.findById(userId);
     if (!account) {
-      res.status(404).json({ message: "Không tìm thấy tài khoản với email này!" });
+      res.status(404).json({ message: "Không tìm thấy tài khoản!" });
       return;
     }
-    const hashed = await bcrypt.hash(password, 10);
+    // Kiểm tra mật khẩu cũ
+    const isMatch = await bcrypt.compare(oldPassword, account.password);
+    if (!isMatch) {
+      res.status(400).json({ message: "Mật khẩu cũ không đúng!" });
+      return;
+    }
+    // Đổi mật khẩu
+    const hashed = await bcrypt.hash(newPassword, 10);
     account.password = hashed;
     await account.save();
     res.status(200).json({ message: "Đổi mật khẩu thành công!" });

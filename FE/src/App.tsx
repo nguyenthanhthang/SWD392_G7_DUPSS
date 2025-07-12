@@ -39,6 +39,7 @@ import QuizManagement from "./pages/admin/QuizManagement";
 import QuizResultsManagement from "./pages/admin/QuizResultsManagement";
 import EventDetailPage from "./pages/EventDetailPage";
 import VerifyOTP from "./pages/VerifyOTP";
+import AdminProfile from "./pages/admin/AdminProfile";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -161,17 +162,11 @@ function AppContent() {
                   <Route path="services" element={<Service />} />
                   <Route path="events" element={<EventManagement />} />
                   <Route path="consultants" element={<Consultant />} />
-               
                   <Route path="blogs" element={<BlogManagement />} />
-                  <Route
-                    path="appointments"
-                    element={<AppointmentManagement />}
-                  />
+                  <Route path="appointments" element={<AppointmentManagement />} />
                   <Route path="quizzes" element={<QuizManagement />} />
-                  <Route
-                    path="quiz-results"
-                    element={<QuizResultsManagement />}
-                  />
+                  <Route path="quiz-results" element={<QuizResultsManagement />} />
+                  <Route path="profile" element={<AdminProfile />} />
                 </Routes>
               </AdminLayout>
             </AdminRoute>

@@ -145,3 +145,20 @@ export const getQuizResultByIdApi = async (resultId: string) => {
   );
   return response.data;
 };
+
+export const uploadAvatarApi = async (file: File): Promise<string> => {
+  const form = new FormData();
+  form.append("image", file);
+  const response = await axios.post(
+    "http://localhost:5000/api/uploads/upload",
+    form,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      withCredentials: true,
+    }
+  );
+  return response.data.imageUrl; // BE trả về { imageUrl }
+};
