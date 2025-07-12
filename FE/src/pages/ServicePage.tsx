@@ -363,6 +363,7 @@ const ServiceRatings = ({ services }: { services: Service[] }) => {
 
 interface Appointment {
   dateBooking: string;
+  status?: string;
 }
 
 type SlotStatus = 'available' | 'booked' | 'past' | 'no-consultant';
@@ -796,6 +797,11 @@ export default function ServicePage() {
       if (isNaN(appDate.getTime())) {
           console.warn('Skipping invalid appointment date:', app.dateBooking);
           continue; // Skip if date is invalid
+      }
+      
+      // Bỏ qua appointment có status 'rescheduled' vì đã được đổi lịch
+      if (app.status === 'rescheduled') {
+        continue;
       }
       
       const appDayFormatted = formatInTimeZone(appDate, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
@@ -1363,7 +1369,7 @@ export default function ServicePage() {
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {(timeFilter === 'morning' ? ['08:00', '09:00', '10:00', '11:00'] : ['13:00', '14:00', '15:00', '16:00', '17:00']).map(slot => {
+                            {(timeFilter === 'morning' ? ['08:00', '09:00', '10:00', '11:00'] : ['13:00', '14:00', '15:00', '16:00']).map(slot => {
                               const displayTime = `${slot}-${getEndTime(slot)}`;
                               return (
                                 <div key={slot} className="grid grid-cols-8 gap-3 items-center border-t border-gray-100">

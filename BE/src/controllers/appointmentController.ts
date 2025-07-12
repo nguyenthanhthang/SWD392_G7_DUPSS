@@ -248,16 +248,35 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
         });
 
         // 2. Trả slot cũ về "available" và cleanup holdedBy
-        await SlotTime.findByIdAndUpdate(currentAppointment.slotTime_id, { 
-            status: "available",
-            holdedBy: null 
-        });
+        if (currentAppointment.slotTime_id) {
+            try {
+                // Lấy slotTime_id - có thể là ObjectId hoặc string
+                const oldSlotTimeId = typeof currentAppointment.slotTime_id === 'object' 
+                    ? currentAppointment.slotTime_id._id 
+                    : currentAppointment.slotTime_id;
+                
+                console.log('Releasing old slot:', oldSlotTimeId);
+                await SlotTime.findByIdAndUpdate(oldSlotTimeId, { 
+                    status: "available",
+                    holdedBy: null 
+                });
+            } catch (error) {
+                console.error('Error releasing old slot:', error);
+                // Không throw error vì vẫn muốn tiếp tục tạo appointment mới
+            }
+        }
 
         // 3. Cập nhật slot mới thành "booked" và cleanup holdedBy (vì đã chính thức book)
-        await SlotTime.findByIdAndUpdate(newSlotTimeId, { 
-            status: "booked",
-            holdedBy: null 
-        });
+        try {
+            console.log('Booking new slot:', newSlotTimeId);
+            await SlotTime.findByIdAndUpdate(newSlotTimeId, { 
+                status: "booked",
+                holdedBy: null 
+            });
+        } catch (error) {
+            console.error('Error booking new slot:', error);
+            throw new Error('Không thể book slot mới. Vui lòng thử lại!');
+        }
 
         // 4. Tạo appointment mới với isRescheduled = true (không cho đổi lịch nữa)
         const newAppointment = new Appointment({

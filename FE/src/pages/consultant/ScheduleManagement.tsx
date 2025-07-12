@@ -819,7 +819,7 @@ export default function ScheduleManagement() {
                       </div>
                     ) : (
                       filteredSlots.map(({ slot, slotTimeObj, appointment }, slotIdx) => {
-                        if (appointment) {
+                        if (appointment && appointment.status !== 'rescheduled') {
                           // Render như cũ
                           const date = getAppointmentStartTime(appointment);
                           if (!date) return null;

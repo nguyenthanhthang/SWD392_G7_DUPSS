@@ -47,7 +47,7 @@ interface Appointment {
   dateBooking: string;
   reason: string;
   note?: string;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
+  status: "pending" | "confirmed" | "cancelled" | "completed" | "rescheduled";
 }
 
 const statusColors = {
@@ -419,7 +419,7 @@ const AppointmentManagement = () => {
         };
         
         // Random status
-        const statuses: ("pending" | "confirmed" | "cancelled" | "completed")[] = ["pending", "confirmed", "cancelled", "completed"];
+        const statuses: ("pending" | "confirmed" | "cancelled" | "completed" | "rescheduled")[] = ["pending", "confirmed", "cancelled", "completed", "rescheduled"];
         const status = statuses[Math.floor(Math.random() * statuses.length)];
         
         // Random user & service
@@ -683,7 +683,7 @@ const AppointmentManagement = () => {
                               // Check if this slot has an appointment
                               const appointment = getAppointmentForSlot(slot._id);
                               
-                              if (appointment && (statusFilter === 'all' || appointment.status === statusFilter)) {
+                              if (appointment && appointment.status !== 'rescheduled' && (statusFilter === 'all' || appointment.status === statusFilter)) {
                                 // This slot has an appointment that matches the filter
                                 const user = appointment.user_id as AppointmentUser;
                                 const consultant = appointment.consultant_id as Consultant;

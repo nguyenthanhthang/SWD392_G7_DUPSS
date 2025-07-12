@@ -6,17 +6,18 @@ import {
   deleteQuestion,
   getQuestionsByQuiz,
 } from "../controllers/quizController";
+import { authMiddleware, roleMiddleware } from "../middleware";
 
 const router = express.Router();
 
 // POST /api/questions - Tạo mới câu hỏi
-router.post("/", createQuestion);
+router.post("/",authMiddleware,roleMiddleware(["admin"]), createQuestion);
 // GET /api/questions/:id - Lấy chi tiết câu hỏi
 router.get("/:id", getQuestionById);
 // PUT /api/questions/:id - Cập nhật câu hỏi
-router.put("/:id", updateQuestion);
+router.put("/:id",authMiddleware,roleMiddleware(["admin"]), updateQuestion);
 // DELETE /api/questions/:id - Xóa câu hỏi
-router.delete("/:id", deleteQuestion);
+router.delete("/:id",authMiddleware,roleMiddleware(["admin"]), deleteQuestion);
 // GET /api/questions/quiz/:quizId - Lấy danh sách câu hỏi theo quizId
 router.get("/quiz/:quizId", getQuestionsByQuiz);
 

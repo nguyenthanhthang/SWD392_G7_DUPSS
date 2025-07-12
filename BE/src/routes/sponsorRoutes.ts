@@ -7,6 +7,7 @@ import {
   deleteSponsor,
   getSponsorStats
 } from '../controllers/sponsorController';
+import { authMiddleware, roleMiddleware } from '../middleware';
 
 const router = express.Router();
 
@@ -20,10 +21,10 @@ router.get('/event/:eventId', getSponsorsByEvent);
 router.get('/:id', getSponsorById);
 
 // Tạo sponsor mới
-router.post('/', createSponsor);
+router.post('/',authMiddleware,roleMiddleware(["admin"]), createSponsor);
 
 // Xóa sponsor
-router.delete('/:id', deleteSponsor);
+router.delete('/:id',authMiddleware,roleMiddleware(["admin"]), deleteSponsor);
 
 // Lấy thống kê sponsors
 router.get('/stats/ranking', getSponsorStats);

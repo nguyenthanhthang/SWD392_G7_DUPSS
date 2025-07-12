@@ -12,6 +12,7 @@ import {
   deleteQuiz,
   getAllQuizResults,
 } from "../controllers/quizController";
+import { authMiddleware, roleMiddleware } from "../middleware";
 
 const router = express.Router();
 
@@ -38,12 +39,12 @@ router.get("/quiz-results/all", getAllQuizResults);
 
 // CRUD Quiz
 // POST /api/quizzes - Tạo mới quiz
-router.post("/", createQuiz);
+router.post("/",authMiddleware,roleMiddleware(["admin"]), createQuiz);
 // GET /api/quizzes/:id - Lấy chi tiết quiz
 router.get("/:id", getQuizById);
 // PUT /api/quizzes/:id - Cập nhật quiz
-router.put("/:id", updateQuiz);
+router.put("/:id",authMiddleware,roleMiddleware(["admin"]), updateQuiz);
 // DELETE /api/quizzes/:id - Xóa quiz
-router.delete("/:id", deleteQuiz);
+router.delete("/:id",authMiddleware,roleMiddleware(["admin"]), deleteQuiz);
 
 export default router;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, X, CheckCircle, Star, MessageCircle, RefreshCcw, Video, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAppointmentByUserIdApi, getFeedbackByAppointmentIdApi, getFeedbackByServiceIdApi, getSlotTimeByConsultantIdApi, rescheduleAppointmentApi, getAllConsultantsApi } from '../api';
+import { getAppointmentByUserIdApi, getFeedbackByAppointmentIdApi, getFeedbackByServiceIdApi, getSlotTimeByConsultantIdApi, rescheduleAppointmentApi, getAllConsultantsApi, updateStatusSlotTimeApi } from '../api';
 import { formatInTimeZone } from 'date-fns-tz';
 import FeedbackForm from '../components/FeedbackForm';
 import FeedbackDisplay from '../components/FeedbackDisplay';
@@ -20,7 +20,7 @@ const AppointmentsPage = () => {
       introduction?: string;
     };
     service_id?: { _id?: string; name?: string; price?: number };
-    slotTime_id?: { start_time?: string; end_time?: string };
+    slotTime_id?: { _id?: string; start_time?: string; end_time?: string };
     dateBooking?: string;
     type?: string;
     location?: string;
@@ -76,9 +76,11 @@ const AppointmentsPage = () => {
   const [availableSlots, setAvailableSlots] = useState<SlotTime[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedNewSlot, setSelectedNewSlot] = useState<string>('');
-  const [rescheduleLoading, setRescheduleLoading] = useState(false);
-  const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [selectedConsultant, setSelectedConsultant] = useState<string>('');
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  const [heldSlotId, setHeldSlotId] = useState<string | null>(null);
+  const [slotHoldTime, setSlotHoldTime] = useState<number | null>(null);
+  const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [loadingConsultants, setLoadingConsultants] = useState(false);
 
   useEffect(() => {
@@ -222,6 +224,35 @@ const AppointmentsPage = () => {
     }
   };
 
+  // Handle chọn slot mới - thêm logic hold slot
+  const handleSlotChange = async (slotId: string) => {
+    if (!selectedAppointment) return;
+    
+    try {
+      // Nếu đã chọn slot trước đó, release slot cũ trước
+      if (selectedNewSlot && selectedNewSlot !== slotId) {
+        console.log('Releasing old slot:', selectedNewSlot);
+        await updateStatusSlotTimeApi(selectedNewSlot, 'available');
+      }
+      
+      // Hold slot mới
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        console.log('Holding new slot:', slotId);
+        await updateStatusSlotTimeApi(slotId, 'booked', userId);
+        setSelectedNewSlot(slotId);
+        setHeldSlotId(slotId);
+        setSlotHoldTime(120); // 2 phút = 120 giây
+        
+        // Hiển thị thông báo
+        alert('Slot đã được giữ trong 2 phút. Vui lòng hoàn tất đổi lịch!');
+      }
+    } catch (error) {
+      console.error('Error holding slot:', error);
+      alert('Không thể giữ slot này. Vui lòng thử lại!');
+    }
+  };
+
   // Handle reschedule appointment
   const handleReschedule = async () => {
     if (!selectedAppointment || !selectedNewSlot) return;
@@ -241,11 +272,23 @@ const AppointmentsPage = () => {
         setAppointments(data || []);
       }
 
+      // Release slot cũ từ appointment gốc sau khi đổi lịch thành công
+      if (selectedAppointment?.slotTime_id?._id) {
+        try {
+          console.log('Releasing original appointment slot after successful reschedule:', selectedAppointment.slotTime_id._id);
+          await updateStatusSlotTimeApi(selectedAppointment.slotTime_id._id, 'available');
+        } catch (error) {
+          console.error('Error releasing original slot after reschedule:', error);
+        }
+      }
+
       // Đóng modal và reset state
       setShowRescheduleModal(false);
       setSelectedNewSlot('');
       setSelectedConsultant('');
       setSelectedAppointment(null);
+      setHeldSlotId(null);
+      setSlotHoldTime(null);
       
       alert('Đổi lịch hẹn thành công!');
       
@@ -258,9 +301,72 @@ const AppointmentsPage = () => {
         ? String(error.response.data.message)
         : 'Có lỗi xảy ra khi đổi lịch hẹn';
       alert(errorMessage);
+      
+      // Nếu lỗi, release slot đã hold
+      if (selectedNewSlot) {
+        try {
+          await updateStatusSlotTimeApi(selectedNewSlot, 'available');
+        } catch (releaseError) {
+          console.error('Error releasing slot after failed reschedule:', releaseError);
+        }
+      }
     }
     setRescheduleLoading(false);
   };
+
+  // Handle đóng modal reschedule - release slot nếu có
+  const handleCloseRescheduleModal = async () => {
+    // Release slot đang được hold (nếu có)
+    if (selectedNewSlot) {
+      try {
+        console.log('Releasing held slot on modal close:', selectedNewSlot);
+        await updateStatusSlotTimeApi(selectedNewSlot, 'available');
+      } catch (error) {
+        console.error('Error releasing slot when closing modal:', error);
+      }
+    }
+    
+    // Release slot cũ từ appointment gốc (nếu có)
+    if (selectedAppointment?.slotTime_id?._id) {
+      try {
+        console.log('Releasing original appointment slot:', selectedAppointment.slotTime_id._id);
+        await updateStatusSlotTimeApi(selectedAppointment.slotTime_id._id, 'available');
+      } catch (error) {
+        console.error('Error releasing original slot when closing modal:', error);
+      }
+    }
+    
+    setShowRescheduleModal(false);
+    setSelectedNewSlot('');
+    setSelectedConsultant('');
+    setSelectedAppointment(null);
+    setHeldSlotId(null);
+    setSlotHoldTime(null);
+  };
+
+  // Handle slot hold countdown timer
+  useEffect(() => {
+    if (slotHoldTime === null) return;
+
+    if (slotHoldTime > 0) {
+      const interval = setInterval(() => {
+        setSlotHoldTime(prev => prev !== null ? prev - 1 : null);
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    } else if (slotHoldTime === 0) {
+      // Hết thời gian giữ slot, trả về available
+      if (heldSlotId) {
+        updateStatusSlotTimeApi(heldSlotId, 'available').catch(error => {
+          console.error('Error releasing slot after timeout:', error);
+        });
+      }
+      setSlotHoldTime(null);
+      setHeldSlotId(null);
+      setSelectedNewSlot('');
+      alert('Hết thời gian giữ slot. Vui lòng chọn lại thời gian!');
+    }
+  }, [slotHoldTime, heldSlotId]);
 
   // Chuẩn hóa status từ BE sang FE
   const normalizeStatus = (status?: string) => {
@@ -761,8 +867,15 @@ const AppointmentsPage = () => {
       {showRescheduleModal && selectedAppointment && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto relative p-6">
+            {/* Countdown timer */}
+            {slotHoldTime !== null && slotHoldTime > 0 && (
+              <div className="absolute top-4 left-4 bg-orange-100 text-orange-800 px-3 py-1 rounded-lg text-sm font-medium">
+                Thời gian giữ slot: {Math.floor(slotHoldTime / 60)}:{(slotHoldTime % 60).toString().padStart(2, '0')}
+              </div>
+            )}
+            
             <button
-              onClick={() => setShowRescheduleModal(false)}
+              onClick={handleCloseRescheduleModal}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
               <X className="w-6 h-6" />
@@ -817,7 +930,7 @@ const AppointmentsPage = () => {
                             name="newSlot"
                             value={slot._id}
                             checked={selectedNewSlot === slot._id}
-                            onChange={(e) => setSelectedNewSlot(e.target.value)}
+                            onChange={(e) => handleSlotChange(e.target.value)}
                             className="mr-3"
                           />
                           <div>
@@ -835,7 +948,7 @@ const AppointmentsPage = () => {
             
             <div className="mt-6 flex justify-end gap-3">
               <button
-                onClick={() => setShowRescheduleModal(false)}
+                onClick={handleCloseRescheduleModal}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
               >
                 Hủy
