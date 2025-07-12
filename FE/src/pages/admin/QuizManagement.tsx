@@ -133,8 +133,12 @@ const QuizManagement: React.FC = () => {
   const navigate = useNavigate();
 
   // Lấy lại danh sách quiz
-  const reloadQuizzes = async () => {
-    const data = await getAllQuizzesApi();
+  const reloadQuizzes = async (statusFilter = status) => {
+    const params: Record<string, any> = {};
+    if (statusFilter === "active") params.isActive = true;
+    else if (statusFilter === "inactive") params.isActive = false;
+    // Có thể truyền thêm các filter khác nếu cần
+    const data = await getAllQuizzesApi(params);
     const arr: Quiz[] = Array.isArray(data) ? data : data.data || [];
     setQuizzes(arr);
     setFiltered(arr);
@@ -145,9 +149,11 @@ const QuizManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    reloadQuizzes();
-  }, []);
+    reloadQuizzes(status);
+    // eslint-disable-next-line
+  }, [status]);
 
+  // Bỏ filter status ở useEffect filter local (vì đã filter từ API)
   useEffect(() => {
     let result = quizzes;
     if (search.trim()) {
@@ -164,14 +170,7 @@ const QuizManagement: React.FC = () => {
         (q) => q.ageGroups && ageGroups.some((ag) => q.ageGroups.includes(ag))
       );
     }
-    // Mặc định chỉ hiển thị quiz hoạt động
-    if (status) {
-      result = result.filter((q) =>
-        status === "active" ? q.isActive : !q.isActive
-      );
-    } else {
-      result = result.filter((q) => q.isActive);
-    }
+    // Đã filter status từ API, không filter lại ở đây
     if (tags.length) {
       result = result.filter(
         (q) => q.tags && tags.some((t) => q.tags.includes(t))
@@ -179,7 +178,7 @@ const QuizManagement: React.FC = () => {
     }
     setFiltered(result);
     setPage(1);
-  }, [search, ageGroups, status, tags, quizzes]);
+  }, [search, ageGroups, tags, quizzes]);
 
   // Pagination
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -223,6 +222,17 @@ const QuizManagement: React.FC = () => {
       reloadQuizzes();
     } catch {
       toast.error("Ẩn quiz thất bại!");
+    }
+  };
+
+  // Khôi phục quiz bị ẩn
+  const handleRestoreQuiz = async (quiz: Quiz) => {
+    try {
+      await updateQuizApi(quiz._id, { isActive: true });
+      toast.success("Quiz đã được khôi phục!");
+      reloadQuizzes(status);
+    } catch {
+      toast.error("Khôi phục quiz thất bại!");
     }
   };
 
@@ -503,12 +513,21 @@ const QuizManagement: React.FC = () => {
                     >
                       Sửa
                     </button>
-                    <button
-                      className="text-red-600 hover:underline text-xs"
-                      onClick={() => handleDeleteQuiz(quiz)}
-                    >
-                      Xóa
-                    </button>
+                    {quiz.isActive ? (
+                      <button
+                        className="text-red-600 hover:underline text-xs"
+                        onClick={() => handleDeleteQuiz(quiz)}
+                      >
+                        Xóa
+                      </button>
+                    ) : (
+                      <button
+                        className="text-green-600 hover:underline text-xs"
+                        onClick={() => handleRestoreQuiz(quiz)}
+                      >
+                        Khôi phục
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

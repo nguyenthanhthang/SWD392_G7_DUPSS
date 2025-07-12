@@ -232,8 +232,14 @@ export const getAllQuizzes = async (req: Request, res: Response) => {
   try {
     console.log("Getting all quizzes...");
 
-    const { ageGroup } = req.query;
-    let filter: any = { isActive: true };
+    const { ageGroup, isActive } = req.query;
+    let filter: any = {};
+
+    // Xử lý filter isActive
+    if (typeof isActive !== "undefined") {
+      if (isActive === "true") filter.isActive = true;
+      else if (isActive === "false") filter.isActive = false;
+    } 
 
     // Filter theo age group nếu có
     if (ageGroup) {
