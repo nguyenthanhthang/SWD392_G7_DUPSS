@@ -85,24 +85,21 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
   onCancel: (e: Event) => void;
 }) => {
   return (
-  <motion.div
-    whileHover={{ scale: 1.03 }}
-    className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col h-full min-h-[380px] border border-gray-100"
-  >
-    <div className="relative h-40">
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow duration-200">
+    <div className="relative h-48">
       <img
         src={event.image || "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80"}
         alt={event.title}
         className="w-full h-full object-cover"
       />
-      <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${
+      <div className={`absolute top-3 right-3 px-2 py-1 rounded-md text-xs font-medium ${
         event.status === "upcoming"
-          ? "bg-sky-600 text-white"
+          ? "bg-sky-100 text-sky-800"
           : event.status === "ongoing"
-          ? "bg-green-500 text-white"
+          ? "bg-green-100 text-green-800"
           : event.status === "completed"
-          ? "bg-gray-400 text-white"
-          : "bg-red-500 text-white"
+          ? "bg-gray-100 text-gray-800"
+          : "bg-red-100 text-red-800"
       }`}>
         {event.status === "upcoming"
           ? "Sắp diễn ra"
@@ -113,87 +110,96 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
           : "Đã hủy"}
       </div>
     </div>
-    <div className="p-5 flex flex-col flex-1">
-      <h3 className="text-lg font-bold mb-1 text-gray-800 line-clamp-1">{event.title}</h3>
-      <p className="text-gray-500 text-sm mb-2 line-clamp-2">{event.description}</p>
-      <div className="flex items-center text-gray-400 text-xs mb-1">
-        <FiCalendar className="mr-1" />
-        {new Date(event.startDate).toLocaleString("vi-VN", {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
+    <div className="p-4 flex flex-col flex-1">
+      <h3 className="text-lg font-semibold mb-2 text-gray-900 line-clamp-1">{event.title}</h3>
+      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{event.description}</p>
+      
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center text-gray-500 text-sm">
+          <FiCalendar className="mr-2 text-gray-400" />
+          {new Date(event.startDate).toLocaleString("vi-VN", {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </div>
+        <div className="flex items-center text-gray-500 text-sm">
+          <FiMapPin className="mr-2 text-gray-400" />
+          <span className="line-clamp-1">{event.location}</span>
+        </div>
+        <div className="flex items-center text-gray-500 text-sm">
+          <FiUsers className="mr-2 text-gray-400" />
+          Sức chứa: {event.capacity} người
+        </div>
       </div>
-      <div className="flex items-center text-gray-400 text-xs mb-1">
-        <FiMapPin className="mr-1" />
-        {event.location}
-      </div>
-      <div className="flex items-center text-gray-400 text-xs mb-1">
-        <FiUsers className="mr-1" />
-        Sức chứa: {event.capacity} người
-      </div>
-      <div className="flex items-center text-gray-400 text-xs mb-2">
-        <FiUsers className="mr-1" />
-        <span className={event.registeredCount && event.registeredCount >= event.capacity ? "text-red-500 font-semibold" : ""}>
-          {event.registeredCount ?? 0}/{event.capacity} người đã đăng ký
-        </span>
-        {event.registeredCount && event.registeredCount >= event.capacity && (
-          <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full font-medium">
-            Đã đầy
+      
+      <div className="mb-3">
+        <div className="flex items-center justify-between text-sm mb-1">
+          <span className="text-gray-600">Đăng ký:</span>
+          <span className={`font-medium ${
+            event.registeredCount && event.registeredCount >= event.capacity 
+              ? "text-red-600" 
+              : "text-gray-900"
+          }`}>
+            {event.registeredCount ?? 0}/{event.capacity}
           </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className={`h-2 rounded-full transition-all duration-300 ${
+              event.registeredCount && event.registeredCount >= event.capacity 
+                ? 'bg-red-500' 
+                : event.registeredCount && event.registeredCount >= event.capacity * 0.8
+                ? 'bg-yellow-500'
+                : 'bg-sky-500'
+            }`}
+            style={{ 
+              width: `${Math.min(((event.registeredCount ?? 0) / event.capacity) * 100, 100)}%` 
+            }}
+          ></div>
+        </div>
+        {event.registeredCount && event.registeredCount >= event.capacity && (
+          <span className="text-xs text-red-600 font-medium mt-1 block">Đã đầy</span>
         )}
       </div>
-      {/* Progress bar cho mức độ đăng ký */}
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-        <div 
-          className={`h-2 rounded-full transition-all duration-300 ${
-            event.registeredCount && event.registeredCount >= event.capacity 
-              ? 'bg-red-500' 
-              : event.registeredCount && event.registeredCount >= event.capacity * 0.8
-              ? 'bg-yellow-500'
-              : 'bg-green-500'
-          }`}
-          style={{ 
-            width: `${Math.min(((event.registeredCount ?? 0) / event.capacity) * 100, 100)}%` 
-          }}
-        ></div>
-      </div>
+      
       <div className="flex-1"></div>
-      <div className="flex gap-2 mt-2">
+      <div className="flex gap-2 mt-4">
         <button
           onClick={() => onSelect(event)}
-          className="flex-1 py-2 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-all text-sm"
+          className="flex-1 py-2 px-3 bg-sky-600 text-white text-sm font-medium rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors"
           disabled={event.status === "cancelled"}
         >
           Quét QR
         </button>
         <button
           onClick={() => onEdit(event)}
-          className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-all"
+          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+          title="Chỉnh sửa"
         >
-          <FiEdit className="text-gray-600" />
+          <FiEdit className="w-4 h-4" />
         </button>
         <button
           onClick={() => onDelete(event)}
-          className="p-2 rounded-xl bg-red-100 hover:bg-red-200 transition-all"
+          className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-md transition-colors"
           title="Xóa sự kiện"
         >
-          <FiTrash2 className="text-red-600" />
+          <FiTrash2 className="w-4 h-4" />
         </button>
         {event.status !== "cancelled" && (
           <button
             onClick={() => onCancel(event)}
-            className="p-2 rounded-xl bg-orange-100 hover:bg-orange-200 transition-all"
+            className="p-2 text-orange-600 hover:text-orange-800 hover:bg-orange-100 rounded-md transition-colors"
             title="Hủy sự kiện"
           >
-            <FiXCircle className="text-orange-600" />
+            <FiXCircle className="w-4 h-4" />
           </button>
         )}
       </div>
     </div>
-  </motion.div>
+  </div>
   );
 };
 
@@ -1097,7 +1103,7 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
               {checkInHistory.length === 0 && <li className="text-gray-400">Chưa có ai check-in</li>}
               {checkInHistory.map((item, idx) => (
                 <li key={idx} className="text-green-600">
-                  {item.userName}{item.email ? ` | ${item.email}` : ''} - {item.timestamp ? new Date(item.timestamp).toLocaleString('vi-VN') : ''}
+                  {item.userName} - {item.timestamp ? new Date(item.timestamp).toLocaleString('vi-VN') : ''}
                 </li>
               ))}
             </ul>
@@ -1206,9 +1212,7 @@ const AdminEventManagement = () => {
         registrationStartDate: new Date(formData.registrationStartDate),
         registrationEndDate: new Date(formData.registrationEndDate),
         location: formData.location,
-        capacity: formData.capacity,
-        image: formData.image,
-        sponsors: formData.sponsors
+        capacity: formData.capacity
       });
       toast.success("Cập nhật sự kiện thành công!");
       setShowEventForm(false);
@@ -1327,7 +1331,9 @@ const AdminEventManagement = () => {
   const handleScan = async (data: string | null) => {
     if (!data || !selectedEvent) return;
     try {
-      await checkInEventApi(selectedEvent._id, data);
+      // Extract userId from QR data (assuming QR contains userId)
+      const userId = data; // Assuming QR data is the userId
+      await checkInEventApi(selectedEvent._id, data, userId);
       setCheckInHistory((prev) => [
         { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date().toISOString(), status: "success" as const },
         ...prev
@@ -1389,127 +1395,151 @@ const AdminEventManagement = () => {
   const paginatedFilteredEvents = sortedEvents.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-[#f6f8fb] pb-10">
-      <ToastContainer position="top-right" autoClose={2000} />
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="container mx-auto px-4 py-8">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Quản lý sự kiện</h1>
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 w-full flex flex-col justify-center items-center">
+        <div className="w-full max-w-7xl mx-auto bg-white rounded-lg shadow-sm p-6 mb-8">
+          <ToastContainer position="top-right" autoClose={2000} />
+          
+          {/* Header */}
+          <div className="px-4 py-5 sm:px-6">
+            <h1 className="text-2xl font-semibold text-gray-800">Quản lý sự kiện</h1>
             {events.length > 0 && (
-              <div className="flex gap-4 text-sm text-gray-600">
-                <span>📊 Tổng cộng: {events.length} sự kiện</span>
-                <span className="text-sky-600 font-medium">
-                 
+              <div className="flex gap-4 text-sm text-gray-600 mt-2">
+                <span>Tổng cộng: {events.length} sự kiện</span>
+              </div>
+            )}
+          </div>
+
+          {/* Filter & Search Section */}
+          <div className="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 className="text-lg font-medium text-gray-800 mb-4">Tìm kiếm và Lọc</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Search */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiSearch className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm sự kiện..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="focus:ring-sky-500 focus:border-sky-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+              
+              {/* Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="upcoming">Sắp diễn ra</option>
+                  <option value="ongoing">Đang diễn ra</option>
+                  <option value="completed">Đã kết thúc</option>
+                  <option value="cancelled">Đã hủy</option>
+                </select>
+              </div>
+              
+              {/* Sort */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sắp xếp</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
+                >
+                  <option value="newest">Mới nhất</option>
+                  <option value="oldest">Cũ nhất</option>
+                  <option value="startDate">Ngày bắt đầu (tăng dần)</option>
+                  <option value="startDateDesc">Ngày bắt đầu (giảm dần)</option>
+                  <option value="capacity">Sức chứa</option>
+                  <option value="registered">Số đăng ký</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <div>
+                <span className="text-sm text-gray-500">
+                  Kết quả: {filteredEvents.length} sự kiện
                 </span>
               </div>
-            )}
-          </div>
-          <button
-            onClick={() => {
-              setEditingEvent(null);
-              setShowEventForm(true);
-            }}
-            className="flex items-center gap-2 px-6 py-3 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition-all font-medium"
-          >
-            <FiPlus /> Tạo sự kiện mới
-          </button>
-        </div>
-
-        {/* Filter & Search & Sort */}
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-8">
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {[
-              { id: "all", name: "Tất cả" },
-              { id: "upcoming", name: "Sắp diễn ra" },
-              { id: "ongoing", name: "Đang diễn ra" },
-              { id: "completed", name: "Đã kết thúc" },
-              { id: "cancelled", name: "Đã hủy" },
-            ].map((cat) => (
               <button
-                key={cat.id}
-                onClick={() => setFilter(cat.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                  filter === cat.id ? "bg-sky-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-sky-50"
-                }`}
+                onClick={() => {
+                  setEditingEvent(null);
+                  setShowEventForm(true);
+                }}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
               >
-                {cat.name}
+                <FiPlus className="mr-2 h-4 w-4" />
+                Tạo sự kiện mới
               </button>
-            ))}
-          </div>
-          
-          <div className="flex gap-3 items-center">
-            {/* Dropdown sắp xếp */}
-            <div className="relative">
-              
-            </div>
-            
-            {/* Search */}
-            <div className="w-full md:w-80 relative">
-              <FiSearch className="absolute left-3 top-3 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm sự kiện..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm"
-              />
             </div>
           </div>
-        </div>
 
-        {/* Hiển thị tất cả nhà tài trợ */}
-        {allSponsors.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-bold text-gray-700 mb-2">Tất cả nhà tài trợ</h2>
-            <div className="flex flex-wrap gap-4">
-              {allSponsors.map(s => (
-                <div key={s._id} className="flex items-center gap-2 bg-white rounded-lg shadow px-4 py-2 border">
-                  {s.logo && <img src={s.logo} alt={s.name} className="w-10 h-10 rounded-full object-cover" />}
-                  <div>
-                    <div className="font-semibold text-gray-800">{s.name}</div>
-                    <div className="text-xs text-gray-500">{s.email}</div>
+          {/* Hiển thị tất cả nhà tài trợ */}
+          {allSponsors.length > 0 && (
+            <div className="bg-white shadow rounded-lg p-6 mb-6">
+              <h2 className="text-lg font-medium text-gray-800 mb-4">Tất cả nhà tài trợ</h2>
+              <div className="flex flex-wrap gap-4">
+                {allSponsors.map(s => (
+                  <div key={s._id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                    {s.logo && <img src={s.logo} alt={s.name} className="w-10 h-10 rounded-full object-cover" />}
+                    <div>
+                      <div className="font-semibold text-gray-800">{s.name}</div>
+                      <div className="text-xs text-gray-500">{s.email}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Events Grid */}
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-sky-500"></div>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedFilteredEvents.map(event => (
-                <EventCard 
-                  key={event._id} 
-                  event={event} 
-                  onSelect={handleEventSelect}
-                  onEdit={handleEditEvent}
-                  onDelete={handleDeleteClick}
-                  onCancel={handleCancelEvent}
-                />
-              ))}
-            </div>
-            
-            {filteredEvents.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">Không có sự kiện nào phù hợp</p>
+                ))}
               </div>
-            )}
-          </>
-        )}
+            </div>
+          )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-        )}
-      </motion.div>
+          {/* Events Grid */}
+          <div className="bg-white shadow rounded-lg w-full mb-6">
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                  {paginatedFilteredEvents.map(event => (
+                    <EventCard 
+                      key={event._id} 
+                      event={event} 
+                      onSelect={handleEventSelect}
+                      onEdit={handleEditEvent}
+                      onDelete={handleDeleteClick}
+                      onCancel={handleCancelEvent}
+                    />
+                  ))}
+                </div>
+                
+                {filteredEvents.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 text-lg">Không có sự kiện nào phù hợp</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white shadow rounded-lg p-4">
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Modals */}
       <EventFormModal

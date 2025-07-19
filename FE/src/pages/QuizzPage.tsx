@@ -85,12 +85,19 @@ export default function QuizzPage() {
     loadQuizzes();
   }, []);
 
+  // Scroll to top when step changes to result
+  useEffect(() => {
+    if (step === "result") {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [step]);
+
   const loadQuizzes = async () => {
     try {
       setLoading(true);
       // Chỉ lấy những quiz có trạng thái active
       const response = await getAllQuizzesApi({ isActive: true });
-      setQuizzes(response.data);
+        setQuizzes(response.data);
     } catch (error) {
       setError("Lỗi kết nối server");
       console.error("Error loading quizzes:", error);
@@ -188,6 +195,8 @@ export default function QuizzPage() {
       if (response.success) {
         setQuizResult(response.data);
         setStep("result");
+        // Scroll to top when showing results
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setError("Không thể gửi kết quả");
       }
@@ -271,77 +280,79 @@ export default function QuizzPage() {
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Hero Section */}
-        <div className="mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 lg:p-12"
-          >
-                        <div className="grid lg:grid-cols-2 gap-12 items-center">
-              {/* Content Section */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-center lg:text-left"
-              >
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-sky-600 mb-6">
-                  Khám phá bản thân
-                </h1>
-                
-                <p className="text-base text-slate-600 max-w-lg leading-relaxed mb-6">
-                  Chọn bài đánh giá phù hợp để hiểu rõ hơn về tình trạng của bạn. 
-                  Mỗi bài kiểm tra được thiết kế khoa học để đưa ra đánh giá chính xác nhất.
-                </p>
-
-                <div className="space-y-4 mb-6">
-                  <div className="flex items-center gap-3 text-slate-600">
-                    <div className="w-2 h-2 bg-sky-400 rounded-full"></div>
-                    <span className="text-sm">Đánh giá tình trạng tâm lý hiện tại</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-600">
-                    <div className="w-2 h-2 bg-sky-400 rounded-full"></div>
-                    <span className="text-sm">Nhận diện các dấu hiệu cảnh báo sớm</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-600">
-                    <div className="w-2 h-2 bg-sky-400 rounded-full"></div>
-                    <span className="text-sm">Đề xuất hướng cải thiện phù hợp</span>
-                  </div>
-                </div>
-
-                {user && (
-                  <motion.button
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    onClick={() => setShowHistory(true)}
-                    className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg text-slate-600 font-medium transition-colors duration-200 border border-slate-300"
-                  >
-                    <span className="text-slate-500">🕐</span>
-                    <span>Lịch sử</span>
-                  </motion.button>
-                )}
-              </motion.div>
-
-            {/* Survey Illustration */}
+        {/* Hero Section - Only show on selection step */}
+        {step === "selection" && (
+          <div className="mb-16">
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="flex justify-center lg:justify-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 lg:p-12"
             >
-              <div className="relative">
-                <img 
-                  src={surveyImage} 
-                  alt="Survey Illustration" 
-                  className="w-[380px] h-[380px] object-contain opacity-95 rounded-xl shadow-md"
-                />
+                          <div className="grid lg:grid-cols-2 gap-12 items-center">
+                {/* Content Section */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-center lg:text-left"
+                >
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-sky-600 mb-6">
+                    Khám phá bản thân
+                  </h1>
+                  
+                  <p className="text-base text-slate-600 max-w-lg leading-relaxed mb-6">
+                    Chọn bài đánh giá phù hợp để hiểu rõ hơn về tình trạng của bạn. 
+                    Mỗi bài kiểm tra được thiết kế khoa học để đưa ra đánh giá chính xác nhất.
+                  </p>
+
+                  <div className="space-y-4 mb-6">
+                    <div className="flex items-center gap-3 text-slate-600">
+                      <div className="w-2 h-2 bg-sky-400 rounded-full"></div>
+                      <span className="text-sm">Đánh giá tình trạng tâm lý hiện tại</span>
+          </div>
+                    <div className="flex items-center gap-3 text-slate-600">
+                      <div className="w-2 h-2 bg-sky-400 rounded-full"></div>
+                      <span className="text-sm">Nhận diện các dấu hiệu cảnh báo sớm</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600">
+                      <div className="w-2 h-2 bg-sky-400 rounded-full"></div>
+                      <span className="text-sm">Đề xuất hướng cải thiện phù hợp</span>
+                    </div>
+                  </div>
+
+          {user && (
+                    <motion.button
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+              onClick={() => setShowHistory(true)}
+                      className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg text-slate-600 font-medium transition-colors duration-200 border border-slate-300"
+                    >
+                      <span className="text-slate-500">🕐</span>
+                      <span>Lịch sử</span>
+                    </motion.button>
+                  )}
+                </motion.div>
+
+              {/* Survey Illustration */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex justify-center lg:justify-center"
+              >
+                <div className="relative">
+                  <img 
+                    src={surveyImage} 
+                    alt="Survey Illustration" 
+                    className="w-[380px] h-[380px] object-contain opacity-95 rounded-xl shadow-md"
+                  />
+        </div>
+              </motion.div>
               </div>
             </motion.div>
-            </div>
-          </motion.div>
-        </div>
+          </div>
+        )}
 
         {/* Show History Modal */}
         {showHistory && user && (
@@ -415,8 +426,8 @@ export default function QuizzPage() {
                         <div className="text-white text-2xl font-bold">{quiz.questionCount || 0}</div>
                       </div>
                     </div>
-                  </div>
-                  
+                    </div>
+
                   <div className="p-6">
                     <div className="flex flex-wrap gap-2 mb-4">
                       {quiz.ageGroups.map((ageGroup) => (
@@ -428,7 +439,7 @@ export default function QuizzPage() {
                         </span>
                       ))}
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <span className="text-slate-600 text-sm font-medium">Bắt đầu đánh giá</span>
                       <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center group-hover:bg-sky-600 transition-colors">
@@ -456,12 +467,12 @@ export default function QuizzPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 mb-8 max-w-2xl mx-auto"
+                className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200 mb-8 max-w-2xl mx-auto"
               >
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                <h2 className="text-3xl font-bold text-sky-600 mb-4">
                   {selectedQuiz.title}
                 </h2>
-                <p className="text-lg text-gray-600">
+                <p className="text-lg text-slate-600">
                   Chọn nhóm tuổi phù hợp với bạn để có kết quả chính xác nhất
                 </p>
               </motion.div>
@@ -476,13 +487,13 @@ export default function QuizzPage() {
                   transition={{ delay: index * 0.1 }}
                   whileHover={{ y: -4, scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="group p-8 bg-white rounded-2xl border border-gray-100 hover:border-blue-200 transition-all duration-300 shadow-sm hover:shadow-lg text-left"
+                  className="group p-8 bg-white rounded-2xl border border-slate-200 hover:border-sky-300 transition-all duration-300 shadow-sm hover:shadow-lg text-left"
                   onClick={() => handleAgeGroupSelect(ageGroup)}
                 >
-                  <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                    {ageGroup === "teen" ? "👦" : ageGroup === "student" ? "🎓" : ageGroup === "adult" ? "👨‍💼" : ageGroup === "parent" ? "👨‍👩‍👧‍👦" : "👤"}
+                  <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-sky-200 transition-colors duration-300">
+                    <div className="w-8 h-8 bg-sky-500 rounded-full"></div>
                   </div>
-                  <div className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  <div className="text-xl font-bold text-slate-800 group-hover:text-sky-600 transition-colors">
                     {getAgeGroupDisplay(ageGroup)}
                   </div>
                 </motion.button>
@@ -492,7 +503,7 @@ export default function QuizzPage() {
             <div className="text-center">
               <button
                 onClick={() => setStep("selection")}
-                className="inline-flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 hover:bg-white rounded-xl transition-all duration-300"
+                className="inline-flex items-center gap-2 px-6 py-3 text-slate-600 hover:text-slate-800 hover:bg-white rounded-xl transition-all duration-300 border border-slate-200"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -511,44 +522,41 @@ export default function QuizzPage() {
             className="space-y-8"
           >
             {/* Progress Bar */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <div className="flex justify-between items-center mb-4">
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+              <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-4">
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-lg font-bold text-slate-800">
                     Câu {currentQuestionIndex + 1} / {questions.length}
                   </span>
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+                  <span className="px-4 py-2 bg-sky-50 text-sky-700 rounded-lg text-sm font-medium border border-sky-200">
                     {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% hoàn thành
                   </span>
-                </div>
-                <div className="text-2xl">
-                  {currentQuestionIndex === questions.length - 1 ? "🏁" : "📝"}
                 </div>
               </div>
 
               {questionBreakdown && (selectedQuiz?._id === "assist" || selectedQuiz?._id === "crafft") && (
-                <div className="mb-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                  <div className="text-sm text-blue-800 font-medium mb-2">📊 Cấu trúc bài test:</div>
-                  <div className="flex gap-4 text-sm">
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-yellow-400 rounded-full"></span>
-                      Medium: {questionBreakdown.medium} câu
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-green-400 rounded-full"></span>
-                      Easy: {questionBreakdown.easy} câu
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-blue-400 rounded-full"></span>
-                      Tổng: {questionBreakdown.total} câu
-                    </span>
+                <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-sm text-slate-700 font-medium mb-3">Cấu trúc bài test:</div>
+                  <div className="flex gap-6 text-sm">
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 bg-sky-400 rounded-full"></span>
+                        Medium: {questionBreakdown.medium} câu
+                      </span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                        Easy: {questionBreakdown.easy} câu
+                      </span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 bg-slate-400 rounded-full"></span>
+                        Tổng: {questionBreakdown.total} câu
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="relative w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div className="relative w-full bg-slate-200 rounded-full h-3 overflow-hidden">
                 <motion.div
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full"
+                  className="bg-sky-500 h-3 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
                   transition={{ duration: 0.5, ease: "easeOut" }}
@@ -563,19 +571,19 @@ export default function QuizzPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.5 }}
-              className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100"
+              className="bg-white rounded-2xl shadow-lg p-8 border border-slate-200"
             >
               <div className="mb-8">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
+                  <div className="w-10 h-10 bg-sky-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
                     Q
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-slate-600">
                     <div>Chủ đề: {questions[currentQuestionIndex].topic}</div>
                     <div>Độ khó: {questions[currentQuestionIndex].difficulty}</div>
+                    </div>
                   </div>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 leading-relaxed">
+                <h3 className="text-xl font-bold text-slate-800 leading-relaxed">
                   {questions[currentQuestionIndex].text}
                 </h3>
               </div>
@@ -583,63 +591,63 @@ export default function QuizzPage() {
               <div className="space-y-4">
                 {questions[currentQuestionIndex].options.map((option, optionIndex) => {
                   const isSelected = answers[currentQuestionIndex]?.selectedOption === optionIndex;
-                  const optionLabels = ["A", "B", "C", "D", "E"];
+                    const optionLabels = ["A", "B", "C", "D", "E"];
 
-                  return (
-                    <motion.div
-                      key={optionIndex}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: optionIndex * 0.1 }}
+                    return (
+                      <motion.div
+                        key={optionIndex}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: optionIndex * 0.1 }}
                       whileHover={{ scale: 1.02, x: 4 }}
-                      whileTap={{ scale: 0.98 }}
+                        whileTap={{ scale: 0.98 }}
                       className={`group relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
-                        isSelected
-                          ? "border-blue-500 bg-blue-50 shadow-md"
-                          : "border-gray-200 hover:border-blue-300 bg-white hover:shadow-sm"
-                      }`}
+                          isSelected
+                          ? "border-sky-500 bg-sky-50 shadow-md"
+                          : "border-slate-200 hover:border-sky-300 bg-white hover:shadow-sm"
+                        }`}
                       onClick={() => handleAnswerSelect(currentQuestionIndex, optionIndex)}
-                    >
+                      >
                       <div className="flex items-center gap-4">
                         <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm transition-all duration-300 ${
-                          isSelected
-                            ? "border-blue-500 bg-blue-500 text-white"
-                            : "border-gray-300 text-gray-500 group-hover:border-blue-400 group-hover:text-blue-400"
+                              isSelected
+                            ? "border-sky-500 bg-sky-500 text-white"
+                            : "border-slate-300 text-slate-500 group-hover:border-sky-400 group-hover:text-sky-400"
                         }`}>
-                          {optionLabels[optionIndex]}
-                        </div>
+                            {optionLabels[optionIndex]}
+                          </div>
                         <span className={`text-lg transition-colors duration-300 ${
-                          isSelected ? "text-blue-700 font-medium" : "text-gray-700 group-hover:text-gray-900"
+                          isSelected ? "text-sky-700 font-medium" : "text-slate-700 group-hover:text-slate-900"
                         }`}>
-                          {option.text}
-                        </span>
-                      </div>
+                            {option.text}
+                          </span>
+                        </div>
 
-                    </motion.div>
-                  );
+                      </motion.div>
+                    );
                 })}
               </div>
             </motion.div>
 
             {/* Navigation */}
-            <div className="flex justify-between items-center bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="flex justify-between items-center bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
               <motion.button
                 whileHover={{ scale: 1.05, x: -4 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handlePrevQuestion}
                 disabled={currentQuestionIndex === 0}
-                className="px-6 py-3 text-gray-600 border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium"
+                className="px-6 py-3 text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium"
               >
                 ← Câu trước
               </motion.button>
 
               <div className="text-center">
-                <div className="text-sm text-gray-500 mb-1">
+                <div className="text-sm text-slate-600 mb-1">
                   Đã trả lời: {answers.filter((a) => a.selectedOption !== -1).length}/{questions.length}
                 </div>
-                <div className="w-24 h-2 bg-gray-200 rounded-full mx-auto">
+                <div className="w-24 h-2 bg-slate-200 rounded-full mx-auto">
                   <div
-                    className="h-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-300"
+                    className="h-2 bg-sky-500 rounded-full transition-all duration-300"
                     style={{
                       width: `${(answers.filter((a) => a.selectedOption !== -1).length / questions.length) * 100}%`,
                     }}
@@ -653,16 +661,16 @@ export default function QuizzPage() {
                   whileTap={{ scale: 0.95 }}
                   onClick={handleSubmitQuiz}
                   disabled={answers.filter((a) => a.selectedOption !== -1).length === 0}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold shadow-lg transition-all duration-300"
+                  className="px-8 py-3 bg-sky-600 text-white rounded-xl hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold shadow-lg transition-all duration-300"
                 >
-                  🎯 Nộp bài
+                  Nộp bài
                 </motion.button>
               ) : (
                 <motion.button
                   whileHover={{ scale: 1.05, x: 4 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleNextQuestion}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 font-medium shadow-lg transition-all duration-300"
+                  className="px-6 py-3 bg-sky-600 text-white rounded-xl hover:bg-sky-700 font-medium shadow-lg transition-all duration-300"
                 >
                   Câu tiếp →
                 </motion.button>
@@ -679,18 +687,10 @@ export default function QuizzPage() {
             className="space-y-8"
           >
             <div className="text-center">
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ duration: 0.8, type: "spring" }}
-                className="text-6xl mb-6"
-              >
-                🎉
-              </motion.div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-4xl font-bold text-slate-800 mb-4">
                 Kết quả đánh giá
               </h2>
-              <p className="text-lg text-gray-600">
+              <p className="text-lg text-slate-600">
                 Cảm ơn bạn đã hoàn thành bài đánh giá!
               </p>
             </div>
@@ -700,20 +700,20 @@ export default function QuizzPage() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              className="bg-white rounded-2xl shadow-lg p-8 text-center border border-gray-100"
+              className="bg-white rounded-2xl shadow-lg p-8 text-center border border-slate-200"
             >
               <div className="mb-8">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.5, type: "spring", duration: 1 }}
-                  className="text-6xl font-bold text-blue-600 mb-4"
+                  className="text-6xl font-bold text-sky-600 mb-4"
                 >
                   {quizResult.percentage}%
                 </motion.div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="w-full bg-slate-200 rounded-full h-3">
                   <motion.div
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full"
+                    className="bg-sky-500 h-3 rounded-full"
                     initial={{ width: 0 }}
                     animate={{ width: `${quizResult.percentage}%` }}
                     transition={{ delay: 0.8, duration: 1.5, ease: "easeOut" }}
@@ -729,9 +729,8 @@ export default function QuizzPage() {
                 className="mb-8"
               >
                 <span className={`inline-flex items-center gap-3 px-6 py-3 rounded-xl text-lg font-bold border-2 ${getRiskLevelColor(quizResult.riskLevel)}`}>
-                  <span className="text-2xl">{getRiskLevelIcon(quizResult.riskLevel)}</span>
-                  {quizResult.riskLevelDescription}
-                </span>
+                    {quizResult.riskLevelDescription}
+                  </span>
               </motion.div>
 
               {/* Quiz Recommendation */}
@@ -743,39 +742,38 @@ export default function QuizzPage() {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 1.1 }}
-                  className="bg-blue-50 border border-blue-200 rounded-xl p-6 mt-6"
+                  className="bg-slate-50 border border-slate-200 rounded-xl p-6 mt-6"
                 >
-                  <h4 className="flex items-center gap-3 text-xl font-bold text-blue-900 mb-4">
-                    <span className="text-2xl">🩺</span>
+                  <h4 className="text-xl font-bold text-slate-800 mb-4">
                     Tư vấn chuyên môn
                   </h4>
-                  <p className="text-gray-700 mb-6 leading-relaxed">
+                  <p className="text-slate-700 mb-6 leading-relaxed">
                     Dựa trên kết quả đánh giá, chúng tôi khuyến nghị bạn nên gặp chuyên viên tư vấn để được hỗ trợ tốt hơn.
                   </p>
                   <motion.button
                     whileHover={{ scale: 1.05, boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => (window.location.href = "/consulting")}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 font-bold shadow-lg"
+                    className="bg-sky-600 text-white px-6 py-3 rounded-xl hover:bg-sky-700 transition-all duration-300 font-bold shadow-lg"
                   >
-                    🩺 Tìm chuyên viên tư vấn
+                    Tìm chuyên viên tư vấn
                   </motion.button>
                 </motion.div>
               )}
             </motion.div>
 
             {/* Answer Details */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-              <h3 className="text-lg font-bold mb-4 text-gray-900">Chi tiết câu trả lời của bạn</h3>
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-slate-200">
+              <h3 className="text-lg font-bold mb-4 text-slate-800">Chi tiết câu trả lời của bạn</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">STT</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Câu hỏi</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Đáp án đã chọn</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Điểm</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Mức ảnh hưởng</th>
+                    <tr className="border-b border-slate-200">
+                      <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">STT</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Câu hỏi</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Đáp án đã chọn</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Điểm</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Mức ảnh hưởng</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -795,11 +793,11 @@ export default function QuizzPage() {
                         impactText = "Cao";
                       }
                       return (
-                        <tr key={ans.questionId} className="border-b border-gray-100">
-                          <td className="px-4 py-3 text-sm text-gray-900">{idx + 1}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{q?.text}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{selectedOpt?.text}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{selectedOpt?.score}</td>
+                        <tr key={ans.questionId} className="border-b border-slate-100">
+                          <td className="px-4 py-3 text-sm text-slate-800">{idx + 1}</td>
+                          <td className="px-4 py-3 text-sm text-slate-800">{q?.text}</td>
+                          <td className="px-4 py-3 text-sm text-slate-800">{selectedOpt?.text}</td>
+                          <td className="px-4 py-3 text-sm text-slate-800">{selectedOpt?.score}</td>
                           <td className={`px-4 py-3 text-sm font-medium ${impactColor}`}>{impactText}</td>
                         </tr>
                       );
@@ -820,17 +818,17 @@ export default function QuizzPage() {
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={resetQuiz}
-                className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 font-medium shadow-lg transition-all duration-300"
+                className="px-6 py-3 bg-slate-600 text-white rounded-xl hover:bg-slate-700 font-medium shadow-lg transition-all duration-300"
               >
-                📝 Làm bài khác
+                Làm bài khác
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => (window.location.href = "/")}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 font-medium shadow-lg transition-all duration-300"
+                className="px-6 py-3 bg-sky-600 text-white rounded-xl hover:bg-sky-700 font-medium shadow-lg transition-all duration-300"
               >
-                🏠 Về trang chủ
+                Về trang chủ
               </motion.button>
             </motion.div>
           </motion.div>

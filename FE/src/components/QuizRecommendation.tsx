@@ -190,10 +190,10 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
           analysis: 'Kết quả sẽ giúp bạn hiểu rõ hơn về tình trạng hiện tại của mình.',
           tips: ['Tìm hiểu thêm về các biện pháp phòng ngừa và bảo vệ sức khỏe.'],
           recommendations: ['Tham khảo ý kiến chuyên gia khi cần thiết.'],
-          color: 'from-blue-500 to-purple-500',
-          icon: '💙',
-          bgColor: 'from-blue-50 to-purple-50',
-          riskColor: 'text-blue-700 bg-blue-100'
+          color: 'from-sky-500 to-sky-600',
+          icon: '',
+          bgColor: 'from-sky-50 to-sky-100',
+          riskColor: 'text-sky-700 bg-sky-100'
         };
     }
   };
@@ -412,10 +412,9 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
         initial={{ x: 40, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="bg-white rounded-3xl p-8 shadow-xl border border-purple-100"
+        className="bg-white rounded-3xl p-8 shadow-xl border border-slate-200"
       >
-        <h3 className="text-2xl font-bold text-purple-700 mb-6 flex items-center">
-          <span className="text-3xl mr-3">🎯</span>
+        <h3 className="text-2xl font-bold text-slate-800 mb-6">
           Khuyến nghị dịch vụ
         </h3>
         
@@ -427,8 +426,8 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
           <div className="space-y-3">
             {analysis.recommendations.map((rec, index) => (
               <div key={index} className="flex items-start">
-                <span className="inline-block w-2 h-2 bg-purple-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
-                <span className="text-gray-700">{rec}</span>
+                <span className="inline-block w-2 h-2 bg-sky-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
+                <span className="text-slate-700">{rec}</span>
               </div>
             ))}
           </div>
@@ -442,11 +441,10 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
           initial={{ x: -40, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="bg-white rounded-3xl shadow-xl p-6 border border-blue-100"
+          className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200"
         >
           <div className="text-center mb-6">
-            <h3 className="text-xl font-bold text-blue-700 mb-2 flex items-center justify-center">
-              <span className="text-2xl mr-2">📚</span>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">
               {content.blogTitle}
             </h3>
             <p className="text-gray-600 text-sm">Tìm hiểu thêm kiến thức hữu ích qua các bài viết chuyên môn</p>
@@ -454,7 +452,7 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
           
           {loading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-200 border-t-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-sky-600"></div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -462,7 +460,7 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
                 <motion.div
                   key={blog._id}
                   whileHover={{ scale: 1.02, x: 4 }}
-                  className="flex bg-blue-50 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-all"
+                  className="flex bg-slate-50 rounded-xl p-4 cursor-pointer hover:bg-slate-100 transition-all"
                   onClick={() => navigate(`/blogs/${blog._id}`)}
                 >
                   <img
@@ -471,7 +469,7 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
                     className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                   />
                   <div className="ml-4 flex-1">
-                    <div className="font-semibold text-blue-800 line-clamp-1 text-sm">{blog.title}</div>
+                    <div className="font-semibold text-slate-800 line-clamp-1 text-sm">{blog.title}</div>
                     <div className="text-gray-600 text-xs line-clamp-2 mt-1">{truncateContent(blog.content, 60)}</div>
                   </div>
                 </motion.div>
@@ -481,9 +479,9 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/blogs')}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all text-sm"
+                className="w-full bg-sky-600 text-white py-2 rounded-xl font-medium hover:bg-sky-700 transition-all text-sm"
               >
-                Xem tất cả bài viết 📖
+                Xem tất cả bài viết
               </motion.button>
             </div>
           )}
@@ -494,11 +492,10 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
           initial={{ x: 40, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="bg-white rounded-3xl shadow-xl p-6 border border-purple-100"
+          className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200"
         >
           <div className="text-center mb-6">
-            <h3 className="text-xl font-bold text-purple-700 mb-2 flex items-center justify-center">
-              <span className="text-2xl mr-2">🎯</span>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">
               {content.eventTitle}
             </h3>
             <p className="text-gray-600 text-sm">Tham gia các hoạt động để nâng cao nhận thức và kỹ năng</p>
@@ -506,7 +503,7 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
           
           {loading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-200 border-t-purple-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-sky-600"></div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -514,7 +511,7 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
                 <motion.div
                   key={event._id}
                   whileHover={{ scale: 1.02, x: 4 }}
-                  className="flex bg-purple-50 rounded-xl p-4 cursor-pointer hover:bg-purple-100 transition-all"
+                  className="flex bg-slate-50 rounded-xl p-4 cursor-pointer hover:bg-slate-100 transition-all"
                   onClick={() => navigate(`/events/${event._id}`)}
                 >
                   <img
@@ -523,7 +520,7 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
                     className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                   />
                   <div className="ml-4 flex-1">
-                    <div className="font-semibold text-purple-800 line-clamp-1 text-sm">{event.title}</div>
+                    <div className="font-semibold text-slate-800 line-clamp-1 text-sm">{event.title}</div>
                     <div className="text-gray-600 text-xs line-clamp-2 mt-1">
                       {event.description || 'Sự kiện hấp dẫn đang chờ bạn tham gia!'}
                     </div>
@@ -535,9 +532,9 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/events')}
-                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-2 rounded-xl font-medium hover:from-purple-700 hover:to-purple-800 transition-all text-sm"
+                className="w-full bg-sky-600 text-white py-2 rounded-xl font-medium hover:bg-sky-700 transition-all text-sm"
               >
-                Khám phá sự kiện 🎉
+                Khám phá sự kiện
               </motion.button>
             </div>
           )}
@@ -570,7 +567,7 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
         transition={{ delay: 1.0 }}
         className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-3xl p-8 text-center shadow-xl border border-gray-200"
       >
-        <h3 className="text-2xl font-bold mb-4 text-gray-800">🤝 Hành trình của bạn không dừng lại ở đây</h3>
+        <h3 className="text-2xl font-bold mb-4 text-slate-800">Hành trình của bạn không dừng lại ở đây</h3>
         <p className="text-lg mb-6 text-gray-600">
           Tiếp tục khám phá và học hỏi cùng chúng tôi. Mỗi bước đi đều quan trọng trong hành trình phòng chống tệ nạn xã hội.
         </p>
@@ -579,17 +576,17 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/consulting')}
-            className="bg-white text-blue-700 px-6 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-all border border-blue-200 shadow-md"
+            className="bg-white text-sky-700 px-6 py-3 rounded-xl font-semibold hover:bg-sky-50 transition-all border border-sky-200 shadow-md"
           >
-            🩺 Tư vấn chuyên môn
+            Tư vấn chuyên môn
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/service')}
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-md"
+            className="bg-sky-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-sky-700 transition-all shadow-md"
           >
-            🛠️ Dịch vụ hỗ trợ
+            Dịch vụ hỗ trợ
           </motion.button>
         </div>
       </motion.div>
