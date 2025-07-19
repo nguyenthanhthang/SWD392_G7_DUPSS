@@ -70,11 +70,10 @@ export default function EventsPage() {
   const { user } = useAuth();
 
   const categories = [
-    { id: "all", name: "Tất cả sự kiện", icon: "📅" },
-    { id: "upcoming", name: "Sắp diễn ra", icon: "🎓" },
-    { id: "ongoing", name: "Đang diễn ra", icon: "🎤" },
-    { id: "completed", name: "Đã kết thúc", icon: "📚" },
-    
+    { id: "all", name: "Tất cả sự kiện" },
+    { id: "upcoming", name: "Sắp diễn ra" },
+    { id: "ongoing", name: "Đang diễn ra" },
+    { id: "completed", name: "Đã kết thúc" },
   ];
 
   useEffect(() => {
@@ -413,75 +412,85 @@ export default function EventsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-[#f6f8fb]">
+    <div className="min-h-screen bg-slate-50">
       <Header />
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Main Content Container */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 lg:p-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-16"
         >
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">
+          <h1 className="text-4xl font-bold text-sky-600 mb-6">
             Sự kiện sắp tới
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="text-slate-600 max-w-2xl mx-auto text-lg leading-relaxed">
             Tham gia các sự kiện của chúng tôi để học hỏi, chia sẻ và kết nối
             với cộng đồng
           </p>
         </motion.div>
 
         {/* Search and Filter Section */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="w-full md:w-96">
+        <div className="mb-12">
+          <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
+            <div className="w-full lg:w-96">
               <input
                 type="text"
                 placeholder="Tìm kiếm sự kiện..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                className="w-full px-6 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 shadow-sm text-slate-700"
               />
             </div>
             <div className="flex gap-4 items-center">
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                      selectedCategory === category.id
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-white text-gray-700 hover:bg-blue-50"
-                    }`}
-                  >
-                    <span className="mr-2">{category.icon}</span>
-                    {category.name}
-                  </button>
-                ))}
+              {/* Filter Dropdown */}
+              <div className="relative">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-6 py-3 pr-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 shadow-sm bg-white text-slate-700 text-sm font-medium min-w-[180px] appearance-none"
+                >
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
               
-              {/* Dropdown sắp xếp */}
+              {/* Sort Dropdown */}
               <div className="relative">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-4 py-2 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white text-gray-700 text-sm font-medium"
+                  className="px-6 py-3 pr-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 shadow-sm bg-white text-slate-700 text-sm font-medium min-w-[160px] appearance-none"
                 >
-                  <option value="newest">🆕 Mới nhất</option>
-                  <option value="oldest">📅 Cũ nhất</option>
-                  <option value="startDate">📅 Sắp diễn ra</option>
-                  <option value="startDateDesc">📅 Sắp diễn ra (ngược)</option>
-                  <option value="capacity">👥 Sức chứa cao</option>
-                  <option value="registered">📊 Đăng ký nhiều</option>
+                  <option value="newest">Mới nhất</option>
+                  <option value="oldest">Cũ nhất</option>
+                  <option value="startDate">Sắp diễn ra</option>
+                  <option value="startDateDesc">Sắp diễn ra (ngược)</option>
+                  <option value="capacity">Sức chứa cao</option>
+                  <option value="registered">Đăng ký nhiều</option>
                 </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Events Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredEvents.map((event) => {
             const now = new Date();
             const isInRegistrationPeriod = event.registrationStartDate && event.registrationEndDate
@@ -494,7 +503,7 @@ export default function EventsPage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
-                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col h-full min-h-[420px] cursor-pointer"
+                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full min-h-[420px] cursor-pointer border border-slate-100"
                 onClick={() => navigate(`/events/${event._id}`)}
               >
                 <div className="relative h-48">
@@ -506,7 +515,7 @@ export default function EventsPage() {
                     alt={event.title}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-4 right-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm">
+                  <div className="absolute top-4 right-4 bg-sky-600 text-white px-4 py-2 rounded-full text-sm font-medium">
                     {event.status === "upcoming"
                       ? "Sắp diễn ra"
                       : event.status === "ongoing"
@@ -517,10 +526,10 @@ export default function EventsPage() {
                   </div>
                 </div>
                 <div className="p-6 flex flex-col flex-1">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                  <h3 className="text-xl font-bold text-slate-800 mb-3">
                     {event.title}
                   </h3>
-                  <p className="text-gray-600 mb-4 line-clamp-2 min-h-[48px]">
+                  <p className="text-slate-600 mb-4 line-clamp-2 min-h-[48px] leading-relaxed">
                     {event.description}
                   </p>
                   {/* Thông tin nhà tài trợ */}
@@ -540,28 +549,12 @@ export default function EventsPage() {
                       )}
                     </div>
                   )}
-                  <div className="flex items-center text-gray-500 mb-4">
-                    <svg
-                      className="w-5 h-5 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                  <div className="text-slate-500 mb-4 text-sm font-medium">
                     {format(new Date(event.startDate), "dd/MM/yyyy HH:mm")}
                   </div>
                   {/* Thời gian đăng ký */}
                   {event.registrationStartDate && event.registrationEndDate && (
-                    <div className="flex items-center text-gray-500 mb-2 text-xs">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3" />
-                      </svg>
+                    <div className="text-gray-500 mb-2 text-xs">
                       {`Đăng ký: ${new Date(event.registrationStartDate).toLocaleString('vi-VN', {
                         year: 'numeric',
                         month: '2-digit',
@@ -577,31 +570,12 @@ export default function EventsPage() {
                       })}`}
                     </div>
                   )}
-                  <div className="flex items-center text-gray-500 mb-4">
-                    <svg
-                      className="w-5 h-5 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
+                  <div className="text-slate-500 mb-4 text-sm font-medium">
                     {event.location}
                   </div>
                   <div className="flex-1"></div>
                   <div className="space-y-2 mb-4">
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-slate-600 font-medium">
                       <span className={event.registeredCount && event.registeredCount >= event.capacity ? "text-red-600 font-semibold" : ""}>
                         {event.registeredCount || 0}/{event.capacity} người tham gia
                       </span>
@@ -637,17 +611,17 @@ export default function EventsPage() {
                         !isInRegistrationPeriod ||
                         (registeredEvents.some(regEvent => regEvent._id === event._id && regEvent.isCancelled !== true) && !registeredEvents.some(regEvent => regEvent._id === event._id && regEvent.isCancelled === true))
                       }
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all min-w-[120px] text-center
+                      className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 min-w-[120px] text-center
                         ${
                           (event.registeredCount || 0) >= event.capacity ||
                           event.status !== "upcoming" ||
                           !isInRegistrationPeriod
-                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            ? "bg-slate-300 text-slate-500 cursor-not-allowed"
                             : registeredEvents.some(regEvent => regEvent._id === event._id && regEvent.isCancelled === true)
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            ? "bg-sky-600 text-white hover:bg-sky-700"
                             : registeredEvents.some(regEvent => regEvent._id === event._id && regEvent.isCancelled !== true)
                             ? "bg-green-600 text-white cursor-not-allowed"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
+                            : "bg-sky-600 text-white hover:bg-sky-700"
                         }`}
                     >
                       {(event.registeredCount || 0) >= event.capacity
@@ -680,6 +654,7 @@ export default function EventsPage() {
         <RegistrationConfirmationModal />
         <UnregisterSuccessModal />
         <UnregisterConfirmModal />
+        </div>
       </div>
       <Footer />
     </div>

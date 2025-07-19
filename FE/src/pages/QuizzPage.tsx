@@ -286,7 +286,7 @@ export default function QuizzPage() {
                 transition={{ delay: 0.2 }}
                 className="text-center lg:text-left"
               >
-                <h1 className="text-3xl md:text-4xl font-bold text-sky-600 mb-4">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-sky-600 mb-6">
                   Khám phá bản thân
                 </h1>
                 
@@ -431,16 +431,10 @@ export default function QuizzPage() {
                     
                     <div className="flex items-center justify-between">
                       <span className="text-slate-600 text-sm font-medium">Bắt đầu đánh giá</span>
-                      <div className="flex items-center gap-2">
-                        {/* Checkmark icon inspired by survey image */}
-                        <div className="w-6 h-6 bg-sky-100 rounded-full flex items-center justify-center">
-                          <span className="text-sky-600 text-xs">✓</span>
-                        </div>
-                        <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center group-hover:bg-sky-600 transition-colors">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
+                      <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center group-hover:bg-sky-600 transition-colors">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -620,15 +614,7 @@ export default function QuizzPage() {
                           {option.text}
                         </span>
                       </div>
-                      {isSelected && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="absolute -top-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm"
-                        >
-                          ✓
-                        </motion.div>
-                      )}
+
                     </motion.div>
                   );
                 })}
