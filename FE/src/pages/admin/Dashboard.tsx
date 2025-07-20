@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { getAllAccountsApi, getAllConsultantsApi, getTotalRevenueApi, getWeeklyRevenueApi, getMonthlyRevenueApi, getRevenueByServiceApi } from "../../api";
+import { getAllAccountsApi, getAllConsultantsApi, getTotalRevenueApi, getWeeklyRevenueApi, getMonthlyRevenueApi, getRevenueByServiceApi, getAllBlogsApi, getAllQuizzesApi, getAllEventsApi } from "../../api";
 import { Users, UserPlus, UserCheck } from "lucide-react";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement } from 'chart.js';
+import { Pie, Bar, Line } from 'react-chartjs-2';
 
 // Đăng ký các thành phần cần thiết cho Chart.js
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement);
 
 interface ThongKeNguoiDung {
   tongSoNguoiDung: number;
@@ -40,6 +40,49 @@ interface ThongKeDichVu {
   dangTai: boolean;
 }
 
+// Thêm interface Blog
+interface Blog {
+  _id: string;
+  title: string;
+  content: string;
+  authorId: {
+    _id: string;
+    fullName: string;
+    username: string;
+  };
+  image?: string;
+  thumbnail?: string;
+  topics?: string[];
+  published: 'draft' | 'published' | 'unpublished' | 'rejected';
+  comments: any[];
+  createdAt: string;
+  updatedAt: string;
+  anDanh: boolean;
+}
+
+interface Quiz {
+  _id: string;
+  title: string;
+  description: string;
+  ageGroups: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Event {
+  _id: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  capacity: number;
+  status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  registeredCount?: number;
+  createdAt: string;
+}
+
 const Dashboard = () => {
   const [thongKeNguoiDung, setThongKeNguoiDung] = useState<ThongKeNguoiDung>({
     tongSoNguoiDung: 0,
@@ -67,6 +110,13 @@ const Dashboard = () => {
     services: [],
     dangTai: true
   });
+
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [loadingBlogs, setLoadingBlogs] = useState<boolean>(true);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loadingQuizzes, setLoadingQuizzes] = useState<boolean>(true);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState<boolean>(true);
 
   // Fetch user statistics
   useEffect(() => {
@@ -206,6 +256,302 @@ const Dashboard = () => {
     layThongKeDichVu();
   }, []);
 
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        setLoadingBlogs(true);
+        const data = await getAllBlogsApi();
+        setBlogs(data);
+      } catch (e) {
+        setBlogs([]);
+      } finally {
+        setLoadingBlogs(false);
+      }
+    };
+    fetchBlogs();
+  }, []);
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        setLoadingQuizzes(true);
+        const data = await getAllQuizzesApi();
+        // API từ api.ts trả về data trực tiếp, không có wrapper { data: ... }
+        const quizData = Array.isArray(data) ? data : [];
+        console.log('Quiz data from API:', quizData);
+        console.log('Quiz ageGroups:', quizData.map(q => ({ title: q.title, ageGroups: q.ageGroups, isActive: q.isActive })));
+        setQuizzes(quizData);
+      } catch (e) {
+        console.error('Error fetching quizzes:', e);
+        setQuizzes([]);
+      } finally {
+        setLoadingQuizzes(false);
+      }
+    };
+    fetchQuizzes();
+  }, []);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoadingEvents(true);
+        const data = await getAllEventsApi();
+        setEvents(data);
+      } catch (e) {
+        console.error('Error fetching events:', e);
+        setEvents([]);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  // Xử lý dữ liệu cho Pie Chart trạng thái bài viết
+  const blogStatusCount = blogs.reduce<{ [key in Blog['published']]: number }>((acc, blog) => {
+    acc[blog.published] = (acc[blog.published] || 0) + 1;
+    return acc;
+  }, { draft: 0, published: 0, unpublished: 0, rejected: 0 });
+  const blogStatusPieData = {
+    labels: ['Bản nháp', 'Đã xuất bản', 'Chưa xuất bản', 'Từ chối'],
+    datasets: [
+      {
+        data: [
+          blogStatusCount.draft,
+          blogStatusCount.published,
+          blogStatusCount.unpublished,
+          blogStatusCount.rejected,
+        ],
+        backgroundColor: [
+          '#64748B', // slate-500 (đậm nhất)
+          '#0EA5E9', // sky-500 (trung bình)
+          '#7DD3FC', // sky-300 (nhạt nhất)
+          '#BAE6FD', // sky-200 (rất nhạt)
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  // Xử lý dữ liệu cho Bar Chart bài viết theo tháng
+  const publishedBlogs = blogs.filter((blog) => blog.published === 'published');
+  const monthMap: { [key: string]: number } = {};
+  publishedBlogs.forEach((blog) => {
+    const d = new Date(blog.createdAt);
+    const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+    monthMap[key] = (monthMap[key] || 0) + 1;
+  });
+  const sortedMonths = Object.keys(monthMap).sort();
+  const blogBarData = {
+    labels: sortedMonths.map((m) => {
+      const [y, mo] = m.split('-');
+      return `thg ${mo} ${y}`;
+    }),
+    datasets: [
+      {
+        label: 'Số bài viết',
+        data: sortedMonths.map((m) => monthMap[m]),
+        backgroundColor: '#0EA5E9', // sky-500
+        borderRadius: 6,
+      },
+    ],
+  };
+
+  // Tính toán top tác giả
+  const authorMap: { [key: string]: { name: string; count: number } } = {};
+  blogs.filter(b => b.published === 'published').forEach(blog => {
+    const id = blog.authorId?._id || 'unknown';
+    const name = blog.authorId?.fullName || blog.authorId?.username || 'Không rõ';
+    if (!authorMap[id]) authorMap[id] = { name, count: 0 };
+    authorMap[id].count++;
+  });
+  const topAuthors = Object.values(authorMap)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+  const maxCount = topAuthors[0]?.count || 1;
+
+  // Xử lý dữ liệu cho Stacked Bar Chart - Quiz theo nhóm tuổi và trạng thái
+  const ageGroupMap = {
+    teen: 'Thanh thiếu niên',
+    student: 'Học sinh',
+    parent: 'Phụ huynh'
+  };
+
+  const quizAgeGroupData = Object.entries(ageGroupMap).map(([key, label]) => {
+    // Đếm tất cả quiz có chứa nhóm tuổi này (bao gồm quiz thuộc nhiều nhóm)
+    const quizzesInGroup = quizzes.filter(quiz => 
+      quiz.ageGroups && quiz.ageGroups.includes(key)
+    );
+    const activeCount = quizzesInGroup.filter(quiz => quiz.isActive).length;
+    const inactiveCount = quizzesInGroup.filter(quiz => !quiz.isActive).length;
+    
+    console.log(`Age group ${key} (${label}):`, {
+      total: quizzesInGroup.length,
+      active: activeCount,
+      inactive: inactiveCount,
+      quizzes: quizzesInGroup.map((q: Quiz) => ({ title: q.title, isActive: q.isActive }))
+    });
+    
+    return {
+      ageGroup: label,
+      active: activeCount,
+      inactive: inactiveCount
+    };
+  });
+
+  console.log('Final quizAgeGroupData:', quizAgeGroupData);
+
+  const quizStackedBarData = {
+    labels: quizAgeGroupData.map(item => item.ageGroup),
+    datasets: [
+      {
+        label: 'Hoạt động',
+        data: quizAgeGroupData.map(item => item.active),
+        backgroundColor: '#0EA5E9', // sky-500
+        borderColor: '#0284C7',
+        borderWidth: 1,
+      },
+      {
+        label: 'Không hoạt động', 
+        data: quizAgeGroupData.map(item => item.inactive),
+        backgroundColor: '#94A3B8', // slate-400
+        borderColor: '#64748B',
+        borderWidth: 1,
+      }
+    ]
+  };
+
+  const quizStackedBarOptions = {
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top' as const,
+        labels: {
+          font: { size: 14 },
+          boxWidth: 18,
+          boxHeight: 18,
+          padding: 18,
+        },
+      },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: function(context: any) {
+            return `${context.dataset.label}: ${context.parsed.y}`;
+          }
+        }
+      }
+    },
+    layout: {
+      padding: 20
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 14 } }
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: '#F3F4F6' },
+        ticks: { stepSize: 1, font: { size: 14 } }
+      }
+    }
+  };
+
+  // Xử lý dữ liệu cho Line Chart - Xu hướng đăng ký sự kiện
+  const eventRegistrationData = () => {
+    const monthMap: { [key: string]: number } = {};
+    
+    // Khởi tạo tất cả tháng từ Feb đến Jul 2025
+    for (let month = 2; month <= 7; month++) {
+      const key = `2025-${month.toString().padStart(2, '0')}`;
+      monthMap[key] = 0;
+    }
+    
+    // Đếm số đăng ký theo tháng
+    events.forEach(event => {
+      if (event.registeredCount && event.registeredCount > 0) {
+        const eventDate = new Date(event.createdAt);
+        const key = `${eventDate.getFullYear()}-${(eventDate.getMonth() + 1).toString().padStart(2, '0')}`;
+        if (monthMap[key] !== undefined) {
+          monthMap[key] += event.registeredCount;
+        }
+      }
+    });
+    
+    return monthMap;
+  };
+
+  const eventLineData = {
+    labels: ['thg 2 2025', 'thg 3 2025', 'thg 4 2025', 'thg 5 2025', 'thg 6 2025', 'thg 7 2025'],
+    datasets: [
+      {
+        label: 'Số người đăng ký sự kiện',
+        data: [
+          eventRegistrationData()['2025-02'] || 0,
+          eventRegistrationData()['2025-03'] || 0,
+          eventRegistrationData()['2025-04'] || 0,
+          eventRegistrationData()['2025-05'] || 0,
+          eventRegistrationData()['2025-06'] || 0,
+          eventRegistrationData()['2025-07'] || 0,
+        ],
+        borderColor: '#0EA5E9', // sky-500
+        backgroundColor: 'rgba(14, 165, 233, 0.1)', // sky-500 with opacity
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#0EA5E9', // sky-500
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+      }
+    ]
+  };
+
+  const eventLineOptions = {
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top' as const,
+        labels: {
+          font: { size: 14 },
+          boxWidth: 18,
+          boxHeight: 18,
+          padding: 18,
+        },
+      },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: function(context: any) {
+            return `Số người: ${context.parsed.y}`;
+          }
+        }
+      }
+    },
+    layout: {
+      padding: 20
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 14 } }
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: '#F3F4F6' },
+        ticks: { 
+          stepSize: 0.5, 
+          font: { size: 14 },
+          callback: function(value: any) {
+            return value + ' người';
+          }
+        }
+      }
+    }
+  };
+
   // Hàm xử lý khi thay đổi loại thống kê doanh thu
   const handleChangeLoaiThongKe = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value as 'week' | 'month';
@@ -341,6 +687,78 @@ const Dashboard = () => {
       }
     }
   };
+
+  // Tùy chỉnh options cho Pie Chart
+  const blogPieOptions = {
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom' as const,
+        labels: {
+          font: { size: 14 },
+          boxWidth: 18,
+          boxHeight: 18,
+          padding: 18,
+        },
+      },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: function(context: any) {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            return `${label}: ${value}`;
+          }
+        }
+      }
+    },
+    layout: {
+      padding: 20
+    },
+  };
+
+  // Tùy chỉnh options cho Bar Chart
+  const blogBarOptions = {
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top' as const,
+        labels: {
+          font: { size: 14 },
+          boxWidth: 18,
+          boxHeight: 18,
+          padding: 18,
+        },
+      },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: function(context: any) {
+            return `Số bài viết: ${context.parsed.y}`;
+          }
+        }
+      }
+    },
+    layout: {
+      padding: 20
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 14 } }
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: '#F3F4F6' },
+        ticks: { stepSize: 1, font: { size: 14 } }
+      }
+    }
+  };
+
+  // Tính toán thống kê
+  const totalRegistrations = events.reduce((sum, event) => sum + (event.registeredCount || 0), 0);
+  const maxRegistrations = Math.max(...Object.values(eventRegistrationData()));
+  const avgRegistrations = totalRegistrations / 6; // 6 tháng
 
   return (
     <div className="space-y-6 mt-4">
@@ -557,6 +975,110 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Pie Chart - Trạng thái bài viết */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center">
+          <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Trạng thái bài viết</h2>
+          {loadingBlogs ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+            </div>
+          ) : (
+            <>
+              <Pie data={blogStatusPieData} options={blogPieOptions} style={{ maxHeight: 320 }} />
+              <div className="flex justify-between mt-4 text-base w-full px-2">
+                <span>Tổng bài viết <b>{blogs.length}</b></span>
+                <span>Đã xuất bản <b>{blogStatusCount.published}</b></span>
+              </div>
+            </>
+          )}
+        </div>
+        {/* Bar Chart - Bài viết theo tháng */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center">
+          <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Bài viết theo tháng</h2>
+          {loadingBlogs ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+            </div>
+          ) : (
+            <Bar data={blogBarData} options={blogBarOptions} style={{ maxHeight: 320 }} />
+          )}
+        </div>
+      </div>
+
+      {/* Top Tác giả */}
+      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8">
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="text-lg font-bold text-gray-800">Top Tác giả</h3>
+        </div>
+        {topAuthors.length === 0 ? (
+          <div className="text-gray-500 text-center">Chưa có dữ liệu</div>
+        ) : (
+          topAuthors.map((author, idx) => (
+            <div key={author.name} className="mb-4 last:mb-0 bg-amber-50 rounded-xl px-4 py-3 relative">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-gray-500 font-medium">#{idx + 1}</span>
+                <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">{author.count} bài</span>
+              </div>
+              <div className="font-medium text-sm text-amber-900 mb-1">{author.name}</div>
+              <div className="w-full h-2 bg-amber-100 rounded-full">
+                <div className="h-2 bg-amber-500 rounded-full" style={{ width: `${(author.count / maxCount) * 100}%` }}></div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Quiz Stacked Bar Chart */}
+      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8">
+        <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Quiz theo nhóm tuổi và trạng thái</h2>
+        {loadingQuizzes ? (
+          <div className="flex justify-center items-center h-60">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+          </div>
+        ) : (
+          <Bar data={quizStackedBarData} options={quizStackedBarOptions} style={{ maxHeight: 400 }} />
+        )}
+        {!loadingQuizzes && (
+          <div className="mt-4 flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+            <div className="text-base font-medium text-gray-700">
+              Tổng quiz: <span className="font-bold text-sky-600 text-lg">{quizzes.length}</span>
+            </div>
+            <div className="text-base font-medium text-gray-700">
+              Đang hoạt động: <span className="font-bold text-sky-600 text-lg">{quizzes.filter(q => q.isActive).length}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Event Registration Trend Line Chart */}
+      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8">
+        <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Xu hướng đăng ký sự kiện</h2>
+        {loadingEvents ? (
+          <div className="flex justify-center items-center h-60">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+          </div>
+        ) : (
+          <Line data={eventLineData} options={eventLineOptions} style={{ maxHeight: 400 }} />
+        )}
+        {!loadingEvents && (
+          <div className="mt-4 grid grid-cols-3 gap-4">
+            <div className="bg-sky-50 p-3 rounded-lg text-center">
+              <div className="text-sm text-sky-600 font-medium">Tổng đăng ký</div>
+              <div className="text-lg font-bold text-sky-700">{totalRegistrations} người</div>
+            </div>
+            <div className="bg-sky-50 p-3 rounded-lg text-center">
+              <div className="text-sm text-sky-600 font-medium">Tháng cao nhất</div>
+              <div className="text-lg font-bold text-sky-700">{maxRegistrations} người</div>
+            </div>
+            <div className="bg-sky-50 p-3 rounded-lg text-center">
+              <div className="text-sm text-sky-600 font-medium">Trung bình/tháng</div>
+              <div className="text-lg font-bold text-sky-700">{avgRegistrations.toFixed(1)} người</div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
