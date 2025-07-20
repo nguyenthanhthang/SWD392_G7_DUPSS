@@ -11,6 +11,7 @@ import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
+import eventBackground from "../assets/event-background.webp";
 
 interface RegisteredUser {
   _id: string;
@@ -417,20 +418,36 @@ export default function EventsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Main Content Container */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 lg:p-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+        {/* Background Image Section */}
+        <div 
+          className="relative mb-16 rounded-2xl overflow-hidden"
+          style={{
+            backgroundImage: `url(${eventBackground})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            minHeight: '300px'
+          }}
         >
-          <h1 className="text-4xl font-bold text-sky-600 mb-6">
-            Sự kiện sắp tới
-          </h1>
-          <p className="text-slate-600 max-w-2xl mx-auto text-lg leading-relaxed">
-            Tham gia các sự kiện của chúng tôi để học hỏi, chia sẻ và kết nối
-            với cộng đồng
-          </p>
-        </motion.div>
+          {/* Overlay for better text readability */}
+          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+          
+          {/* Content */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative z-10 text-center py-16 px-8"
+          >
+            <h1 className="text-4xl font-bold text-white mb-6">
+              Sự kiện sắp tới
+            </h1>
+            <p className="text-white max-w-2xl mx-auto text-lg leading-relaxed">
+              Tham gia các sự kiện của chúng tôi để học hỏi, chia sẻ và kết nối
+              với cộng đồng
+            </p>
+          </motion.div>
+        </div>
 
         {/* Search and Filter Section */}
         <div className="mb-12">
