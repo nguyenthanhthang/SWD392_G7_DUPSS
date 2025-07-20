@@ -522,6 +522,21 @@ export const getQuizResultByIdApi = async (resultId: string) => {
   return res.data;
 };
 
+// Lấy thống kê kết quả quiz
+export const getQuizResultsStatsApi = async (params?: {
+  quizId?: string;
+  from?: string;
+  to?: string;
+}) => {
+  const queryParams = new URLSearchParams();
+  if (params?.quizId) queryParams.append("quizId", params.quizId);
+  if (params?.from) queryParams.append("from", params.from);
+  if (params?.to) queryParams.append("to", params.to);
+  
+  const res = await api.get(`/quizzes/quiz-results/stats?${queryParams.toString()}`);
+  return res.data;
+};
+
 // ===== SLOT TIME APIs =====
 
 export const getAllSlotTimeApi = async () => {
@@ -687,7 +702,7 @@ export const createFeedbackWithRatingApi = async (data: {
 };
 
 export const getAllFeedbacksApi = async () => {
-  const res = await api.get("/feedbacks");
+  const res = await api.get("/feedback");
   return res.data;
 };
 
@@ -695,7 +710,7 @@ export const updateFeedbackStatusApi = async (
   id: string,
   status: "approved" | "rejected"
 ) => {
-  const res = await api.put(`/feedbacks/${id}/status`, { status });
+  const res = await api.put(`/feedback/${id}/status`, { status });
   return res.data;
 };
 
@@ -850,6 +865,12 @@ export const getRevenueByServiceApi = async () => {
   return res.data;
 };
 
+export const getYearlyRevenueApi = async (year?: number) => {
+  const params = year ? `?year=${year}` : '';
+  const res = await api.get(`/payment/statistics/yearly${params}`);
+  return res.data;
+};
+
 // ===== QUIZ MANAGEMENT APIs =====
 
 // Tạo quiz mới
@@ -916,7 +937,12 @@ export const deleteQuestionApi = async (id: string) => {
 };
 
 export const getPaymentByAppointmentIdApi = async (appointmentId: string) => {
-  const res = await api.get(`/payment/by-appointment/${appointmentId}`);
+  const res = await api.get(`/payment/appointment/${appointmentId}`);
+  return res.data;
+};
+
+export const getAllPaymentsApi = async () => {
+  const res = await api.get("/payment/test");
   return res.data;
 };
 
