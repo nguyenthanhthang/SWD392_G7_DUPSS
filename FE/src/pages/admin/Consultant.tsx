@@ -243,11 +243,6 @@ const Consultant: React.FC = () => {
     }
   };
 
-  const handleOpenDeleteModal = (consultant: IConsultant) => {
-    setSelectedConsultant(consultant);
-    setIsDeleteModalOpen(true);
-  };
-
   const handleCloseDeleteModal = () => {
     setIsDeleteModalOpen(false);
     setSelectedConsultant(null);
@@ -272,11 +267,16 @@ const Consultant: React.FC = () => {
       });
 
       if (selectedConsultant && response.data.imageUrl) {
-        // Cập nhật avatar cho consultant
-        await api.put(`/users/${selectedConsultant.accountId._id}`, {
+        // Cập nhật avatar cho consultant (dùng updateAccountApi)
+        await api.put(`/accounts/${selectedConsultant.accountId._id}`, {
           photoUrl: response.data.imageUrl
         });
-        
+        // Cập nhật lại state consultants để hiển thị avatar mới
+        setConsultants(prev => prev.map(consultant =>
+          consultant._id === selectedConsultant._id
+            ? { ...consultant, accountId: { ...consultant.accountId, photoUrl: response.data.imageUrl } }
+            : consultant
+        ));
         toast.success('Cập nhật ảnh đại diện thành công!');
       }
     } catch (error) {
@@ -445,19 +445,28 @@ const Consultant: React.FC = () => {
   // Handle create certificate
   const handleCreateCertificate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     // Validate form
+    const todayStr = new Date().toISOString().slice(0, 10);
+    let errorMsg = '';
     if (!certificateFormData.consultant_id || !certificateFormData.title || !certificateFormData.type || 
         !certificateFormData.issueDate || !certificateFormData.fileUrl) {
-      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc!');
+      errorMsg = 'Vui lòng điền đầy đủ thông tin bắt buộc!';
+    } else if (certificateFormData.issueDate > todayStr) {
+      errorMsg = 'Ngày cấp không được là ngày trong tương lai!';
+    } else if (certificateFormData.expireDate) {
+      if (certificateFormData.expireDate < todayStr) {
+        errorMsg = 'Ngày hết hạn không được là ngày trong quá khứ!';
+      } else if (certificateFormData.expireDate < certificateFormData.issueDate) {
+        errorMsg = 'Ngày hết hạn không được trước ngày cấp!';
+      }
+    }
+    if (errorMsg) {
+      toast.error(errorMsg);
       return;
     }
-
     try {
       const response = await api.post('/certificates', certificateFormData);
-      
       setCertificates(prev => [...prev, response.data]);
-      
       handleCloseCreateCertificateModal();
       toast.success('Tạo chứng chỉ thành công!');
     } catch (error) {
@@ -499,23 +508,32 @@ const Consultant: React.FC = () => {
   const handleUpdateCertificate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCertificate) return;
-
     // Validate form
+    const todayStr = new Date().toISOString().slice(0, 10);
+    let errorMsg = '';
     if (!certificateFormData.consultant_id || !certificateFormData.title || !certificateFormData.type || 
         !certificateFormData.issueDate || !certificateFormData.fileUrl) {
-      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc!');
+      errorMsg = 'Vui lòng điền đầy đủ thông tin bắt buộc!';
+    } else if (certificateFormData.issueDate > todayStr) {
+      errorMsg = 'Ngày cấp không được là ngày trong tương lai!';
+    } else if (certificateFormData.expireDate) {
+      if (certificateFormData.expireDate < todayStr) {
+        errorMsg = 'Ngày hết hạn không được là ngày trong quá khứ!';
+      } else if (certificateFormData.expireDate < certificateFormData.issueDate) {
+        errorMsg = 'Ngày hết hạn không được trước ngày cấp!';
+      }
+    }
+    if (errorMsg) {
+      toast.error(errorMsg);
       return;
     }
-
     try {
       const response = await api.put(`/certificates/${selectedCertificate._id}`, certificateFormData);
-      
       setCertificates(prev =>
         prev.map(cert =>
           cert._id === selectedCertificate._id ? response.data : cert
         )
       );
-      
       handleCloseUpdateCertificateModal();
       toast.success('Cập nhật chứng chỉ thành công!');
     } catch (error) {
@@ -611,9 +629,7 @@ const Consultant: React.FC = () => {
                 type="text"
                 placeholder="Tìm theo tên, email..."
                 className="focus:ring-sky-500 focus:border-sky-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                onChange={(e) => {
-                  // Thêm logic tìm kiếm ở đây
-                }}
+                onChange={() => {}}
               />
             </div>
           </div>
@@ -623,9 +639,7 @@ const Consultant: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
             <select
               className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
-              onChange={(e) => {
-                // Thêm logic lọc theo trạng thái ở đây
-              }}
+              onChange={() => {}}
             >
               <option value="">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
@@ -639,9 +653,7 @@ const Consultant: React.FC = () => {
             <input
               type="date"
               className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
-              onChange={(e) => {
-                // Thêm logic lọc theo ngày ở đây
-              }}
+              onChange={() => {}}
             />
           </div>
         </div>
@@ -733,20 +745,6 @@ const Consultant: React.FC = () => {
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                      </button>
-                    </Tooltip>
-                    
-                    <Tooltip text="Xóa">
-                      <button
-                        onClick={() => {
-                          setSelectedConsultant(consultant);
-                          handleOpenDeleteModal(consultant);
-                        }}
-                        className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
                     </Tooltip>
@@ -1199,7 +1197,7 @@ const Consultant: React.FC = () => {
       {/* Modal tạo chứng chỉ mới */}
       {isCreateCertificateModalOpen && selectedConsultant && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
               <h2 className="text-xl font-semibold text-gray-800">Thêm chứng chỉ mới</h2>
               <button
@@ -1388,7 +1386,7 @@ const Consultant: React.FC = () => {
       {/* Modal cập nhật chứng chỉ */}
       {isUpdateCertificateModalOpen && selectedCertificate && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
               <h2 className="text-xl font-semibold text-gray-800">Cập nhật chứng chỉ</h2>
               <button

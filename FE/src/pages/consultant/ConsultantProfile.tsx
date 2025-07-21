@@ -3,6 +3,7 @@ import whaleLogo from '../../assets/whale.png';
 import { PlusCircle, Trash2, Edit, Eye, EyeOff, Filter, CalendarDays, X } from 'lucide-react';
 import { getAccountByIdApi, updateAccountApi, changePasswordApi, sendResetPasswordEmailApi, getConsultantByAccountIdApi, updateConsultantApi, getCertificatesByConsultantIdApi, createCertificateApi, updateCertificateApi, deleteCertificateApi, getCertificateByIdApi } from '../../api';
 import type { AxiosError } from 'axios';
+import React from 'react';
 
 // Interfaces
 interface User {
@@ -107,9 +108,8 @@ export default function ConsultantProfile() {
     try {
         const certsData = await getCertificatesByConsultantIdApi(consultantId);
         setCertificates(certsData || []);
-    } catch (err) {
+    } catch {
         setCertificates([]);
-        console.error("Lỗi khi tải chứng chỉ:", err);
     }
   };
 
@@ -191,7 +191,7 @@ export default function ConsultantProfile() {
     setPwdLoading(true);
     try {
       if (!user?.email) throw new Error('No user email');
-      await changePasswordApi(user.email, pwdNew, pwdConfirm);
+      await changePasswordApi(user.email, '', pwdNew, pwdConfirm);
       setShowPwdModal(false);
       setPwdStep('email');
       setPwdEmail(''); setPwdOtp(''); setPwdNew(''); setPwdConfirm('');
@@ -692,8 +692,11 @@ export default function ConsultantProfile() {
 }
 
 // Certificate Modal Component
-function CertificateModal({ initialData, onClose, onSubmit }: { initialData: Omit<ICertificate, '_id'>, onClose: () => void, onSubmit: (data: Omit<ICertificate, '_id' | 'consultant_id'>) => void }) {
+function CertificateModal({ initialData, onClose, onSubmit }: { initialData: Omit<ICertificate, '_id'>, onClose: () => void, onSubmit: (data: Omit<ICertificate, '_id' | 'consultant_id'>) => void }): React.ReactElement {
     const [data, setData] = useState(initialData);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -707,10 +710,45 @@ function CertificateModal({ initialData, onClose, onSubmit }: { initialData: Omi
           fileUrl: data.fileUrl
         });
     }
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setUploadError(null);
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setUploadError('Chỉ chấp nhận file ảnh.');
+        return;
+      }
+      // Validate file size (tối đa 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError('Kích thước file không được vượt quá 5MB.');
+        return;
+      }
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const res = await fetch('http://localhost:5000/api/uploads/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: formData
+        });
+        if (!res.ok) throw new Error('Upload thất bại');
+        const { imageUrl } = await res.json();
+        setData(prev => ({ ...prev, fileUrl: imageUrl }));
+      } catch (err) {
+        setUploadError('Tải ảnh lên thất bại.');
+      } finally {
+        setUploading(false);
+      }
+    };
     
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg">
+            <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-semibold mb-6 text-gray-900">{initialData.title ? 'Chỉnh sửa' : 'Thêm mới'} Chứng chỉ</h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -739,7 +777,21 @@ function CertificateModal({ initialData, onClose, onSubmit }: { initialData: Omi
                     </div>
                     <div>
                         <label className="block text-gray-600 text-sm mb-1">Link file chứng chỉ (URL)</label>
-                        <input required placeholder="https://example.com/certificate.pdf" type="url" className="w-full border border-gray-300 rounded px-3 py-2" value={data.fileUrl} onChange={e => setData({...data, fileUrl: e.target.value})} />
+                        <div className="flex flex-col gap-2">
+                          <input placeholder="https://example.com/certificate.jpg" type="url" className="w-full border border-gray-300 rounded px-3 py-2" value={data.fileUrl} onChange={e => setData({...data, fileUrl: e.target.value})} />
+                          <div className="flex items-center gap-2">
+                            <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+                            <button type="button" className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                              {uploading ? 'Đang tải...' : 'Tải ảnh từ thiết bị'}
+                            </button>
+                            {uploadError && <span className="text-red-500 text-xs ml-2">{uploadError}</span>}
+                          </div>
+                          {data.fileUrl && (
+                            <div className="mt-2">
+                              <img src={data.fileUrl} alt="Preview" className="max-h-40 rounded border border-gray-200" onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://cdn.prod.website-files.com/60a530a795c0ca8a81c5868a/660568c3773236b1fdefc245_badge-preview%20(2)%2011.46.22.png'; }} />
+                            </div>
+                          )}
+                        </div>
                     </div>
                     <div className="flex justify-end gap-4 pt-4">
                         <button type="button" onClick={onClose} className="text-gray-600 font-medium px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">Hủy</button>
