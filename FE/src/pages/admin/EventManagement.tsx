@@ -265,6 +265,7 @@ const EventFormModal = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(newSponsor),
       });
@@ -275,6 +276,9 @@ const EventFormModal = ({
         setNewSponsor({ name: "", email: "", logo: "" });
         setShowNewSponsorForm(false);
         toast.success('Tạo nhà tài trợ thành công!');
+        fetchSponsors(); // Luôn refetch lại danh sách sponsor sau khi tạo mới
+        // Tự động chọn sponsor vừa tạo
+        setSelectedSponsorId(createdSponsor._id);
       } else {
         // Lấy lỗi message từ BE
         const errorData = await response.json();
@@ -290,20 +294,27 @@ const EventFormModal = ({
 
   // Add sponsor to event
   const handleAddSponsor = () => {
-    if (!selectedSponsorId || !sponsorDonation.trim()) {
-      toast.error('Vui lòng chọn nhà tài trợ và nhập nội dung tài trợ');
+    if (!selectedSponsorId) {
+      toast.error('Vui lòng chọn nhà tài trợ!');
       return;
     }
-    // Không kiểm tra là số nữa
+    if (!sponsorDonation.trim()) {
+      toast.error('Vui lòng nhập nội dung tài trợ');
+      return;
+    }
     const existingSponsor = formData.sponsors.find(s => s.sponsorId === selectedSponsorId);
     if (existingSponsor) {
       toast.error('Nhà tài trợ này đã được thêm vào sự kiện');
       return;
     }
+    // Lấy thông tin sponsor từ danh sách availableSponsors
+    const sponsorObj = availableSponsors.find(sp => sp._id === selectedSponsorId);
     const newEventSponsor: EventSponsor = {
       sponsorId: selectedSponsorId,
       donation: sponsorDonation.trim(),
-      tier: sponsorTier
+      tier: sponsorTier,
+      name: sponsorObj?.name || '',
+      logo: sponsorObj?.logo || ''
     };
     setFormData(prev => ({
       ...prev,
@@ -314,11 +325,11 @@ const EventFormModal = ({
     setSponsorTier("Bronze");
   };
 
-  // Remove sponsor from event
-  const handleRemoveSponsor = (sponsorId: string) => {
+  // Remove sponsor from event (xóa theo index)
+  const handleRemoveSponsor = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      sponsors: prev.sponsors.filter(s => s.sponsorId !== sponsorId)
+      sponsors: prev.sponsors.filter((_, i) => i !== index)
     }));
   };
 
@@ -337,6 +348,15 @@ const EventFormModal = ({
 
   useEffect(() => {
     if (event && isEditing) {
+      // Map lại sponsor để bổ sung name/logo
+      const sponsorsWithName = (event.sponsors || []).map(s => {
+        const sponsorObj = availableSponsors.find(sp => sp._id === s.sponsorId);
+        return {
+          ...s,
+          name: sponsorObj?.name || '',
+          logo: sponsorObj?.logo || ''
+        };
+      });
       setFormData({
         title: event.title,
         description: event.description,
@@ -347,7 +367,7 @@ const EventFormModal = ({
         location: event.location,
         capacity: event.capacity,
         image: event.image || "",
-        sponsors: event.sponsors || []
+        sponsors: sponsorsWithName
       });
     } else {
       // Set default times for new events
@@ -650,17 +670,23 @@ const EventFormModal = ({
             </div>
 
             {/* Selected Sponsors List */}
-            {formData.sponsors.length > 0 && (
-              <div className="space-y-2">
-                <h5 className="font-medium text-gray-700">Danh sách nhà tài trợ:</h5>
-                {formData.sponsors.map((s, index) => (
+            {formData.sponsors.length === 0 ? (
+              <div className="text-gray-500 italic">Chưa có nhà tài trợ nào</div>
+            ) : availableSponsors.length === 0 ? (
+              <div className="text-gray-500 italic">Đang tải...</div>
+            ) : (
+              formData.sponsors.map((s, index) => {
+                // Ép kiểu sponsorId và _id về string để so sánh
+                const sponsorIdStr = s.sponsorId ? s.sponsorId.toString() : '';
+                const sponsorObj = availableSponsors.find(sp => sp._id.toString() === sponsorIdStr);
+                return (
                   <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border">
                     <div className="flex items-center space-x-3">
-                      {s.logo && (
-                        <img src={s.logo} alt={s.name} className="w-8 h-8 rounded-full object-cover" />
+                      {(s.logo || sponsorObj?.logo) && (
+                        <img src={s.logo || sponsorObj?.logo} alt={s.name || sponsorObj?.name || 'Unknown Sponsor'} className="w-8 h-8 rounded-full object-cover" />
                       )}
                       <div>
-                        <div className="font-medium">{s.name || 'Unknown Sponsor'}</div>
+                        <div className="font-medium">{s.name || sponsorObj?.name || 'Unknown Sponsor'}</div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -677,15 +703,15 @@ const EventFormModal = ({
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleRemoveSponsor(s.sponsorId || s._id || '')}
+                        onClick={() => handleRemoveSponsor(index)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <FiX size={16} />
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })
             )}
           </div>
 
@@ -1186,7 +1212,11 @@ const AdminEventManagement = () => {
         location: formData.location,
         capacity: formData.capacity,
         image: formData.image,
-        sponsors: formData.sponsors
+        sponsors: formData.sponsors.map(s => ({
+          sponsorId: s.sponsorId,
+          donation: s.donation,
+          tier: s.tier
+        }))
       };
       
       await createEventApi(payload);
@@ -1212,7 +1242,13 @@ const AdminEventManagement = () => {
         registrationStartDate: new Date(formData.registrationStartDate),
         registrationEndDate: new Date(formData.registrationEndDate),
         location: formData.location,
-        capacity: formData.capacity
+        capacity: formData.capacity,
+        image: formData.image,
+        sponsors: formData.sponsors.map(s => ({
+          sponsorId: s.sponsorId,
+          donation: s.donation,
+          tier: s.tier
+        }))
       });
       toast.success("Cập nhật sự kiện thành công!");
       setShowEventForm(false);
