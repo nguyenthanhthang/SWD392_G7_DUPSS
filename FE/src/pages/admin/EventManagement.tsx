@@ -294,7 +294,6 @@ const EventFormModal = ({
       toast.error('Vui lòng chọn nhà tài trợ và nhập nội dung tài trợ');
       return;
     }
-    // Không kiểm tra là số nữa
     const existingSponsor = formData.sponsors.find(s => s.sponsorId === selectedSponsorId);
     if (existingSponsor) {
       toast.error('Nhà tài trợ này đã được thêm vào sự kiện');
@@ -306,8 +305,8 @@ const EventFormModal = ({
       sponsorId: selectedSponsorId,
       donation: sponsorDonation.trim(),
       tier: sponsorTier,
-      name: sponsorObj?.name || '', // Thêm name để hiển thị đúng
-      logo: sponsorObj?.logo || '' // Thêm logo nếu có
+      name: sponsorObj?.name || '',
+      logo: sponsorObj?.logo || ''
     };
     setFormData(prev => ({
       ...prev,
