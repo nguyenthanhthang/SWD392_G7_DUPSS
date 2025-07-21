@@ -352,7 +352,7 @@ export const createPayment = async (req: Request, res: Response) => {
 // Lấy tất cả payment
 export const getAllPayments = async (req: Request, res: Response) => {
   try {
-    const payments = await Payment.find().populate('customerId').populate('appointmentId');
+    const payments = await Payment.find().populate('accountId').populate('appointmentId');
     res.status(200).json(payments);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -362,7 +362,7 @@ export const getAllPayments = async (req: Request, res: Response) => {
 // Lấy payment theo id
 export const getPaymentById = async (req: Request, res: Response) => {
   try {
-    const payment = await Payment.findById(req.params.id).populate('customerId').populate('appointmentId');
+    const payment = await Payment.findById(req.params.id).populate('accountId').populate('appointmentId');
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
     res.status(200).json(payment);
   } catch (err: any) {
@@ -594,13 +594,13 @@ export const getRevenueByService = async (req: Request, res: Response) => {
       }
     });
 
-    // Chuyển đổi map thành mảng để trả về
-    const result = Array.from(revenueByService.values());
+    // Chuyển đổi map thành array
+    const services = Array.from(revenueByService.values());
 
     return res.status(200).json({
       success: true,
       data: {
-        services: result,
+        services,
         currency: 'VND'
       }
     });
@@ -609,6 +609,60 @@ export const getRevenueByService = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'Không thể tính doanh thu theo dịch vụ',
+      error: err.message
+    });
+  }
+};
+
+// API doanh thu theo 12 tháng trong năm
+export const getYearlyRevenue = async (req: Request, res: Response) => {
+  try {
+    // Lấy năm từ query parameters hoặc sử dụng năm hiện tại
+    const year = parseInt(req.query.year as string) || moment().year();
+
+    // Tạo mảng doanh thu cho 12 tháng
+    const monthlyRevenue = Array(12).fill(0);
+    const monthlyCount = Array(12).fill(0);
+
+    // Tìm tất cả thanh toán đã hoàn thành trong năm
+    const startOfYear = moment({ year }).startOf('year').toDate();
+    const endOfYear = moment({ year }).endOf('year').toDate();
+
+    const yearlyPayments = await Payment.find({
+      status: "completed",
+      date: {
+        $gte: startOfYear,
+        $lte: endOfYear
+      }
+    });
+
+    // Tính doanh thu cho từng tháng
+    yearlyPayments.forEach(payment => {
+      const month = moment(payment.date).month(); // 0-indexed (0-11)
+      monthlyRevenue[month] += payment.totalPrice;
+      monthlyCount[month] += 1;
+    });
+
+    // Tính tổng doanh thu năm
+    const yearlyRevenue = monthlyRevenue.reduce((sum, revenue) => sum + revenue, 0);
+    const yearlyCount = monthlyCount.reduce((sum, count) => sum + count, 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        yearlyRevenue,
+        monthlyRevenue,
+        monthlyCount,
+        yearlyCount,
+        currency: 'VND',
+        year
+      }
+    });
+  } catch (err: any) {
+    console.error('Lỗi khi tính doanh thu năm:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể tính doanh thu năm',
       error: err.message
     });
   }

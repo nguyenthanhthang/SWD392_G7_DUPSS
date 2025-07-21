@@ -654,7 +654,12 @@ const AppointmentManagement = () => {
                   key={day.formattedDate} 
                   className={`py-2 px-2 text-center font-medium appointment-cell ${day.isToday ? 'bg-blue-50' : 'bg-sky-50'} ${day.date.getDay() === 0 ? 'rounded-tr-lg' : ''}`}
                 >
-                  <div className="uppercase text-xs tracking-wide text-gray-500">{day.dayName.substring(0, 3)}</div>
+                  <div className="uppercase text-xs tracking-wide text-gray-500">
+                    {(() => {
+                      const fullNames = ['CHỦ NHẬT', 'THỨ HAI', 'THỨ BA', 'THỨ TƯ', 'THỨ NĂM', 'THỨ SÁU', 'THỨ BẢY'];
+                      return fullNames[day.date.getDay()];
+                    })()}
+                  </div>
                   <div className={`text-sm font-bold ${day.isToday ? 'text-blue-700' : 'text-gray-800'}`}>{day.formattedDate}</div>
                 </div>
               ))}

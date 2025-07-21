@@ -154,59 +154,12 @@ function BlogPage() {
     <MainLayout>
       <Toaster position="top-center" />
       
-      {/* Modern Blog Banner with Wave Effect - Reduced top spacing */}
-      <div className="relative -mt-16">
-        {/* Main banner with gradient - reduced top padding */}
-        <div className="bg-gradient-to-r from-sky-300 via-blue-200 to-sky-300 pt-12 pb-16 relative overflow-hidden">
-          {/* Decorative elements */}
-          <div className="absolute top-12 left-10 w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm"></div>
-          <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full bg-sky-100/30 backdrop-blur-sm"></div>
-          <div className="absolute top-1/4 left-1/4 w-6 h-6 rounded-full bg-white/40"></div>
-          <div className="absolute bottom-1/3 right-1/3 w-8 h-8 rounded-full bg-white/30"></div>
-          
-          {/* Floating icons */}
-          <div className="absolute top-24 left-[20%] transform rotate-12 opacity-30">
-            <FaFeatherAlt className="w-8 h-8 text-blue-600" />
-          </div>
-          <div className="absolute bottom-16 right-1/4 transform -rotate-12 opacity-30">
-            <FaRegLightbulb className="w-10 h-10 text-blue-600" />
-          </div>
-          
-          <div className="container mx-auto px-4 z-10 relative">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex flex-col items-center">
-                {/* Icon in elegant circle */}
-                <div className="relative mb-8">
-                  <div className="absolute inset-0 rounded-full bg-blue-400/20 blur-xl transform scale-150"></div>
-                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-white to-blue-50 shadow-lg border border-white/50 p-4">
-                    <div className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center">
-                      <FaBookOpen className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Title with modern typography - removed underlines */}
-                <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4 tracking-tight text-center">
-                  <span>Blog</span>
-                  <span className="mx-2">&</span>
-                  <span>Tin tức</span>
-                </h1>
-                
-                {/* Description with nicer styling */}
-                <p className="text-blue-700 text-lg max-w-2xl mx-auto text-center px-4 leading-relaxed">
-                  Khám phá những bài viết bổ ích về tâm lý học và sức khỏe tinh thần
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Wave bottom effect */}
-          <div className="absolute bottom-0 left-0 right-0">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 100" className="w-full h-auto">
-              <path fill="#ffffff" fillOpacity="1" d="M0,64L60,58.7C120,53,240,43,360,48C480,53,600,75,720,80C840,85,960,75,1080,64C1200,53,1320,43,1380,37.3L1440,32L1440,100L1380,100C1320,100,1200,100,1080,100C960,100,840,100,720,100C600,100,480,100,360,100C240,100,120,100,60,100L0,100Z"></path>
-            </svg>
-          </div>
-        </div>
+      {/* Minimalist Blog Banner inspired by Buzzsprout Blog */}
+      <div className="bg-white pt-4 pb-8 text-center border-b border-gray-200">
+        <h1 className="text-5xl md:text-6xl font-extrabold text-gray-800 mb-4 tracking-tight">Blog & Tin tức</h1>
+        <p className="text-lg md:text-xl text-gray-600 font-medium max-w-2xl mx-auto">
+          Khám phá những bài viết bổ ích về tâm lý học và sức khỏe tinh thần.
+        </p>
       </div>
 
       <div className="container mx-auto px-4 py-6 bg-gradient-to-b from-white to-sky-50/30 min-h-screen">
@@ -384,7 +337,6 @@ function BlogPage() {
                 </Link>
               ))}
             </div>
-
             {/* Pagination - Blue theme */}
             {filteredBlogs.length > blogsPerPage && (
               <div className="flex justify-center mt-12">
@@ -433,6 +385,129 @@ function BlogPage() {
                 </nav>
               </div>
             )}
+
+            {/* PHẦN MỚI: Bài viết theo 3 chủ đề nhiều nhất */}
+            {(() => {
+              // Đếm số lượng bài viết theo từng chủ đề
+              const topicCount: Record<string, number> = {};
+              blogs.forEach(blog => {
+                blog.topics?.forEach(topic => {
+                  topicCount[topic] = (topicCount[topic] || 0) + 1;
+                });
+              });
+              // Lấy 3 chủ đề nhiều bài nhất
+              const topTopics = Object.entries(topicCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([topic]) => topic);
+              if (topTopics.length === 0) return null;
+              return (
+                <div className="mt-16">
+                  <h2 className="text-2xl font-bold text-blue-800 mb-6 border-l-4 border-cyan-500 pl-4 bg-cyan-50 py-2 rounded-r-lg shadow-sm">
+                    Bài viết theo chủ đề nổi bật
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {topTopics.map(topic => {
+                      const topicBlogs = blogs.filter(blog => blog.topics?.includes(topic)).slice(0, 3);
+                      return (
+                        <div key={topic} className="bg-white rounded-xl shadow-md p-6 border border-cyan-100 flex flex-col">
+                          <div className="flex items-center mb-4">
+                            <span className="text-lg font-semibold text-cyan-700 bg-cyan-50 px-4 py-1 rounded-full">{topic}</span>
+                          </div>
+                          <div className="space-y-4">
+                            {topicBlogs.map(blog => (
+                              <Link
+                                key={blog._id}
+                                to={'/blogs/' + blog._id}
+                                className="flex items-center gap-3 hover:bg-cyan-50 rounded-lg p-3 transition"
+                              >
+                                {/* Ảnh thu nhỏ vuông */}
+                                {blog.image || blog.thumbnail ? (
+                                  <img
+                                    src={blog.image || blog.thumbnail}
+                                    alt={blog.title}
+                                    className="w-16 h-16 object-cover rounded-lg flex-shrink-0 border border-cyan-100 bg-white"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 flex items-center justify-center bg-cyan-50 rounded-lg flex-shrink-0 border border-cyan-100">
+                                    <svg className="w-8 h-8 text-cyan-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    </svg>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-blue-900 line-clamp-2 mb-1">{blog.title}</div>
+                                  <div className="text-xs text-gray-500 mb-1">{formatDate(blog.createdAt)}</div>
+                                  <div className="text-xs text-cyan-700">{blog.anDanh ? 'Ẩn danh' : (blog.authorId?.fullName || 'Không xác định')}</div>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+            {/* KẾT THÚC PHẦN MỚI */}
+
+            {/* Tiêu đề Top Tác giả vàng nhạt, căn lề trái, ngoài khung */}
+            <div className="mt-20 mb-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 bg-yellow-50 text-yellow-700 border-l-4 border-yellow-300 rounded-r-lg py-2 px-6 w-full max-w-max shadow-sm">
+                <svg className="w-6 h-6 text-yellow-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Top Tác giả
+              </h3>
+            </div>
+            {/* PHẦN MỚI: Top Tác giả (không tính bài ẩn danh, podium 3 cột) */}
+            {(() => {
+              // Lọc các blog không ẩn danh
+              const nonAnonymousBlogs = blogs.filter(blog => blog.anDanh === false);
+              // Đếm số bài viết theo tác giả
+              const authorMap: Record<string, { name: string; count: number }> = {};
+              nonAnonymousBlogs.forEach(blog => {
+                const id = blog.authorId?._id || 'unknown';
+                const name = blog.authorId?.fullName || blog.authorId?.username || 'Không rõ';
+                if (!authorMap[id]) authorMap[id] = { name, count: 0 };
+                authorMap[id].count++;
+              });
+              const topAuthors = Object.values(authorMap)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 3);
+              const maxCount = topAuthors[0]?.count || 1;
+              if (topAuthors.length === 0) return null;
+              // Sắp xếp lại cho podium: #2, #1, #3
+              const podium = [topAuthors[1], topAuthors[0], topAuthors[2]];
+              const podiumRanks = [2, 1, 3];
+              const podiumColors = [
+                'bg-gray-200 text-gray-700', // #2
+                'bg-yellow-300 text-yellow-900 border-2 border-yellow-400 shadow-lg', // #1
+                'bg-rose-200 text-rose-700', // #3
+              ];
+              return (
+                <div className="bg-white p-8 rounded-2xl shadow-lg border border-sky-100">
+                  <div className="flex flex-col sm:flex-row justify-center items-end gap-4">
+                    {podium.map((author, idx) => (
+                      author ? (
+                        <div key={idx} className={`flex-1 flex flex-col items-center justify-end ${podiumColors[idx]} rounded-xl px-4 pt-4 pb-2 relative min-w-[100px] max-w-[180px] ${idx === 1 ? 'z-10 scale-110 shadow-xl' : 'opacity-90'} transition-all`} style={{height: idx === 1 ? 180 : 140}}>
+                          <div className={`absolute -top-7 left-1/2 -translate-x-1/2 w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg border-4 ${idx === 1 ? 'bg-yellow-400 border-yellow-300 text-yellow-900 shadow' : idx === 0 ? 'bg-gray-300 border-gray-200 text-gray-700' : 'bg-rose-300 border-rose-200 text-rose-700'}`}>#{podiumRanks[idx]}</div>
+                          <div className="font-semibold text-base mt-6 text-center break-words">{author.name}</div>
+                          <div className="text-xs font-medium mt-1 mb-2">{author.count} bài viết</div>
+                          {idx === 1 && (
+                            <svg className="w-8 h-8 text-yellow-400 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.09 6.26L20 9.27l-5 3.64L16.18 20 12 16.77 7.82 20 9 12.91l-5-3.64 5.91-.01z"/></svg>
+                          )}
+                        </div>
+                      ) : (
+                        <div key={idx} className="flex-1 min-w-[100px] max-w-[180px]" />
+                      )
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+            {/* KẾT THÚC PHẦN MỚI */}
+
+            
           </>
         )}
       </div>

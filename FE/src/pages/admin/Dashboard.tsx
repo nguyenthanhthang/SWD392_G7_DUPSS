@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { getAllAccountsApi, getAllConsultantsApi, getTotalRevenueApi, getWeeklyRevenueApi, getMonthlyRevenueApi, getRevenueByServiceApi, getAllBlogsApi, getAllQuizzesApi, getAllEventsApi } from "../../api";
+import {
+  getAllAccountsApi,
+  getAllAppointmentsApi,
+  getAllBlogsApi,
+  getAllConsultantsApi,
+  getAllEventsApi,
+  getAllFeedbacksApi,
+  getAllPaymentsApi,
+  getAllQuizzesApi,
+  getAllServicesApi,
+  getServiceRatingApi,
+  getTotalRevenueApi,
+  getWeeklyRevenueApi,
+  getMonthlyRevenueApi,
+  getYearlyRevenueApi,
+  getRevenueByServiceApi,
+  getQuizResultsStatsApi,
+} from "../../api";
 import { Users, UserPlus, UserCheck } from "lucide-react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement } from 'chart.js';
 import { Pie, Bar, Line } from 'react-chartjs-2';
@@ -83,6 +100,26 @@ interface Event {
   createdAt: string;
 }
 
+interface QuizStats {
+  totalResults: number;
+  recentResults: number;
+  scoreStats: {
+    average: number;
+    min: number;
+    max: number;
+  };
+  riskLevelDistribution: Array<{
+    _id: string;
+    count: number;
+    avgScore: number;
+  }>;
+  quizDistribution: Array<{
+    _id: string;
+    count: number;
+    avgScore: number;
+  }>;
+}
+
 const Dashboard = () => {
   const [thongKeNguoiDung, setThongKeNguoiDung] = useState<ThongKeNguoiDung>({
     tongSoNguoiDung: 0,
@@ -117,6 +154,18 @@ const Dashboard = () => {
   const [loadingQuizzes, setLoadingQuizzes] = useState<boolean>(true);
   const [events, setEvents] = useState<Event[]>([]);
   const [loadingEvents, setLoadingEvents] = useState<boolean>(true);
+  const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
+  const [loadingQuizStats, setLoadingQuizStats] = useState<boolean>(true);
+
+  // State cho feedback
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(true);
+  const [topRatedServices, setTopRatedServices] = useState<any[]>([]);
+  const [loadingTopServices, setLoadingTopServices] = useState(true);
+  const [services, setServices] = useState<any[]>([]);
+  const [serviceRatings, setServiceRatings] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(true);
 
   // Fetch user statistics
   useEffect(() => {
@@ -204,16 +253,16 @@ const Dashboard = () => {
             setThongKeDoanhThu(prev => ({ ...prev, dangTai: false }));
           }
         } else if (thongKeDoanhThu.loaiThongKe === 'month') {
-          const response = await getMonthlyRevenueApi();
+          const response = await getYearlyRevenueApi();
           
           if (response.success && response.data) {
-            // Lấy dữ liệu theo ngày trong tháng
-            const dailyRevenue = response.data.dailyRevenue || [];
+            // Lấy dữ liệu theo 12 tháng trong năm
+            const monthlyRevenue = response.data.monthlyRevenue || Array(12).fill(0);
             
             setThongKeDoanhThu({
-              tongDoanhThu: response.data.monthlyRevenue || 0,
-              doanhThuTheoNgay: dailyRevenue,
-              soLuongGiaoDich: response.data.count || 0,
+              tongDoanhThu: response.data.yearlyRevenue || 0,
+              doanhThuTheoNgay: monthlyRevenue, // Sử dụng tên cũ nhưng thực chất là monthly data
+              soLuongGiaoDich: response.data.yearlyCount || 0,
               dangTai: false,
               loaiThongKe: 'month',
             });
@@ -275,11 +324,12 @@ const Dashboard = () => {
     const fetchQuizzes = async () => {
       try {
         setLoadingQuizzes(true);
-        const data = await getAllQuizzesApi();
-        // API từ api.ts trả về data trực tiếp, không có wrapper { data: ... }
-        const quizData = Array.isArray(data) ? data : [];
-        console.log('Quiz data from API:', quizData);
-        console.log('Quiz ageGroups:', quizData.map(q => ({ title: q.title, ageGroups: q.ageGroups, isActive: q.isActive })));
+        const response = await getAllQuizzesApi();
+        // API trả về { success: true, data: [...] }
+        const quizData = response.success && response.data ? response.data : [];
+        console.log('Quiz response from API:', response);
+        console.log('Quiz data:', quizData);
+        console.log('Quiz ageGroups:', quizData.map((q: Quiz) => ({ title: q.title, ageGroups: q.ageGroups, isActive: q.isActive })));
         setQuizzes(quizData);
       } catch (e) {
         console.error('Error fetching quizzes:', e);
@@ -307,6 +357,214 @@ const Dashboard = () => {
     fetchEvents();
   }, []);
 
+  // Fetch quiz results statistics
+  useEffect(() => {
+    const fetchQuizStats = async () => {
+      try {
+        setLoadingQuizStats(true);
+        const response = await getQuizResultsStatsApi();
+        console.log('Quiz stats response:', response);
+        if (response.success && response.data) {
+          setQuizStats(response.data);
+        } else {
+          setQuizStats(null);
+        }
+      } catch (error) {
+        console.error('Error fetching quiz stats:', error);
+        setQuizStats(null);
+      } finally {
+        setLoadingQuizStats(false);
+      }
+    };
+    fetchQuizStats();
+  }, []);
+
+  // Lấy toàn bộ feedback
+  useEffect(() => {
+    const fetchFeedbacks = async () => {
+      setLoadingFeedbacks(true);
+      try {
+        const data = await getAllFeedbacksApi();
+        setFeedbacks(Array.isArray(data) ? data : data.data || []);
+      } catch (e) {
+        setFeedbacks([]);
+      } finally {
+        setLoadingFeedbacks(false);
+      }
+    };
+    fetchFeedbacks();
+  }, []);
+
+  // Lấy toàn bộ dịch vụ
+  useEffect(() => {
+    const fetchServices = async () => {
+      setLoadingTopServices(true);
+      try {
+                 const response = await getAllServicesApi() as any;
+         setServices(response?.data || response || []);
+      } catch (e) {
+        setServices([]);
+      } finally {
+        setLoadingTopServices(false);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  // Lấy toàn bộ đánh giá dịch vụ
+  useEffect(() => {
+    const fetchServiceRatings = async () => {
+      setLoadingTopServices(true); // Use loadingTopServices for consistency
+      try {
+        const ratingPromises = (Array.isArray(services) ? services : (services as any)?.data || []).map(async (service: any) => {
+          try {
+            const ratingData = await getServiceRatingApi(service._id);
+            return {
+              service_id: service._id,
+              averageRating: ratingData.averageRating || 0,
+              totalRatings: ratingData.feedbackCount || 0,
+            };
+          } catch {
+            return { service_id: service._id, averageRating: 0, totalRatings: 0 };
+          }
+        });
+        const allRatings = await Promise.all(ratingPromises);
+        setServiceRatings(allRatings);
+      } catch {
+        setServiceRatings([]);
+      } finally {
+        setLoadingTopServices(false);
+      }
+    };
+    fetchServiceRatings();
+  }, [services]);
+
+  // Tính toán top 5 dịch vụ có rating cao nhất
+  useEffect(() => {
+    if (services.length > 0 && serviceRatings.length > 0) {
+      const servicesWithRatings = services.map(service => {
+        const rating = serviceRatings.find(r => r.service_id === service._id);
+        return {
+          ...service,
+          rating: rating ? rating.averageRating : 0,
+          totalRatings: rating ? rating.totalRatings : 0
+        };
+      });
+
+      // Sắp xếp theo rating giảm dần và lấy top 5
+      const top5 = servicesWithRatings
+        .filter(s => s.rating > 0)
+        .sort((a, b) => b.rating - a.rating)
+        .slice(0, 5);
+
+      console.log('Top 5 services with ratings:', top5);
+      setTopRatedServices(top5);
+      setLoadingTopServices(false);
+    }
+  }, [services, serviceRatings]);
+
+  // Fetch payments
+  useEffect(() => {
+    const fetchPayments = async () => {
+      setLoadingPayments(true);
+      try {
+        const response = await getAllPaymentsApi() as any;
+        console.log('Payments API response:', response);
+        setPayments(response?.data || response || []);
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+        setPayments([]);
+      } finally {
+        setLoadingPayments(false);
+      }
+    };
+    fetchPayments();
+  }, []);
+
+  // Xử lý dữ liệu cho Bar Chart thanh toán theo phương thức
+  const paymentMethodMap: { [key: string]: number } = {};
+  payments.forEach(payment => {
+    const method = payment.paymentMethod || 'Unknown';
+    paymentMethodMap[method] = (paymentMethodMap[method] || 0) + 1;
+  });
+
+  const paymentMethodLabels = Object.keys(paymentMethodMap);
+  const paymentMethodData = Object.values(paymentMethodMap);
+
+  const paymentMethodBarData = {
+    labels: paymentMethodLabels,
+    datasets: [
+      {
+        label: 'Số lượt thanh toán',
+        data: paymentMethodData,
+        backgroundColor: [
+          '#0ea5e9', // sky-500
+          '#38bdf8', // sky-400
+          '#7dd3fc', // sky-300
+          '#bae6fd', // sky-200
+          '#e0f2fe', // sky-100
+          '#0284C7', // sky-600
+          '#0369A1', // sky-700
+          '#02799D', // sky-500 (lighter)
+          '#0891B2', // sky-400 (lighter)
+          '#06B6D4', // sky-300 (lighter)
+        ],
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#fff',
+      },
+    ],
+  };
+
+  const paymentMethodBarOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: '#0ea5e9',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: false,
+        callbacks: {
+          title: (context: any) => {
+            const index = context[0].dataIndex;
+            return paymentMethodLabels[index] || '';
+          },
+          label: (context: any) => {
+            return `Số lượt: ${context.parsed.y}`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: '#64748b',
+                     font: {
+             size: 11,
+             weight: 500,
+           },
+          maxRotation: 0,
+          minRotation: 0,
+        },
+        grid: {
+          display: false,
+        },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: '#F3F4F6' },
+        ticks: { stepSize: 1, font: { size: 14 } }
+      }
+    }
+  };
+
   // Xử lý dữ liệu cho Pie Chart trạng thái bài viết
   const blogStatusCount = blogs.reduce<{ [key in Blog['published']]: number }>((acc, blog) => {
     acc[blog.published] = (acc[blog.published] || 0) + 1;
@@ -333,26 +591,45 @@ const Dashboard = () => {
     ],
   };
 
-  // Xử lý dữ liệu cho Bar Chart bài viết theo tháng
+  // Xử lý dữ liệu cho Line Chart bài viết theo tháng
   const publishedBlogs = blogs.filter((blog) => blog.published === 'published');
+  const currentYear = new Date().getFullYear();
+  
+  // Tạo mảng 12 tháng cho năm hiện tại
+  const allMonths = [];
+  for (let month = 1; month <= 12; month++) {
+    const key = `${currentYear}-${month.toString().padStart(2, '0')}`;
+    allMonths.push(key);
+  }
+  
+  // Đếm bài viết theo tháng
   const monthMap: { [key: string]: number } = {};
   publishedBlogs.forEach((blog) => {
     const d = new Date(blog.createdAt);
     const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
     monthMap[key] = (monthMap[key] || 0) + 1;
   });
-  const sortedMonths = Object.keys(monthMap).sort();
-  const blogBarData = {
-    labels: sortedMonths.map((m) => {
+  
+  // Tạo dữ liệu cho 12 tháng, tháng nào không có dữ liệu thì = 0
+  const blogLineData = {
+    labels: allMonths.map((m) => {
       const [y, mo] = m.split('-');
-      return `thg ${mo} ${y}`;
+      return `T${mo}`;
     }),
     datasets: [
       {
         label: 'Số bài viết',
-        data: sortedMonths.map((m) => monthMap[m]),
-        backgroundColor: '#0EA5E9', // sky-500
-        borderRadius: 6,
+        data: allMonths.map((m) => monthMap[m] || 0),
+        borderColor: '#0EA5E9', // sky-500
+        backgroundColor: 'rgba(14, 165, 233, 0.1)', // sky-500 với opacity
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#0EA5E9',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
       },
     ],
   };
@@ -377,6 +654,9 @@ const Dashboard = () => {
     parent: 'Phụ huynh'
   };
 
+  console.log('All quizzes:', quizzes);
+  console.log('Quizzes length:', quizzes.length);
+  
   const quizAgeGroupData = Object.entries(ageGroupMap).map(([key, label]) => {
     // Đếm tất cả quiz có chứa nhóm tuổi này (bao gồm quiz thuộc nhiều nhóm)
     const quizzesInGroup = quizzes.filter(quiz => 
@@ -420,6 +700,40 @@ const Dashboard = () => {
       }
     ]
   };
+
+  // Xử lý dữ liệu cho Pie Chart - Phân tích mức độ rủi ro
+  const riskLevelLabels = {
+    low: 'Rủi ro thấp',
+    moderate: 'Rủi ro trung bình', 
+    high: 'Rủi ro cao',
+    critical: 'Rủi ro nghiêm trọng'
+  };
+
+  const riskLevelColors = {
+    low: '#7DD3FC', // sky-300 (xanh nhạt)
+    moderate: '#0EA5E9', // sky-500 (xanh trung bình)
+    high: '#0284C7', // sky-600 (xanh đậm)
+    critical: '#0369A1' // sky-700 (xanh rất đậm)
+  };
+
+  console.log('Quiz stats:', quizStats);
+  console.log('Risk level distribution:', quizStats?.riskLevelDistribution);
+  
+  const riskLevelPieData = {
+    labels: quizStats?.riskLevelDistribution?.map(item => riskLevelLabels[item._id as keyof typeof riskLevelLabels] || item._id) || [],
+    datasets: [
+      {
+        data: quizStats?.riskLevelDistribution?.map(item => item.count) || [],
+        backgroundColor: quizStats?.riskLevelDistribution?.map(item => 
+          riskLevelColors[item._id as keyof typeof riskLevelColors] || '#6B7280'
+        ) || [],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+      },
+    ],
+  };
+  
+  console.log('Risk level pie data:', riskLevelPieData);
 
   const quizStackedBarOptions = {
     plugins: {
@@ -575,23 +889,19 @@ const Dashboard = () => {
     if (thongKeDoanhThu.loaiThongKe === 'week') {
       return ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
     } else {
-      // Tạo nhãn cho các ngày trong tháng
-      return Array.from({ length: thongKeDoanhThu.doanhThuTheoNgay.length }, (_, i) => `${i + 1}`);
+      // Tên các tháng trong năm
+      return ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
     }
   };
 
   // Hiển thị các cột với số lượng phù hợp
   const visibleData = () => {
-    const labels = getLabels();
     if (thongKeDoanhThu.loaiThongKe === 'week') {
       // Hiển thị đầy đủ 7 ngày trong tuần
       return thongKeDoanhThu.doanhThuTheoNgay.slice(0, 7);
     } else {
-      // Hiển thị 7 ngày gần nhất nếu là view tháng
-      if (thongKeDoanhThu.doanhThuTheoNgay.length > 7) {
-        return thongKeDoanhThu.doanhThuTheoNgay.slice(-7);
-      }
-      return thongKeDoanhThu.doanhThuTheoNgay;
+      // Hiển thị đủ 12 tháng trong năm
+      return thongKeDoanhThu.doanhThuTheoNgay.slice(0, 12);
     }
   };
 
@@ -601,11 +911,8 @@ const Dashboard = () => {
     if (thongKeDoanhThu.loaiThongKe === 'week') {
       return allLabels;
     } else {
-      // Lấy 7 nhãn cuối cùng nếu là view tháng
-      if (allLabels.length > 7) {
-        return allLabels.slice(-7);
-      }
-      return allLabels;
+      // Lấy đủ 12 tháng
+      return allLabels.slice(0, 12);
     }
   };
 
@@ -717,12 +1024,12 @@ const Dashboard = () => {
     },
   };
 
-  // Tùy chỉnh options cho Bar Chart
-  const blogBarOptions = {
+  // Tùy chỉnh options cho Pie Chart - Phân tích mức độ rủi ro
+  const riskLevelPieOptions = {
     plugins: {
       legend: {
         display: true,
-        position: 'top' as const,
+        position: 'bottom' as const,
         labels: {
           font: { size: 14 },
           boxWidth: 18,
@@ -732,9 +1039,24 @@ const Dashboard = () => {
       },
       tooltip: {
         enabled: true,
+        backgroundColor: 'rgba(14, 165, 233, 0.9)', // sky-500 với opacity
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        titleFont: { size: 16, weight: 'bold' as const },
+        bodyFont: { size: 14 },
+        padding: 12,
+        cornerRadius: 8,
         callbacks: {
+          title: function(context: any) {
+            return context[0].label || '';
+          },
           label: function(context: any) {
-            return `Số bài viết: ${context.parsed.y}`;
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const dataset = context.dataset;
+            const total = dataset.data.reduce((acc: number, data: number) => acc + data, 0);
+            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+            return `${value} người (${percentage}% tổng số)`;
           }
         }
       }
@@ -742,15 +1064,40 @@ const Dashboard = () => {
     layout: {
       padding: 20
     },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { font: { size: 14 } }
+  };
+
+  // Tùy chỉnh options cho Line Chart
+  const blogLineOptions = {
+    plugins: {
+      legend: {
+        display: false,
       },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: '#0ea5e9',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: false,
+        callbacks: {
+          title: (context: any) => {
+            return context[0].label;
+          },
+          label: (context: any) => {
+            return `Số bài viết: ${context.parsed.y}`;
+          },
+        },
+      },
+    },
+    scales: {
       y: {
         beginAtZero: true,
         grid: { color: '#F3F4F6' },
         ticks: { stepSize: 1, font: { size: 14 } }
+      },
+      x: {
+        grid: { display: false }
       }
     }
   };
@@ -759,6 +1106,142 @@ const Dashboard = () => {
   const totalRegistrations = events.reduce((sum, event) => sum + (event.registeredCount || 0), 0);
   const maxRegistrations = Math.max(...Object.values(eventRegistrationData()));
   const avgRegistrations = totalRegistrations / 6; // 6 tháng
+
+  // Xử lý dữ liệu cho Pie/Bar Chart phân bố số sao
+  console.log('Feedbacks:', feedbacks);
+  const ratingCounts = [1, 2, 3, 4, 5].map(star => feedbacks.filter(fb => fb.rating === star).length);
+  console.log('ratingCounts:', ratingCounts);
+  const ratingPieData = {
+    labels: ['1 sao', '2 sao', '3 sao', '4 sao', '5 sao'],
+    datasets: [
+      {
+        data: ratingCounts,
+        backgroundColor: [
+          '#bae6fd', // sky-200
+          '#7dd3fc', // sky-300
+          '#38bdf8', // sky-400
+          '#0ea5e9', // sky-500
+          '#0369a1', // sky-700
+        ],
+        borderColor: '#fff',
+        borderWidth: 2,
+      },
+    ],
+  };
+  console.log('ratingPieData:', ratingPieData);
+  const ratingPieOptions = {
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom' as const,
+        labels: { font: { size: 14 }, boxWidth: 18, boxHeight: 18, padding: 18 },
+      },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: function(context: any) {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = context.dataset.data.reduce((acc: number, v: number) => acc + v, 0);
+            const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+            return `${label}: ${value} (${percent}%)`;
+          }
+        }
+      }
+    },
+    layout: { padding: 20 },
+  };
+
+  // Dữ liệu cho Bar Chart top dịch vụ rating
+  // Rút gọn tên dịch vụ để dễ hiển thị
+  const shortenServiceName = (name: string) => {
+    if (name.length > 30) {
+      return name.substring(0, 30) + '...';
+    }
+    return name;
+  };
+
+  // Sửa: trục x chỉ hiện Top 1, Top 2, ...
+  const topServiceBarData = {
+    labels: topRatedServices.map((_, idx) => `Top ${idx + 1}`),
+    datasets: [
+      {
+        label: 'Rating trung bình',
+        data: topRatedServices.map(s => s.rating),
+        backgroundColor: [
+          '#0ea5e9', // sky-500
+          '#38bdf8', // sky-400
+          '#7dd3fc', // sky-300
+          '#bae6fd', // sky-200
+          '#e0f2fe', // sky-100
+        ],
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#fff',
+      },
+    ],
+  };
+
+  // Sửa: tooltip hiện tên dịch vụ thật
+  const topServiceBarOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: '#0ea5e9',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: false,
+        callbacks: {
+          title: (context: any) => {
+            const index = context[0].dataIndex;
+            return topRatedServices[index]?.name || '';
+          },
+          label: (context: any) => {
+            return `Rating: ${context.parsed.y.toFixed(1)}/5`;
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 5,
+        ticks: {
+          stepSize: 1,
+          color: '#64748b',
+          font: {
+            size: 12,
+          },
+        },
+        grid: {
+          color: '#e2e8f0',
+        },
+      },
+      x: {
+        ticks: {
+          color: '#64748b',
+          font: {
+            size: 11,
+            weight: 500,
+          },
+          maxRotation: 0,
+          minRotation: 0,
+        },
+        grid: {
+          display: false,
+        },
+      },
+    },
+  };
+
+
 
   return (
     <div className="space-y-6 mt-4">
@@ -871,49 +1354,141 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="flex justify-around items-end h-full w-full p-4">
-                {visibleData().map((value, index) => {
-                  // Calculate bar height - minimum 15px for visibility
-                  const maxHeight = 150; // Maximum height in pixels
-                  const height = value > 0 
-                    ? Math.max(15, (value / maxValue) * maxHeight) 
-                    : 0;
-                  
-                  return (
-                    <div
-                      key={index}
-                      className="flex flex-col items-center justify-end"
-                      style={{ width: '12%' }} // Wider columns
-                    >
-                      {value > 0 && (
-                        <div className="flex flex-col items-center">
-                          {/* Bar chart - primary part */}
-                          <div
-                            className="w-full bg-gradient-to-t from-sky-600 to-sky-400 rounded-t-md relative group"
-                            style={{ height: `${height}px`, minWidth: '30px' }}
-                          >
-                            {/* Tooltip on hover */}
-                            <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                              {formatCurrency(value)}
-                            </div>
-                          </div>
-                          
-                          {/* Decorative part */}
-                          <div
-                            className="w-full bg-sky-300 rounded-b-md mt-0.5"
-                            style={{ height: '5px', minWidth: '30px' }}
-                          ></div>
-                        </div>
-                      )}
-                      
-                      {/* Label */}
-                      <span className="text-sm font-medium text-gray-700 mt-2">
-                        {visibleLabels()[index]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              {thongKeDoanhThu.loaiThongKe === 'week' ? (
+                // Line chart cho tuần sử dụng Chart.js
+                <div className="h-60 w-full">
+                  <Line 
+                    data={{
+                      labels: visibleLabels(),
+                      datasets: [
+                        {
+                          label: 'Doanh thu',
+                          data: visibleData(),
+                          borderColor: '#0EA5E9', // sky-500
+                          backgroundColor: 'rgba(14, 165, 233, 0.2)', // sky-500 nhạt trong suốt
+                          borderWidth: 3,
+                          fill: true,
+                          tension: 0.4,
+                          pointBackgroundColor: '#0EA5E9',
+                          pointBorderColor: '#fff',
+                          pointBorderWidth: 2,
+                          pointRadius: 5,
+                          pointHoverRadius: 8,
+                        },
+                      ],
+                    }}
+                    options={{
+                      plugins: {
+                        legend: {
+                          display: false,
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          titleColor: '#fff',
+                          bodyColor: '#fff',
+                          borderColor: '#0ea5e9',
+                          borderWidth: 1,
+                          cornerRadius: 8,
+                          displayColors: false,
+                          callbacks: {
+                            title: (context: any) => {
+                              return context[0].label;
+                            },
+                            label: (context: any) => {
+                              return `Doanh thu: ${formatCurrency(context.parsed.y)}`;
+                            },
+                          },
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: { color: '#F3F4F6' },
+                          ticks: { 
+                            stepSize: Math.max(1, Math.ceil(maxValue / 5)),
+                            font: { size: 12 },
+                            callback: function(value: any) {
+                              return formatCurrency(value);
+                            }
+                          }
+                        },
+                        x: {
+                          grid: { display: false }
+                        }
+                      },
+                      responsive: true,
+                      maintainAspectRatio: false,
+                    }}
+                  />
+                </div>
+              ) : (
+                // Line chart cho tháng sử dụng Chart.js
+                <div className="h-60 w-full">
+                  <Line 
+                    data={{
+                      labels: visibleLabels(),
+                      datasets: [
+                        {
+                          label: 'Doanh thu',
+                          data: visibleData(),
+                          borderColor: '#0EA5E9', // sky-500
+                          backgroundColor: 'rgba(14, 165, 233, 0.2)', // sky-500 nhạt trong suốt
+                          borderWidth: 3,
+                          fill: true,
+                          tension: 0.4,
+                          pointBackgroundColor: '#0EA5E9',
+                          pointBorderColor: '#fff',
+                          pointBorderWidth: 2,
+                          pointRadius: 5,
+                          pointHoverRadius: 8,
+                        },
+                      ],
+                    }}
+                    options={{
+                      plugins: {
+                        legend: {
+                          display: false,
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          titleColor: '#fff',
+                          bodyColor: '#fff',
+                          borderColor: '#0ea5e9',
+                          borderWidth: 1,
+                          cornerRadius: 8,
+                          displayColors: false,
+                          callbacks: {
+                            title: (context: any) => {
+                              return context[0].label;
+                            },
+                            label: (context: any) => {
+                              return `Doanh thu: ${formatCurrency(context.parsed.y)}`;
+                            },
+                          },
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: { color: '#F3F4F6' },
+                          ticks: { 
+                            stepSize: Math.max(1, Math.ceil(maxValue / 5)),
+                            font: { size: 12 },
+                            callback: function(value: any) {
+                              return formatCurrency(value);
+                            }
+                          }
+                        },
+                        x: {
+                          grid: { display: false }
+                        }
+                      },
+                      responsive: true,
+                      maintainAspectRatio: false,
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1003,54 +1578,86 @@ const Dashboard = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
             </div>
           ) : (
-            <Bar data={blogBarData} options={blogBarOptions} style={{ maxHeight: 320 }} />
+            <Line data={blogLineData} options={blogLineOptions} style={{ maxHeight: 320 }} />
           )}
         </div>
       </div>
 
       {/* Top Tác giả */}
-      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8">
+      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8 border border-sky-100">
         <div className="flex items-center gap-2 mb-4">
-          <h3 className="text-lg font-bold text-gray-800">Top Tác giả</h3>
+          <h3 className="text-lg font-bold text-sky-700 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Top Tác giả
+          </h3>
         </div>
         {topAuthors.length === 0 ? (
-          <div className="text-gray-500 text-center">Chưa có dữ liệu</div>
+          <div className="text-sky-400 text-center">Chưa có dữ liệu</div>
         ) : (
           topAuthors.map((author, idx) => (
-            <div key={author.name} className="mb-4 last:mb-0 bg-amber-50 rounded-xl px-4 py-3 relative">
+            <div key={author.name} className="mb-4 last:mb-0 bg-white rounded-xl px-4 py-3 relative border border-sky-50 shadow-sm">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm text-gray-500 font-medium">#{idx + 1}</span>
-                <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">{author.count} bài</span>
+                <span className="text-sm text-sky-500 font-semibold">#{idx + 1}</span>
+                <span className="text-xs bg-sky-100 text-sky-700 rounded-full px-2 py-0.5 font-medium">{author.count} bài</span>
               </div>
-              <div className="font-medium text-sm text-amber-900 mb-1">{author.name}</div>
-              <div className="w-full h-2 bg-amber-100 rounded-full">
-                <div className="h-2 bg-amber-500 rounded-full" style={{ width: `${(author.count / maxCount) * 100}%` }}></div>
+              <div className="font-medium text-base text-sky-800 mb-1">{author.name}</div>
+              <div className="w-full h-2 bg-sky-100 rounded-full">
+                <div className="h-2 bg-sky-400 rounded-full" style={{ width: `${(author.count / maxCount) * 100}%` }}></div>
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Quiz Stacked Bar Chart */}
-      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8">
-        <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Quiz theo nhóm tuổi và trạng thái</h2>
-        {loadingQuizzes ? (
-          <div className="flex justify-center items-center h-60">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
-          </div>
-        ) : (
-          <Bar data={quizStackedBarData} options={quizStackedBarOptions} style={{ maxHeight: 400 }} />
-        )}
-        {!loadingQuizzes && (
-          <div className="mt-4 flex justify-between items-center bg-gray-50 p-3 rounded-lg">
-            <div className="text-base font-medium text-gray-700">
-              Tổng quiz: <span className="font-bold text-sky-600 text-lg">{quizzes.length}</span>
+      {/* Quiz Charts - 2 columns layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        {/* Quiz Stacked Bar Chart */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg">
+          <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Quiz theo nhóm tuổi và trạng thái</h2>
+          {loadingQuizzes ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
             </div>
-            <div className="text-base font-medium text-gray-700">
-              Đang hoạt động: <span className="font-bold text-sky-600 text-lg">{quizzes.filter(q => q.isActive).length}</span>
+          ) : (
+            <Bar data={quizStackedBarData} options={quizStackedBarOptions} style={{ maxHeight: 400 }} />
+          )}
+          {!loadingQuizzes && (
+            <div className="mt-4 flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+              <div className="text-base font-medium text-gray-700">
+                Tổng quiz: <span className="font-bold text-sky-600 text-lg">{quizzes.length}</span>
+              </div>
+              <div className="text-base font-medium text-gray-700">
+                Đang hoạt động: <span className="font-bold text-sky-600 text-lg">{quizzes.filter(q => q.isActive).length}</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Phân tích mức độ rủi ro Pie Chart */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg">
+          <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Phân tích mức độ rủi ro từ kết quả đánh giá</h2>
+          {loadingQuizStats ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+            </div>
+          ) : quizStats && quizStats.riskLevelDistribution && quizStats.riskLevelDistribution.length > 0 ? (
+            <>
+              <Pie data={riskLevelPieData} options={riskLevelPieOptions} style={{ maxHeight: 400 }} />
+              <div className="mt-4 flex justify-between items-center bg-sky-50 p-3 rounded-lg border border-sky-200">
+                <div className="text-base font-medium text-gray-700">
+                  Tổng người đánh giá: <span className="font-bold text-sky-600 text-lg">{quizStats.totalResults}</span>
+                </div>
+                <div className="text-base font-medium text-gray-700">
+                  Điểm trung bình: <span className="font-bold text-sky-600 text-lg">{quizStats.scoreStats.average.toFixed(1)}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-center items-center h-60">
+              <p className="text-gray-500">Chưa có dữ liệu kết quả đánh giá</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Event Registration Trend Line Chart */}
@@ -1079,6 +1686,43 @@ const Dashboard = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Service Feedback Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+        {/* Pie Chart - Phân bố số sao feedback */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center">
+          <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Phân bố đánh giá dịch vụ</h2>
+          {loadingFeedbacks ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+            </div>
+          ) : (
+            <Pie data={ratingPieData} options={ratingPieOptions} style={{ maxHeight: 320 }} />
+          )}
+        </div>
+        {/* Bar Chart - Top dịch vụ rating */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center">
+          <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Top dịch vụ được đánh giá cao</h2>
+          {loadingTopServices ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+            </div>
+          ) : (
+            <Bar data={topServiceBarData} options={topServiceBarOptions} style={{ maxHeight: 320 }} />
+          )}
+        </div>
+        {/* Payment Method Bar Chart */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center">
+          <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Thanh toán theo phương thức</h2>
+          {loadingPayments ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+            </div>
+          ) : (
+            <Bar data={paymentMethodBarData} options={paymentMethodBarOptions} style={{ maxHeight: 320 }} />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -13,6 +13,6 @@ router.put("/meet-link/:id", authMiddleware,roleMiddleware(["admin","consultant"
 router.get("/user/:id", getAppointmentByUserId);
 router.get("/consultant/:id", getAppointmentByConsultantId);
 router.get("/slotTime/:id", getAppointmentBySlotTimeId);
-router.delete("/:id", authMiddleware,roleMiddleware(["admin","consultant"]), deleteAppointment);
+router.delete("/:id", authMiddleware,roleMiddleware(["admin","consultant","customer"]), deleteAppointment);
 
 export default router;

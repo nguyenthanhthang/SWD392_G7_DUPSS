@@ -48,8 +48,9 @@ export const getAllEvents = async (
         const eventObj = event.toObject();
         // Map lại sponsors để trả về đầy đủ thông tin
         const sponsors = (eventObj.sponsors || []).map((s: any) => ({
-          logo: s.sponsorId?.logo || '',
+          sponsorId: s.sponsorId?._id || s.sponsorId || '',
           name: s.sponsorId?.name || '',
+          logo: s.sponsorId?.logo || '',
           tier: s.tier,
           donation: s.donation
         }));
@@ -88,8 +89,9 @@ export const getEventById = async (
     const eventObj = event.toObject();
     // Map lại sponsors để trả về đầy đủ thông tin
     const sponsors = (eventObj.sponsors || []).map((s: any) => ({
-      logo: s.sponsorId?.logo || '',
+      sponsorId: s.sponsorId?._id || s.sponsorId || '',
       name: s.sponsorId?.name || '',
+      logo: s.sponsorId?.logo || '',
       tier: s.tier,
       donation: s.donation
     }));
