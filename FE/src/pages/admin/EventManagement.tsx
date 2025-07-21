@@ -300,10 +300,14 @@ const EventFormModal = ({
       toast.error('Nhà tài trợ này đã được thêm vào sự kiện');
       return;
     }
+    // Lấy thông tin sponsor từ danh sách availableSponsors
+    const sponsorObj = availableSponsors.find(sp => sp._id === selectedSponsorId);
     const newEventSponsor: EventSponsor = {
       sponsorId: selectedSponsorId,
       donation: sponsorDonation.trim(),
-      tier: sponsorTier
+      tier: sponsorTier,
+      name: sponsorObj?.name || '', // Thêm name để hiển thị đúng
+      logo: sponsorObj?.logo || '' // Thêm logo nếu có
     };
     setFormData(prev => ({
       ...prev,
@@ -314,11 +318,11 @@ const EventFormModal = ({
     setSponsorTier("Bronze");
   };
 
-  // Remove sponsor from event
-  const handleRemoveSponsor = (sponsorId: string) => {
+  // Remove sponsor from event (xóa theo index)
+  const handleRemoveSponsor = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      sponsors: prev.sponsors.filter(s => s.sponsorId !== sponsorId)
+      sponsors: prev.sponsors.filter((_, i) => i !== index)
     }));
   };
 
@@ -337,6 +341,15 @@ const EventFormModal = ({
 
   useEffect(() => {
     if (event && isEditing) {
+      // Map lại sponsor để bổ sung name/logo
+      const sponsorsWithName = (event.sponsors || []).map(s => {
+        const sponsorObj = availableSponsors.find(sp => sp._id === s.sponsorId);
+        return {
+          ...s,
+          name: sponsorObj?.name || '',
+          logo: sponsorObj?.logo || ''
+        };
+      });
       setFormData({
         title: event.title,
         description: event.description,
@@ -347,7 +360,7 @@ const EventFormModal = ({
         location: event.location,
         capacity: event.capacity,
         image: event.image || "",
-        sponsors: event.sponsors || []
+        sponsors: sponsorsWithName
       });
     } else {
       // Set default times for new events
@@ -656,11 +669,11 @@ const EventFormModal = ({
                 {formData.sponsors.map((s, index) => (
                   <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border">
                     <div className="flex items-center space-x-3">
-                      {s.logo && (
-                        <img src={s.logo} alt={s.name} className="w-8 h-8 rounded-full object-cover" />
+                      {(s.logo || availableSponsors.find(sp => sp._id === s.sponsorId)?.logo) && (
+                        <img src={s.logo || availableSponsors.find(sp => sp._id === s.sponsorId)?.logo} alt={s.name || availableSponsors.find(sp => sp._id === s.sponsorId)?.name || 'Unknown Sponsor'} className="w-8 h-8 rounded-full object-cover" />
                       )}
                       <div>
-                        <div className="font-medium">{s.name || 'Unknown Sponsor'}</div>
+                        <div className="font-medium">{s.name || availableSponsors.find(sp => sp._id === s.sponsorId)?.name || 'Unknown Sponsor'}</div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -677,7 +690,7 @@ const EventFormModal = ({
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleRemoveSponsor(s.sponsorId || s._id || '')}
+                        onClick={() => handleRemoveSponsor(index)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <FiX size={16} />
@@ -1186,7 +1199,11 @@ const AdminEventManagement = () => {
         location: formData.location,
         capacity: formData.capacity,
         image: formData.image,
-        sponsors: formData.sponsors
+        sponsors: formData.sponsors.map(s => ({
+          sponsorId: s.sponsorId,
+          donation: s.donation,
+          tier: s.tier
+        }))
       };
       
       await createEventApi(payload);
@@ -1212,7 +1229,13 @@ const AdminEventManagement = () => {
         registrationStartDate: new Date(formData.registrationStartDate),
         registrationEndDate: new Date(formData.registrationEndDate),
         location: formData.location,
-        capacity: formData.capacity
+        capacity: formData.capacity,
+        image: formData.image,
+        sponsors: formData.sponsors.map(s => ({
+          sponsorId: s.sponsorId,
+          donation: s.donation,
+          tier: s.tier
+        }))
       });
       toast.success("Cập nhật sự kiện thành công!");
       setShowEventForm(false);

@@ -21,7 +21,7 @@ router.get('/event/:eventId', getSponsorsByEvent);
 router.get('/:id', getSponsorById);
 
 // Tạo sponsor mới
-router.post('/',authMiddleware, createSponsor);
+router.post('/', createSponsor);
 
 // Xóa sponsor
 router.delete('/:id',authMiddleware, roleMiddleware(["admin"]), deleteSponsor);
