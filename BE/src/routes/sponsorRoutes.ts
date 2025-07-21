@@ -21,10 +21,10 @@ router.get('/event/:eventId', getSponsorsByEvent);
 router.get('/:id', getSponsorById);
 
 // Tạo sponsor mới
-router.post('/',authMiddleware,roleMiddleware(["admin"]), createSponsor);
+router.post('/',authMiddleware, createSponsor);
 
 // Xóa sponsor
-router.delete('/:id',authMiddleware,roleMiddleware(["admin"]), deleteSponsor);
+router.delete('/:id',authMiddleware, roleMiddleware(["admin"]), deleteSponsor);
 
 // Lấy thống kê sponsors
 router.get('/stats/ranking', getSponsorStats);
