@@ -265,6 +265,7 @@ const EventFormModal = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(newSponsor),
       });
@@ -275,6 +276,9 @@ const EventFormModal = ({
         setNewSponsor({ name: "", email: "", logo: "" });
         setShowNewSponsorForm(false);
         toast.success('Tạo nhà tài trợ thành công!');
+        fetchSponsors(); // Luôn refetch lại danh sách sponsor sau khi tạo mới
+        // Tự động chọn sponsor vừa tạo
+        setSelectedSponsorId(createdSponsor._id);
       } else {
         // Lấy lỗi message từ BE
         const errorData = await response.json();
@@ -290,8 +294,12 @@ const EventFormModal = ({
 
   // Add sponsor to event
   const handleAddSponsor = () => {
-    if (!selectedSponsorId || !sponsorDonation.trim()) {
-      toast.error('Vui lòng chọn nhà tài trợ và nhập nội dung tài trợ');
+    if (!selectedSponsorId) {
+      toast.error('Vui lòng chọn nhà tài trợ!');
+      return;
+    }
+    if (!sponsorDonation.trim()) {
+      toast.error('Vui lòng nhập nội dung tài trợ');
       return;
     }
     const existingSponsor = formData.sponsors.find(s => s.sponsorId === selectedSponsorId);
@@ -662,17 +670,23 @@ const EventFormModal = ({
             </div>
 
             {/* Selected Sponsors List */}
-            {formData.sponsors.length > 0 && (
-              <div className="space-y-2">
-                <h5 className="font-medium text-gray-700">Danh sách nhà tài trợ:</h5>
-                {formData.sponsors.map((s, index) => (
+            {formData.sponsors.length === 0 ? (
+              <div className="text-gray-500 italic">Chưa có nhà tài trợ nào</div>
+            ) : availableSponsors.length === 0 ? (
+              <div className="text-gray-500 italic">Đang tải...</div>
+            ) : (
+              formData.sponsors.map((s, index) => {
+                // Ép kiểu sponsorId và _id về string để so sánh
+                const sponsorIdStr = s.sponsorId ? s.sponsorId.toString() : '';
+                const sponsorObj = availableSponsors.find(sp => sp._id.toString() === sponsorIdStr);
+                return (
                   <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border">
                     <div className="flex items-center space-x-3">
-                      {(s.logo || availableSponsors.find(sp => sp._id === s.sponsorId)?.logo) && (
-                        <img src={s.logo || availableSponsors.find(sp => sp._id === s.sponsorId)?.logo} alt={s.name || availableSponsors.find(sp => sp._id === s.sponsorId)?.name || 'Unknown Sponsor'} className="w-8 h-8 rounded-full object-cover" />
+                      {(s.logo || sponsorObj?.logo) && (
+                        <img src={s.logo || sponsorObj?.logo} alt={s.name || sponsorObj?.name || 'Unknown Sponsor'} className="w-8 h-8 rounded-full object-cover" />
                       )}
                       <div>
-                        <div className="font-medium">{s.name || availableSponsors.find(sp => sp._id === s.sponsorId)?.name || 'Unknown Sponsor'}</div>
+                        <div className="font-medium">{s.name || sponsorObj?.name || 'Unknown Sponsor'}</div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -696,8 +710,8 @@ const EventFormModal = ({
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })
             )}
           </div>
 
