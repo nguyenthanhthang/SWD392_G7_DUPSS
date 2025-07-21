@@ -1153,8 +1153,6 @@ const Dashboard = () => {
   };
 
   // Dữ liệu cho Bar Chart top dịch vụ rating
-  console.log('topRatedServices:', topRatedServices);
-  
   // Rút gọn tên dịch vụ để dễ hiển thị
   const shortenServiceName = (name: string) => {
     if (name.length > 30) {
@@ -1163,8 +1161,9 @@ const Dashboard = () => {
     return name;
   };
 
+  // Sửa: trục x chỉ hiện Top 1, Top 2, ...
   const topServiceBarData = {
-    labels: topRatedServices.map(s => shortenServiceName(s.name)),
+    labels: topRatedServices.map((_, idx) => `Top ${idx + 1}`),
     datasets: [
       {
         label: 'Rating trung bình',
@@ -1183,6 +1182,7 @@ const Dashboard = () => {
     ],
   };
 
+  // Sửa: tooltip hiện tên dịch vụ thật
   const topServiceBarOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -1227,10 +1227,10 @@ const Dashboard = () => {
       x: {
         ticks: {
           color: '#64748b',
-                     font: {
-             size: 11,
-             weight: 500,
-           },
+          font: {
+            size: 11,
+            weight: 500,
+          },
           maxRotation: 0,
           minRotation: 0,
         },
