@@ -511,61 +511,47 @@ const AppointmentsPage = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        {/* Pending */}
-        <div
-          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
-          onClick={() => setFilterStatus('pending')}
-        >
-          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
-            <Clock className="w-5 h-5 text-sky-600" />
+        {/* Chờ xác nhận */}
+        <div className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-gray-100'}`}
+          onClick={() => setFilterStatus('pending')}>
+          <div className="p-2.5 bg-yellow-50 rounded-full mb-2 flex items-center justify-center">
+            <Clock className="w-5 h-5 text-yellow-500" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Chờ xác nhận</p>
           <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'pending').length}</p>
         </div>
-        
-        {/* Confirmed */}
-        <div
-          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'confirmed' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
-          onClick={() => setFilterStatus('confirmed')}
-        >
-          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
-            <CheckCircle className="w-5 h-5 text-sky-600" />
+        {/* Đã xác nhận */}
+        <div className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'confirmed' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-gray-100'}`}
+          onClick={() => setFilterStatus('confirmed')}>
+          <div className="p-2.5 bg-sky-50 rounded-full mb-2 flex items-center justify-center">
+            <CheckCircle className="w-5 h-5 text-sky-500" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã xác nhận</p>
           <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'confirmed').length}</p>
         </div>
-        
-        {/* Completed */}
-        <div
-          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'completed' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
-          onClick={() => setFilterStatus('completed')}
-        >
-          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
-            <CheckCircle className="w-5 h-5 text-sky-600" />
+        {/* Đã hoàn thành */}
+        <div className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'completed' ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-100'}`}
+          onClick={() => setFilterStatus('completed')}>
+          <div className="p-2.5 bg-green-50 rounded-full mb-2 flex items-center justify-center">
+            <CheckCircle className="w-5 h-5 text-green-500" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã hoàn thành</p>
           <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'completed').length}</p>
         </div>
-        
-        {/* Cancelled */}
-        <div
-          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'cancelled' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
-          onClick={() => setFilterStatus('cancelled')}
-        >
-          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
-            <X className="w-5 h-5 text-sky-600" />
+        {/* Đã hủy */}
+        <div className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'cancelled' ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-100'}`}
+          onClick={() => setFilterStatus('cancelled')}>
+          <div className="p-2.5 bg-red-50 rounded-full mb-2 flex items-center justify-center">
+            <X className="w-5 h-5 text-red-500" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã hủy</p>
           <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'cancelled').length}</p>
         </div>
-
-        {/* Rescheduled */}
-        <div
-          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'rescheduled' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
-          onClick={() => setFilterStatus('rescheduled')}
-        >
-          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
-            <RefreshCcw className="w-5 h-5 text-sky-600" />
+        {/* Đã đổi lịch */}
+        <div className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'rescheduled' ? 'border-gray-400 ring-2 ring-gray-200' : 'border-gray-100'}`}
+          onClick={() => setFilterStatus('rescheduled')}>
+          <div className="p-2.5 bg-gray-50 rounded-full mb-2 flex items-center justify-center">
+            <RefreshCcw className="w-5 h-5 text-gray-400" />
           </div>
           <p className="text-sm text-gray-600 mb-1">Đã đổi lịch</p>
           <p className="text-xl font-bold text-gray-900">{appointments.filter(a => normalizeStatus(a.status) === 'rescheduled').length}</p>
@@ -969,3 +955,5 @@ const AppointmentsPage = () => {
 };
 
 export default AppointmentsPage;
+
+

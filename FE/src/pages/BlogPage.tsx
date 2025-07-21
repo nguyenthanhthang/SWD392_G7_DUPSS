@@ -384,7 +384,6 @@ function BlogPage() {
                 </Link>
               ))}
             </div>
-
             {/* Pagination - Blue theme */}
             {filteredBlogs.length > blogsPerPage && (
               <div className="flex justify-center mt-12">
@@ -433,6 +432,129 @@ function BlogPage() {
                 </nav>
               </div>
             )}
+
+            {/* PHẦN MỚI: Bài viết theo 3 chủ đề nhiều nhất */}
+            {(() => {
+              // Đếm số lượng bài viết theo từng chủ đề
+              const topicCount: Record<string, number> = {};
+              blogs.forEach(blog => {
+                blog.topics?.forEach(topic => {
+                  topicCount[topic] = (topicCount[topic] || 0) + 1;
+                });
+              });
+              // Lấy 3 chủ đề nhiều bài nhất
+              const topTopics = Object.entries(topicCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([topic]) => topic);
+              if (topTopics.length === 0) return null;
+              return (
+                <div className="mt-16">
+                  <h2 className="text-2xl font-bold text-blue-800 mb-6 border-l-4 border-cyan-500 pl-4 bg-cyan-50 py-2 rounded-r-lg shadow-sm">
+                    Bài viết theo chủ đề nổi bật
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {topTopics.map(topic => {
+                      const topicBlogs = blogs.filter(blog => blog.topics?.includes(topic)).slice(0, 3);
+                      return (
+                        <div key={topic} className="bg-white rounded-xl shadow-md p-6 border border-cyan-100 flex flex-col">
+                          <div className="flex items-center mb-4">
+                            <span className="text-lg font-semibold text-cyan-700 bg-cyan-50 px-4 py-1 rounded-full">{topic}</span>
+                          </div>
+                          <div className="space-y-4">
+                            {topicBlogs.map(blog => (
+                              <Link
+                                key={blog._id}
+                                to={'/blogs/' + blog._id}
+                                className="flex items-center gap-3 hover:bg-cyan-50 rounded-lg p-3 transition"
+                              >
+                                {/* Ảnh thu nhỏ vuông */}
+                                {blog.image || blog.thumbnail ? (
+                                  <img
+                                    src={blog.image || blog.thumbnail}
+                                    alt={blog.title}
+                                    className="w-16 h-16 object-cover rounded-lg flex-shrink-0 border border-cyan-100 bg-white"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 flex items-center justify-center bg-cyan-50 rounded-lg flex-shrink-0 border border-cyan-100">
+                                    <svg className="w-8 h-8 text-cyan-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    </svg>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-blue-900 line-clamp-2 mb-1">{blog.title}</div>
+                                  <div className="text-xs text-gray-500 mb-1">{formatDate(blog.createdAt)}</div>
+                                  <div className="text-xs text-cyan-700">{blog.anDanh ? 'Ẩn danh' : (blog.authorId?.fullName || 'Không xác định')}</div>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+            {/* KẾT THÚC PHẦN MỚI */}
+
+            {/* Tiêu đề Top Tác giả vàng nhạt, căn lề trái, ngoài khung */}
+            <div className="mt-20 mb-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 bg-yellow-50 text-yellow-700 border-l-4 border-yellow-300 rounded-r-lg py-2 px-6 w-full max-w-max shadow-sm">
+                <svg className="w-6 h-6 text-yellow-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Top Tác giả
+              </h3>
+            </div>
+            {/* PHẦN MỚI: Top Tác giả (không tính bài ẩn danh, podium 3 cột) */}
+            {(() => {
+              // Lọc các blog không ẩn danh
+              const nonAnonymousBlogs = blogs.filter(blog => blog.anDanh === false);
+              // Đếm số bài viết theo tác giả
+              const authorMap: Record<string, { name: string; count: number }> = {};
+              nonAnonymousBlogs.forEach(blog => {
+                const id = blog.authorId?._id || 'unknown';
+                const name = blog.authorId?.fullName || blog.authorId?.username || 'Không rõ';
+                if (!authorMap[id]) authorMap[id] = { name, count: 0 };
+                authorMap[id].count++;
+              });
+              const topAuthors = Object.values(authorMap)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 3);
+              const maxCount = topAuthors[0]?.count || 1;
+              if (topAuthors.length === 0) return null;
+              // Sắp xếp lại cho podium: #2, #1, #3
+              const podium = [topAuthors[1], topAuthors[0], topAuthors[2]];
+              const podiumRanks = [2, 1, 3];
+              const podiumColors = [
+                'bg-gray-200 text-gray-700', // #2
+                'bg-yellow-300 text-yellow-900 border-2 border-yellow-400 shadow-lg', // #1
+                'bg-rose-200 text-rose-700', // #3
+              ];
+              return (
+                <div className="bg-white p-8 rounded-2xl shadow-lg border border-sky-100">
+                  <div className="flex flex-col sm:flex-row justify-center items-end gap-4">
+                    {podium.map((author, idx) => (
+                      author ? (
+                        <div key={idx} className={`flex-1 flex flex-col items-center justify-end ${podiumColors[idx]} rounded-xl px-4 pt-4 pb-2 relative min-w-[100px] max-w-[180px] ${idx === 1 ? 'z-10 scale-110 shadow-xl' : 'opacity-90'} transition-all`} style={{height: idx === 1 ? 180 : 140}}>
+                          <div className={`absolute -top-7 left-1/2 -translate-x-1/2 w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg border-4 ${idx === 1 ? 'bg-yellow-400 border-yellow-300 text-yellow-900 shadow' : idx === 0 ? 'bg-gray-300 border-gray-200 text-gray-700' : 'bg-rose-300 border-rose-200 text-rose-700'}`}>#{podiumRanks[idx]}</div>
+                          <div className="font-semibold text-base mt-6 text-center break-words">{author.name}</div>
+                          <div className="text-xs font-medium mt-1 mb-2">{author.count} bài viết</div>
+                          {idx === 1 && (
+                            <svg className="w-8 h-8 text-yellow-400 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.09 6.26L20 9.27l-5 3.64L16.18 20 12 16.77 7.82 20 9 12.91l-5-3.64 5.91-.01z"/></svg>
+                          )}
+                        </div>
+                      ) : (
+                        <div key={idx} className="flex-1 min-w-[100px] max-w-[180px]" />
+                      )
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+            {/* KẾT THÚC PHẦN MỚI */}
+
+            
           </>
         )}
       </div>

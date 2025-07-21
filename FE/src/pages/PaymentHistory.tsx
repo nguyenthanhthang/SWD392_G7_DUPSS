@@ -103,50 +103,43 @@ const PaymentHistory = () => {
 
   return (
     <div className="px-3 py-3">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+      {/* Tiêu đề */}
+      <div className="font-semibold text-sky-700 mb-4 text-lg">Lịch sử thanh toán</div>
+      {/* Stats Cards - Bộ lọc trạng thái */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         {/* Tất cả */}
-        <button
-          type="button"
+        <div
+          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'all' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
           onClick={() => setFilterStatus('all')}
-          className={`group relative bg-gradient-to-br from-blue-50 to-white rounded-xl p-4 shadow border flex flex-row items-center gap-4 transition-all focus:outline-none hover:shadow-md hover:scale-[1.03] active:scale-100 ${filterStatus === 'all' ? 'ring-2 ring-blue-400 border-blue-300' : 'border-gray-200'}`}
         >
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 group-hover:bg-blue-200 transition-all">
-            <List className="w-7 h-7 text-blue-500" />
+          <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+            <List className="w-5 h-5 text-sky-600" />
           </div>
-          <div className="flex flex-col items-start flex-1">
-            <span className="text-sm text-gray-500 font-medium">Tất cả</span>
-            <span className="text-2xl font-bold text-blue-700">{stats.total}</span>
-          </div>
-        </button>
+          <p className="text-sm text-gray-600 mb-1">Tất cả</p>
+          <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+        </div>
         {/* Đã thanh toán */}
-        <button
-          type="button"
+        <div
+          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'completed' ? 'border-green-500 ring-2 ring-green-200' : 'border-sky-100'}`}
           onClick={() => setFilterStatus('completed')}
-          className={`group relative bg-gradient-to-br from-green-50 to-white rounded-xl p-4 shadow border flex flex-row items-center gap-4 transition-all focus:outline-none hover:shadow-md hover:scale-[1.03] active:scale-100 ${filterStatus === 'completed' ? 'ring-2 ring-green-400 border-green-300' : 'border-gray-200'}`}
         >
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 group-hover:bg-green-200 transition-all">
-            <CheckCircle2 className="w-7 h-7 text-green-500" />
+          <div className="p-2.5 bg-gradient-to-r from-green-50 to-green-100 rounded-full mb-2 flex items-center justify-center">
+            <CheckCircle2 className="w-5 h-5 text-green-600" />
           </div>
-          <div className="flex flex-col items-start flex-1">
-            <span className="text-sm text-gray-500 font-medium">Đã thanh toán</span>
-            <span className="text-2xl font-bold text-green-700">{stats.completed}</span>
-          </div>
-        </button>
+          <p className="text-sm text-gray-600 mb-1">Đã thanh toán</p>
+          <p className="text-xl font-bold text-gray-900">{stats.completed}</p>
+        </div>
         {/* Chưa thanh toán */}
-        <button
-          type="button"
+        <div
+          className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-sky-100'}`}
           onClick={() => setFilterStatus('pending')}
-          className={`group relative bg-gradient-to-br from-yellow-50 to-white rounded-xl p-4 shadow border flex flex-row items-center gap-4 transition-all focus:outline-none hover:shadow-md hover:scale-[1.03] active:scale-100 ${filterStatus === 'pending' ? 'ring-2 ring-yellow-400 border-yellow-300' : 'border-gray-200'}`}
         >
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-yellow-100 group-hover:bg-yellow-200 transition-all">
-            <Clock className="w-7 h-7 text-yellow-500" />
+          <div className="p-2.5 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-full mb-2 flex items-center justify-center">
+            <Clock className="w-5 h-5 text-yellow-600" />
           </div>
-          <div className="flex flex-col items-start flex-1">
-            <span className="text-sm text-gray-500 font-medium">Chưa thanh toán</span>
-            <span className="text-2xl font-bold text-yellow-700">{stats.pending}</span>
-          </div>
-        </button>
+          <p className="text-sm text-gray-600 mb-1">Chưa thanh toán</p>
+          <p className="text-xl font-bold text-gray-900">{stats.pending}</p>
+        </div>
       </div>
       {/* Filters & Search */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">

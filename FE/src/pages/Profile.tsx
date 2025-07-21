@@ -103,6 +103,15 @@ export default function Profile() {
   const [showQR, setShowQR] = useState<{ open: boolean; qr?: string } | null>(null);
   const handleOpenQR = (qr: string) => setShowQR({ open: true, qr });
   const handleCloseQR = () => setShowQR(null);
+  const [eventFilterStatus, setEventFilterStatus] = useState('all');
+  const [eventFilterKeyword, setEventFilterKeyword] = useState('');
+  const filteredEvents = registeredEvents.filter(ev => {
+    const matchStatus = eventFilterStatus === 'all' || ev.status === eventFilterStatus;
+    const matchKeyword = ev.title.toLowerCase().includes(eventFilterKeyword.toLowerCase());
+    return matchStatus && matchKeyword;
+  });
+  const [eventDangXem, setEventDangXem] = useState<Event | null>(null);
+  const [modalEvent, setModalEvent] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -318,7 +327,7 @@ export default function Profile() {
     }
   }, [authUser]);
 
-  const handleUnregister = async (eventId: string, registrationEndDate: string) => {
+  const handleUnregister = async (eventId: string, registrationEndDate: string, userId: string = '', event: Event) => {
     if (!authUser) return;
 
     // Kiểm tra thời gian đăng ký
@@ -332,8 +341,8 @@ export default function Profile() {
 
     try {
       await unregisterEventApi(eventId, authUser._id);
-      setRegisteredEvents(prev => prev.map(event => 
-        event._id === eventId ? { ...event, isCancelled: true } : event
+      setRegisteredEvents(prev => prev.map(ev => 
+        ev._id === eventId ? { ...ev, isCancelled: true } : ev
       ));
       alert("Hủy đăng ký thành công!");
     } catch (error: unknown) {
@@ -645,11 +654,11 @@ export default function Profile() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     {/* Đã xuất bản */}
                     <div
-                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'published' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'published' ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-100'}`}
                       onClick={() => setFilterStatus('published')}
                     >
-                      <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="p-2.5 bg-green-50 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
@@ -659,11 +668,11 @@ export default function Profile() {
                     
                     {/* Chưa duyệt */}
                     <div
-                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'pending' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-gray-100'}`}
                       onClick={() => setFilterStatus('pending')}
                     >
-                      <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="p-2.5 bg-yellow-50 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
@@ -673,11 +682,11 @@ export default function Profile() {
                     
                     {/* Đã từ chối */}
                     <div
-                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'rejected' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-100'}`}
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${filterStatus === 'rejected' ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-100'}`}
                       onClick={() => setFilterStatus('rejected')}
                     >
-                      <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="p-2.5 bg-red-50 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </div>
@@ -716,9 +725,9 @@ export default function Profile() {
                                 Tác giả: {(blog.author === user?.fullName || blog.author === user?.username) && blog.anDanh ? 'Ẩn danh' : blog.author}
                               </div>
                               <div className={`text-xs ${
-                                blog.published === 'published' ? 'text-sky-700' : 'text-red-700'
+                                blog.published === 'published' ? 'text-green-700' : 'text-red-700'
                               } font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${
-                                blog.published === 'published' ? 'bg-sky-50 border-sky-200' : 'bg-red-50 border-red-200'
+                                blog.published === 'published' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                               } border`}>
                                 {blog.published === 'published' ? 'Đã xuất bản' : 
                                  blog.published === 'draft' ? 'Chưa duyệt' : 'Đã từ chối'}
@@ -763,115 +772,157 @@ export default function Profile() {
                 </div>
               )}
               {tab === 'registeredEvents' && (
-                <div className="w-full">
-                  {/* Sự kiện đã đăng ký */}
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Sự kiện đã đăng ký</h2>
-                    {/* Registered Events */}
-                    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                          {registeredEvents.map((event) => (
-                            <div
-                              key={event._id}
-                          className="relative flex flex-col md:flex-row items-stretch bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden mb-8 max-w-3xl w-full mx-auto ticket-card justify-center"
-                          style={{ minHeight: '180px' }}
-                        >
-                          {/* Ảnh sự kiện bên trái */}
-                          <div className="flex-shrink-0 w-full md:w-56 h-40 md:h-auto bg-gray-100 flex items-center justify-center">
-                            <img
-                              src={event.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80'}
-                              alt={event.title}
-                              className="object-cover w-full h-full rounded-l-2xl border-r border-blue-100"
-                            />
-                          </div>
-                          {/* Thông tin sự kiện ở giữa */}
-                          <div className="flex-1 flex flex-col justify-between px-6 py-4 gap-2">
+                <div className="p-7">
+                  <div className="font-semibold text-sky-700 mb-4 text-lg">Sự kiện đã đăng ký</div>
+                  {/* Filter */}
+                  <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+                    <select
+                      value={eventFilterStatus}
+                      onChange={e => setEventFilterStatus(e.target.value)}
+                      className="rounded-lg border border-sky-100 px-3 py-2 text-sm focus:ring-sky-500 focus:border-sky-500"
+                    >
+                      <option value="all">Tất cả</option>
+                      <option value="upcoming">Sắp diễn ra</option>
+                      <option value="ongoing">Đang diễn ra</option>
+                      <option value="completed">Đã kết thúc</option>
+                      <option value="cancelled">Đã hủy</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={eventFilterKeyword}
+                      onChange={e => setEventFilterKeyword(e.target.value)}
+                      placeholder="Tìm theo tên sự kiện..."
+                      className="rounded-lg border border-sky-100 px-3 py-2 text-sm focus:ring-sky-500 focus:border-sky-500 w-full md:w-64"
+                    />
+                  </div>
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {/* Sắp diễn ra */}
+                    <div
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${eventFilterStatus === 'upcoming' ? 'border-sky-500 ring-2 ring-sky-200' : 'border-gray-100'}`}
+                      onClick={() => setEventFilterStatus('upcoming')}
+                    >
+                      <div className="p-2.5 bg-gradient-to-r from-sky-50 to-cyan-50 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1">Sắp diễn ra</p>
+                      <p className="text-xl font-bold text-gray-900">{registeredEvents.filter(ev => ev.status === 'upcoming').length}</p>
+                    </div>
+                    {/* Đang diễn ra */}
+                    <div
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${eventFilterStatus === 'ongoing' ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-100'}`}
+                      onClick={() => setEventFilterStatus('ongoing')}
+                    >
+                      <div className="p-2.5 bg-gradient-to-r from-green-50 to-green-100 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1">Đang diễn ra</p>
+                      <p className="text-xl font-bold text-gray-900">{registeredEvents.filter(ev => ev.status === 'ongoing').length}</p>
+                    </div>
+                    {/* Đã kết thúc */}
+                    <div
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${eventFilterStatus === 'completed' ? 'border-gray-500 ring-2 ring-gray-200' : 'border-gray-100'}`}
+                      onClick={() => setEventFilterStatus('completed')}
+                    >
+                      <div className="p-2.5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1">Đã kết thúc</p>
+                      <p className="text-xl font-bold text-gray-900">{registeredEvents.filter(ev => ev.status === 'completed').length}</p>
+                    </div>
+                    {/* Đã hủy */}
+                    <div
+                      className={`bg-white rounded-xl p-4 shadow-sm border flex flex-col items-center justify-center transition-all cursor-pointer ${eventFilterStatus === 'cancelled' ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-100'}`}
+                      onClick={() => setEventFilterStatus('cancelled')}
+                    >
+                      <div className="p-2.5 bg-gradient-to-r from-red-50 to-red-100 rounded-full mb-2 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1">Đã hủy</p>
+                      <p className="text-xl font-bold text-gray-900">{registeredEvents.filter(ev => ev.status === 'cancelled').length}</p>
+                    </div>
+                  </div>
+                  {/* Danh sách sự kiện */}
+                  <div>
+                    <div className="font-semibold mb-2 text-sky-700">
+                      {eventFilterStatus === 'upcoming' ? 'Sự kiện sắp diễn ra' :
+                       eventFilterStatus === 'ongoing' ? 'Sự kiện đang diễn ra' :
+                       eventFilterStatus === 'completed' ? 'Sự kiện đã kết thúc' :
+                       eventFilterStatus === 'cancelled' ? 'Sự kiện đã hủy' :
+                       'Tất cả sự kiện'}
+                    </div>
+                    {filteredEvents.length === 0 ? (
+                      <div className="text-gray-500 italic">Bạn chưa đăng ký sự kiện nào.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {filteredEvents.map(event => (
+                          <div
+                            key={event._id}
+                            className="bg-gradient-to-r from-sky-50 via-cyan-50 to-white hover:from-sky-100 transition rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm cursor-pointer border border-sky-100"
+                          >
                             <div>
-                              <h3 className="text-lg font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                                <span role="img" aria-label="vé">🎟️</span>
-                                <span className="truncate">{event.title}</span>
-                              </h3>
-                              <div className="flex items-center text-base text-gray-700 mb-1 gap-2">
-                                <span role="img" aria-label="clock">🕒</span>
-                                <span className="font-medium">Thời gian:</span>
-                                <span>{event.startDate ? format(new Date(event.startDate), 'dd/MM/yyyy HH:mm') : 'Không xác định'}</span>
+                              <div className="font-medium text-base text-gray-800">{event.title}</div>
+                              <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                <svg className="w-3 h-3 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                {new Date(event.startDate).toLocaleDateString('vi-VN')} - {new Date(event.endDate).toLocaleDateString('vi-VN')}
                               </div>
-                              <div className="flex items-center text-base text-gray-700 mb-1 gap-2">
-                                <span role="img" aria-label="location">📍</span>
-                                <span className="font-medium">Địa điểm:</span>
-                                <span>{event.location}</span>
+                              <div className="text-xs text-gray-500 mt-1">Địa điểm: {event.location}</div>
+                              <div className={`text-xs font-medium mt-1 inline-block px-2 py-0.5 rounded-full border ${
+                                event.status === 'upcoming' ? 'bg-sky-50 border-sky-200 text-sky-700' :
+                                event.status === 'ongoing' ? 'bg-green-50 border-green-200 text-green-700' :
+                                event.status === 'completed' ? 'bg-gray-50 border-gray-200 text-gray-700' :
+                                'bg-red-50 border-red-200 text-red-700'
+                              }`}>
+                                {event.status === 'upcoming' ? 'Sắp diễn ra' :
+                                 event.status === 'ongoing' ? 'Đang diễn ra' :
+                                 event.status === 'completed' ? 'Đã kết thúc' :
+                                 'Đã hủy'}
                               </div>
-                              {/* Hiển thị trạng thái */}
-                              <div className="flex items-center text-base mb-1 gap-2">
-                                <span className="font-medium">Trạng thái:</span>
-                                <span className={`font-semibold ${
-                                  event.status === "upcoming" 
-                                    ? "text-blue-600"
-                                    : event.status === "ongoing"
-                                    ? "text-green-600" 
-                                    : event.status === "completed"
-                                    ? "text-gray-600"
-                                    : "text-red-600"
-                                }`}>
-                                  {event.status === "upcoming" 
-                                    ? "Sắp diễn ra"
-                                    : event.status === "ongoing"
-                                    ? "Đang diễn ra"
-                                    : event.status === "completed"
-                                    ? "Đã kết thúc"
-                                    : "Đã hủy"}
-                                </span>
-                              </div>
-                              {/* Logo sponsor */}
-                              {event.sponsors && event.sponsors.length > 0 && event.sponsors.some((s: Sponsor) => s.logo) && (
-                                <div className="flex gap-2 mt-2 items-center">
-                                  <span className="text-xs text-gray-500 mr-1">Nhà tài trợ:</span>
-                                  {event.sponsors.map((s: Sponsor, idx: number) =>
-                                    s.logo ? (
-                                      <img
-                                        key={idx}
-                                        src={s.logo}
-                                        alt="Sponsor logo"
-                                        className="w-7 h-7 rounded-full object-cover border bg-white shadow-sm"
-                                      />
-                                    ) : null
+                              {event.sponsors && event.sponsors.length > 0 && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs text-gray-500">Nhà tài trợ:</span>
+                                  {event.sponsors.map((s, idx) => (
+                                    <img key={idx} src={s.logo} alt="sponsor" className="w-6 h-6 object-contain rounded-full border border-gray-200" />
+                                  ))}
+                                </div>
+                              )}
+                              {event.qrCode && (
+                                <div className="mt-2">
+                                  <img src={event.qrCode} alt="QR code" className="w-20 h-20 object-contain border border-gray-200 rounded-lg" />
+                                </div>
                               )}
                             </div>
-                              )}
-                          </div>
-                            {/* Nút */}
-                            <div className="flex gap-4 mt-4 flex-wrap">
-                            <button
-                                onClick={() => window.open(`/events/${event._id}`, '_blank')}
-                                className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
-                            >
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={e => {e.preventDefault(); setEventDangXem(event); setModalEvent(true);}}
+                                className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg text-sm font-medium transition-colors"
+                              >
                                 Xem chi tiết
-                            </button>
-                              {!event.isCancelled && event.status === "upcoming" && (
-                            <button
-                                  onClick={() => handleUnregister(event._id, event.registrationEndDate)}
-                                  className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
-                            >
-                                  Hủy đăng ký
-                            </button>
-                    )}
-                              {event.qrCode && (
-                            <button
-                                  onClick={() => handleOpenQR(event.qrCode!)}
-                                  className="px-5 py-2 bg-gray-100 text-blue-800 rounded-xl border border-gray-300 hover:bg-gray-200 transition-colors text-base font-medium"
+                              </button>
+                              {event.status === 'upcoming' && (
+                                <button
+                                  onClick={() => handleUnregister(event._id, event.registrationEndDate, user?._id || '', event)}
+                                  className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium transition-colors"
                                 >
-                                  Xem mã QR
-                            </button>
+                                  Hủy đăng ký
+                                </button>
                               )}
+                            </div>
                           </div>
-                          </div>
-                          {/* Hiệu ứng lỗ vé */}
-                          <div className="hidden md:block absolute top-6 left-0 w-4 h-8 bg-white rounded-r-full border-l border-blue-100 shadow-sm"></div>
-                          <div className="hidden md:block absolute bottom-6 left-0 w-4 h-8 bg-white rounded-r-full border-l border-blue-100 shadow-sm"></div>
-                          <div className="hidden md:block absolute top-6 right-0 w-4 h-8 bg-white rounded-l-full border-r border-blue-100 shadow-sm"></div>
-                          <div className="hidden md:block absolute bottom-6 right-0 w-4 h-8 bg-white rounded-l-full border-r border-blue-100 shadow-sm"></div>
-                          </div>
-                      ))}
-                        </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1115,6 +1166,50 @@ export default function Profile() {
                 await updateBlogApi(blogDangSua._id, dataUpdate);
               }}
             />
+          </div>
+        </div>
+      )}
+      {/* Modal xem chi tiết sự kiện đã đăng ký */}
+      {modalEvent && eventDangXem && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto relative p-6">
+            <button
+              onClick={() => setModalEvent(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h3 className="text-xl font-bold text-gray-800 mb-4">{eventDangXem.title}</h3>
+            <div className="space-y-2">
+              <div><b>Thời gian:</b> {new Date(eventDangXem.startDate).toLocaleString('vi-VN')} - {new Date(eventDangXem.endDate).toLocaleString('vi-VN')}</div>
+              <div><b>Địa điểm:</b> {eventDangXem.location}</div>
+              <div><b>Trạng thái:</b> {eventDangXem.status === 'upcoming' ? 'Sắp diễn ra' : eventDangXem.status === 'ongoing' ? 'Đang diễn ra' : eventDangXem.status === 'completed' ? 'Đã kết thúc' : 'Đã hủy'}</div>
+              {eventDangXem.sponsors && eventDangXem.sponsors.length > 0 && (
+                <div>
+                  <b>Nhà tài trợ:</b>
+                  {eventDangXem.sponsors.map((s, idx) => (
+                    <img key={idx} src={s.logo} alt="sponsor" className="w-6 h-6 inline-block mx-1 rounded-full border" />
+                  ))}
+                </div>
+              )}
+              {eventDangXem.qrCode && (
+                <div>
+                  <b>Mã QR:</b>
+                  <div className="flex items-center gap-4 mt-2">
+                    <img src={eventDangXem.qrCode} alt="QR code" className="w-64 h-64 object-contain border rounded-lg" />
+                    <a
+                      href={eventDangXem.qrCode}
+                      download={`qr-event-${eventDangXem._id}.png`}
+                      className="px-3 py-2 bg-sky-100 hover:bg-sky-200 text-sky-700 rounded-lg text-sm font-medium transition-colors border border-sky-200"
+                    >
+                      Tải mã QR
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

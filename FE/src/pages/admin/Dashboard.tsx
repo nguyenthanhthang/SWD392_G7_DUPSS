@@ -1584,22 +1584,25 @@ const Dashboard = () => {
       </div>
 
       {/* Top Tác giả */}
-      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8">
+      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8 border border-sky-100">
         <div className="flex items-center gap-2 mb-4">
-          <h3 className="text-lg font-bold text-gray-800">Top Tác giả</h3>
+          <h3 className="text-lg font-bold text-sky-700 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Top Tác giả
+          </h3>
         </div>
         {topAuthors.length === 0 ? (
-          <div className="text-gray-500 text-center">Chưa có dữ liệu</div>
+          <div className="text-sky-400 text-center">Chưa có dữ liệu</div>
         ) : (
           topAuthors.map((author, idx) => (
-            <div key={author.name} className="mb-4 last:mb-0 bg-amber-50 rounded-xl px-4 py-3 relative">
+            <div key={author.name} className="mb-4 last:mb-0 bg-white rounded-xl px-4 py-3 relative border border-sky-50 shadow-sm">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm text-gray-500 font-medium">#{idx + 1}</span>
-                <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">{author.count} bài</span>
+                <span className="text-sm text-sky-500 font-semibold">#{idx + 1}</span>
+                <span className="text-xs bg-sky-100 text-sky-700 rounded-full px-2 py-0.5 font-medium">{author.count} bài</span>
               </div>
-              <div className="font-medium text-sm text-amber-900 mb-1">{author.name}</div>
-              <div className="w-full h-2 bg-amber-100 rounded-full">
-                <div className="h-2 bg-amber-500 rounded-full" style={{ width: `${(author.count / maxCount) * 100}%` }}></div>
+              <div className="font-medium text-base text-sky-800 mb-1">{author.name}</div>
+              <div className="w-full h-2 bg-sky-100 rounded-full">
+                <div className="h-2 bg-sky-400 rounded-full" style={{ width: `${(author.count / maxCount) * 100}%` }}></div>
               </div>
             </div>
           ))
@@ -1686,7 +1689,7 @@ const Dashboard = () => {
       </div>
 
       {/* Service Feedback Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
         {/* Pie Chart - Phân bố số sao feedback */}
         <div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center">
           <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Phân bố đánh giá dịch vụ</h2>
@@ -1709,18 +1712,17 @@ const Dashboard = () => {
             <Bar data={topServiceBarData} options={topServiceBarOptions} style={{ maxHeight: 320 }} />
           )}
         </div>
-      </div>
-
-      {/* Payment Method Bar Chart */}
-      <div className="bg-white p-8 rounded-2xl shadow-lg mt-8">
-        <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Thanh toán theo phương thức</h2>
-        {loadingPayments ? (
-          <div className="flex justify-center items-center h-60">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
-          </div>
-        ) : (
-          <Bar data={paymentMethodBarData} options={paymentMethodBarOptions} style={{ maxHeight: 320 }} />
-        )}
+        {/* Payment Method Bar Chart */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center">
+          <h2 className="text-xl font-bold mb-4 text-center text-sky-700 tracking-wide">Thanh toán theo phương thức</h2>
+          {loadingPayments ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+            </div>
+          ) : (
+            <Bar data={paymentMethodBarData} options={paymentMethodBarOptions} style={{ maxHeight: 320 }} />
+          )}
+        </div>
       </div>
     </div>
   );
