@@ -154,59 +154,12 @@ function BlogPage() {
     <MainLayout>
       <Toaster position="top-center" />
       
-      {/* Modern Blog Banner with Wave Effect - Reduced top spacing */}
-      <div className="relative -mt-16">
-        {/* Main banner with gradient - reduced top padding */}
-        <div className="bg-gradient-to-r from-sky-300 via-blue-200 to-sky-300 pt-12 pb-16 relative overflow-hidden">
-          {/* Decorative elements */}
-          <div className="absolute top-12 left-10 w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm"></div>
-          <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full bg-sky-100/30 backdrop-blur-sm"></div>
-          <div className="absolute top-1/4 left-1/4 w-6 h-6 rounded-full bg-white/40"></div>
-          <div className="absolute bottom-1/3 right-1/3 w-8 h-8 rounded-full bg-white/30"></div>
-          
-          {/* Floating icons */}
-          <div className="absolute top-24 left-[20%] transform rotate-12 opacity-30">
-            <FaFeatherAlt className="w-8 h-8 text-blue-600" />
-          </div>
-          <div className="absolute bottom-16 right-1/4 transform -rotate-12 opacity-30">
-            <FaRegLightbulb className="w-10 h-10 text-blue-600" />
-          </div>
-          
-          <div className="container mx-auto px-4 z-10 relative">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex flex-col items-center">
-                {/* Icon in elegant circle */}
-                <div className="relative mb-8">
-                  <div className="absolute inset-0 rounded-full bg-blue-400/20 blur-xl transform scale-150"></div>
-                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-white to-blue-50 shadow-lg border border-white/50 p-4">
-                    <div className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center">
-                      <FaBookOpen className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Title with modern typography - removed underlines */}
-                <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4 tracking-tight text-center">
-                  <span>Blog</span>
-                  <span className="mx-2">&</span>
-                  <span>Tin tức</span>
-                </h1>
-                
-                {/* Description with nicer styling */}
-                <p className="text-blue-700 text-lg max-w-2xl mx-auto text-center px-4 leading-relaxed">
-                  Khám phá những bài viết bổ ích về tâm lý học và sức khỏe tinh thần
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Wave bottom effect */}
-          <div className="absolute bottom-0 left-0 right-0">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 100" className="w-full h-auto">
-              <path fill="#ffffff" fillOpacity="1" d="M0,64L60,58.7C120,53,240,43,360,48C480,53,600,75,720,80C840,85,960,75,1080,64C1200,53,1320,43,1380,37.3L1440,32L1440,100L1380,100C1320,100,1200,100,1080,100C960,100,840,100,720,100C600,100,480,100,360,100C240,100,120,100,60,100L0,100Z"></path>
-            </svg>
-          </div>
-        </div>
+      {/* Minimalist Blog Banner inspired by Buzzsprout Blog */}
+      <div className="bg-white pt-4 pb-8 text-center border-b border-gray-200">
+        <h1 className="text-5xl md:text-6xl font-extrabold text-gray-800 mb-4 tracking-tight">Blog & Tin tức</h1>
+        <p className="text-lg md:text-xl text-gray-600 font-medium max-w-2xl mx-auto">
+          Khám phá những bài viết bổ ích về tâm lý học và sức khỏe tinh thần.
+        </p>
       </div>
 
       <div className="container mx-auto px-4 py-6 bg-gradient-to-b from-white to-sky-50/30 min-h-screen">
