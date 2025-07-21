@@ -64,6 +64,8 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [anDanh, setAnDanh] = useState(initialData?.anDanh || false);
+  // Thêm biến kiểm tra nếu đã từng là ẩn danh thì không cho sửa lại
+  const isLockedAnonymous = initialData?.anDanh === true;
   const [trangThai, setTrangThai] = useState<'draft' | 'published' | 'unpublished' | 'rejected'>(
     initialData?.published || 'draft'
   );
@@ -288,6 +290,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
                 checked={anDanh}
                 onChange={(e) => setAnDanh(e.target.checked)}
                 className="h-4 w-4 text-cyan-600 border-blue-200 rounded focus:ring-cyan-500"
+                disabled={isLockedAnonymous} // Nếu đã từng là ẩn danh thì không cho sửa lại
               />
               <label
                 htmlFor="anDanh"
@@ -299,7 +302,12 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
             <div className="mt-1 block w-full rounded-xl border border-blue-200 shadow-sm px-4 py-3 bg-blue-50 text-blue-900">
               {anDanh ? "Ẩn danh" : (initialData?.authorName || userInfo?.fullName || userInfo?.username || "Đang tải...")}
             </div>
-            {anDanh && (
+            {isLockedAnonymous && (
+              <p className="mt-1 text-xs text-red-600 font-semibold">
+                Bài viết này đã được đăng ẩn danh và không thể chuyển lại thành hiện tên tác giả.
+              </p>
+            )}
+            {anDanh && !isLockedAnonymous && (
               <p className="mt-1 text-xs text-cyan-600">
                 Tên tác giả thực sẽ được lưu trong hệ thống nhưng hiển thị là "Ẩn danh" cho người đọc.
               </p>
