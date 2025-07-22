@@ -341,9 +341,8 @@ export default function Profile() {
 
     try {
       await unregisterEventApi(eventId, authUser._id);
-      setRegisteredEvents(prev => prev.map(ev => 
-        ev._id === eventId ? { ...ev, isCancelled: true } : ev
-      ));
+      // Gọi lại API để lấy danh sách sự kiện đã đăng ký mới nhất
+      await fetchRegisteredEvents();
       alert("Hủy đăng ký thành công!");
     } catch (error: unknown) {
       const message = (error as any)?.response?.data?.message || "Không thể hủy đăng ký!";
@@ -911,12 +910,21 @@ export default function Profile() {
                                 Xem chi tiết
                               </button>
                               {event.status === 'upcoming' && (
-                                <button
-                                  onClick={() => handleUnregister(event._id, event.registrationEndDate, user?._id || '', event)}
-                                  className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium transition-colors"
-                                >
-                                  Hủy đăng ký
-                                </button>
+                                event.isCancelled ? (
+                                  <button
+                                    disabled
+                                    className="px-3 py-1.5 bg-gray-200 text-gray-500 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed"
+                                  >
+                                    Đã hủy đăng ký
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleUnregister(event._id, event.registrationEndDate, user?._id || '', event)}
+                                    className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium transition-colors"
+                                  >
+                                    Hủy đăng ký
+                                  </button>
+                                )
                               )}
                             </div>
                           </div>
