@@ -11,8 +11,8 @@ export interface BlogData {
 }
 
 const api = axios.create({
- // baseURL: "https://swd392-g7-dupss.onrender.com/api", // Đổi lại nếu BE chạy port khác hoặc có prefix khác
-  baseURL: "https://swd392-g7-dupss.onrender.com/api",
+  // baseURL: "https://swd392-g7-dupss.onrender.com/api", // Đổi lại nếu BE chạy port khác hoặc có prefix khác
+  baseURL: "http://localhost:5000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -189,7 +189,11 @@ export const updateSlotTimeApi = async (
   return res.data;
 };
 
-export const updateStatusSlotTimeApi = async (id: string, status: string, userId?: string) => {
+export const updateStatusSlotTimeApi = async (
+  id: string,
+  status: string,
+  userId?: string
+) => {
   const res = await api.put(`/slot-times/status/${id}`, { status, userId });
   return res.data;
 };
@@ -431,7 +435,10 @@ export const updateBlogApi = async (id: string, data: BlogData) => {
 };
 
 // API để cập nhật trạng thái blog (chỉ admin)
-export const updateBlogStatusApi = async (id: string, published: "draft" | "published" | "unpublished" | "rejected") => {
+export const updateBlogStatusApi = async (
+  id: string,
+  published: "draft" | "published" | "unpublished" | "rejected"
+) => {
   const res = await api.patch(`/blogs/${id}/status`, { published });
   return res.data;
 };
@@ -532,8 +539,10 @@ export const getQuizResultsStatsApi = async (params?: {
   if (params?.quizId) queryParams.append("quizId", params.quizId);
   if (params?.from) queryParams.append("from", params.from);
   if (params?.to) queryParams.append("to", params.to);
-  
-  const res = await api.get(`/quizzes/quiz-results/stats?${queryParams.toString()}`);
+
+  const res = await api.get(
+    `/quizzes/quiz-results/stats?${queryParams.toString()}`
+  );
   return res.data;
 };
 
@@ -866,7 +875,7 @@ export const getRevenueByServiceApi = async () => {
 };
 
 export const getYearlyRevenueApi = async (year?: number) => {
-  const params = year ? `?year=${year}` : '';
+  const params = year ? `?year=${year}` : "";
   const res = await api.get(`/payment/statistics/yearly${params}`);
   return res.data;
 };
