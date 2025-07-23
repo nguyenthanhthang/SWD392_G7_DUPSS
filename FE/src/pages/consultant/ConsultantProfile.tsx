@@ -321,7 +321,7 @@ export default function ConsultantProfile() {
       // Upload to server
       const formData = new FormData();
       formData.append('image', file);
-      const uploadResponse = await fetch('http://localhost:5000/api/uploads/upload', {
+      const uploadResponse = await fetch('https://swd392-g7-dupss.onrender.com/api/uploads/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -729,7 +729,7 @@ function CertificateModal({ initialData, onClose, onSubmit }: { initialData: Omi
       try {
         const formData = new FormData();
         formData.append('image', file);
-        const res = await fetch('http://localhost:5000/api/uploads/upload', {
+        const res = await fetch('https://swd392-g7-dupss.onrender.com/api/uploads/upload', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

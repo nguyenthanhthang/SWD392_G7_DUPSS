@@ -276,7 +276,7 @@ export default function Profile() {
       formData.append('image', file);
       
       // Sử dụng API upload của backend với progress tracking
-      const response = await axios.post('http://localhost:5000/api/uploads/upload', formData, {
+      const response = await axios.post('https://swd392-g7-dupss.onrender.com/api/uploads/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${localStorage.getItem('token')}`

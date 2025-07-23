@@ -1,8 +1,8 @@
 import axios from "axios";
 import type { Quiz, Question } from "../types/global";
 
-//const API_URL = "https://swd392-g7-dupss.onrender.com/api";
-const API_URL = "http://localhost:5000/api";
+const API_URL = "https://swd392-g7-dupss.onrender.com/api";
+//const API_URL = "http://localhost:5000/api";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -150,7 +150,7 @@ export const uploadAvatarApi = async (file: File): Promise<string> => {
   const form = new FormData();
   form.append("image", file);
   const response = await axios.post(
-    "http://localhost:5000/api/uploads/upload",
+    "https://swd392-g7-dupss.onrender.com/api/uploads/upload",
     form,
     {
       headers: {
