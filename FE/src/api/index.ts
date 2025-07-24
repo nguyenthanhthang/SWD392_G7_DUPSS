@@ -1,8 +1,8 @@
 import axios from "axios";
 import type { Quiz, Question } from "../types/global";
 
-const API_URL = "https://swd392-g7-dupss.onrender.com/api";
-//const API_URL = "http://localhost:5000/api";
+//const API_URL = "https://swd392-g7-dupss.onrender.com/api";
+const API_URL = "http://localhost:5000/api";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -134,7 +134,9 @@ export const getQuestionByIdApi = async (id: string) => {
   return response.data;
 };
 
-export const getAllQuizzesApi = async (params?: Record<string, unknown>): Promise<{ data: Quiz[] }> => {
+export const getAllQuizzesApi = async (
+  params?: Record<string, unknown>
+): Promise<{ data: Quiz[] }> => {
   const response = await axios.get(`${API_URL}/quizzes`, { params });
   return response.data;
 };
@@ -150,7 +152,7 @@ export const uploadAvatarApi = async (file: File): Promise<string> => {
   const form = new FormData();
   form.append("image", file);
   const response = await axios.post(
-    "https://swd392-g7-dupss.onrender.com/api/uploads/upload",
+    "http://localhost:5000/api/uploads/upload",
     form,
     {
       headers: {
