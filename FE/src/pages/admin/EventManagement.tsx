@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { checkInEventApi, getAllEventsApi, createEventApi, updateEventApi, deleteEventApi } from "../../api";
+import { checkInEventApi, getAllEventsApi, createEventApi, updateEventApi } from "../../api";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
@@ -1157,7 +1157,7 @@ const AdminEventManagement = () => {
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
   const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(6);
+  const [rowsPerPage] = useState(6);
   const [sortBy, setSortBy] = useState("newest");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancellingEvent, setCancellingEvent] = useState<Event | null>(null);
@@ -1223,11 +1223,8 @@ const AdminEventManagement = () => {
       toast.success("Tạo sự kiện thành công!");
       setShowEventForm(false);
       fetchEvents();
-    } catch (error: unknown) {
-      console.error("Create event error:", error);
-      console.error("Error response:", error instanceof Response ? await error.json() : error);
-      const errorMessage = error instanceof Response ? (await error.json()).message || error.statusText : error instanceof Error ? error.message : "Không thể tạo sự kiện";
-      toast.error(errorMessage);
+    } catch {
+      toast.error("Không thể tạo sự kiện");
     }
   };
 
@@ -1243,7 +1240,7 @@ const AdminEventManagement = () => {
         registrationEndDate: new Date(formData.registrationEndDate),
         location: formData.location,
         capacity: formData.capacity,
-        image: formData.image,
+        ...(formData.image ? { image: formData.image } : {}),
         sponsors: formData.sponsors.map(s => ({
           sponsorId: s.sponsorId,
           donation: s.donation,
@@ -1254,7 +1251,7 @@ const AdminEventManagement = () => {
       setShowEventForm(false);
       setEditingEvent(null);
       fetchEvents();
-    } catch (error) {
+    } catch {
       toast.error("Không thể cập nhật sự kiện");
     }
   };
@@ -1282,7 +1279,7 @@ const AdminEventManagement = () => {
       setShowDeleteConfirm(false);
       setDeletingEvent(null);
       fetchEvents();
-    } catch (error) {
+    } catch {
       toast.error("Lỗi khi xóa sự kiện");
       setShowDeleteConfirm(false);
       setDeletingEvent(null);
@@ -1290,11 +1287,6 @@ const AdminEventManagement = () => {
   };
 
   const handleCancelEvent = async (event: Event) => {
-    // Kiểm tra nếu có người đăng ký
-    if (event.registeredCount && event.registeredCount > 0) {
-      toast.error(`Không thể hủy sự kiện có người đăng ký (${event.registeredCount} người)`);
-      return;
-    }
     setCancellingEvent(event);
     setShowCancelConfirm(true);
   };
@@ -1321,9 +1313,8 @@ const AdminEventManagement = () => {
       setShowCancelConfirm(false);
       setCancellingEvent(null);
       fetchEvents();
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || "Không thể hủy sự kiện";
-      toast.error(errorMessage);
+    } catch {
+      toast.error("Không thể hủy sự kiện");
       setShowCancelConfirm(false);
       setCancellingEvent(null);
     }
@@ -1377,12 +1368,7 @@ const AdminEventManagement = () => {
       toast.success("Check-in thành công!");
       fetchEvents();
       fetchCheckInHistory(selectedEvent._id);
-    } catch (error: any) {
-      if (error?.response?.status === 400 && error?.response?.data?.message?.includes("Đã check-in")) {
-        toast.info("Người này đã check-in trước đó!");
-        // Không đóng modal, không thao tác lại với scanner
-        return;
-      }
+    } catch {
       toast.error("Check-in thất bại!");
       setCheckInHistory((prev) => [
         { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date().toISOString(), status: "error" as const },

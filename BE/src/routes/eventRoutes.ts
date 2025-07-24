@@ -12,6 +12,7 @@ import {
   getEventAttendance,
   getRegisteredEvents,
   getCheckInHistory,
+  cancelEvent,
 } from "../controllers/eventController";
 import { authMiddleware, roleMiddleware } from "../middleware";
 
@@ -24,6 +25,7 @@ router.get("/registered/:userId", getRegisteredEvents);
 router.get("/:id", getEventById);
 router.put("/:id", authMiddleware, roleMiddleware(["admin"]), updateEvent);
 router.delete("/:id", authMiddleware, roleMiddleware(["admin"]), deleteEvent);
+router.put("/:id/cancel", authMiddleware, roleMiddleware(["admin"]), cancelEvent);
 
 // Registration routes
 router.post("/:id/register", authMiddleware, roleMiddleware(["customer"]), registerEvent);

@@ -244,6 +244,12 @@ export const updateEventApi = async (
     location: string;
     capacity: number;
     status: "upcoming" | "ongoing" | "completed" | "cancelled";
+    sponsors: Array<{
+      sponsorId: string;
+      donation: string;
+      tier: "Platinum" | "Gold" | "Silver" | "Bronze";
+    }>;
+    image?: string;
   }>
 ) => {
   const res = await api.put(`/events/${id}`, data);

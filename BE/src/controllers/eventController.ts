@@ -463,3 +463,21 @@ export const getCheckInHistory = async (req: Request<{ id: string }>, res: Respo
 };
 
 // Thêm hàm mới:
+
+// [PUT] /api/events/:id/cancel - Hủy sự kiện (admin)
+export const cancelEvent = async (req: Request, res: Response) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    }
+    if (event.status === "cancelled") {
+      return res.status(400).json({ message: "Sự kiện đã bị hủy trước đó" });
+    }
+    event.status = "cancelled";
+    await event.save();
+    res.status(200).json({ message: "Hủy sự kiện thành công!", event });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi hủy sự kiện", error });
+  }
+};
