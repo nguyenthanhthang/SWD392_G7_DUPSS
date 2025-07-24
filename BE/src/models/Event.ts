@@ -67,6 +67,9 @@ eventSchema.virtual('sponsorDetails', {
 
 // Middleware
 eventSchema.pre("save", function (next) {
+  // Nếu đã là cancelled thì không tự động đổi status nữa
+  if (this.status === "cancelled") return next();
+
   const now = new Date();
   if (this.startDate > now) {
     this.status = "upcoming";

@@ -466,18 +466,31 @@ export const getCheckInHistory = async (req: Request<{ id: string }>, res: Respo
 
 // [PUT] /api/events/:id/cancel - Hủy sự kiện (admin)
 export const cancelEvent = async (req: Request, res: Response) => {
+  console.log("==> [API] PUT /api/events/:id/cancel", req.params.id);
   try {
     const event = await Event.findById(req.params.id);
+    console.log("[cancelEvent] Tìm event:", event ? event._id : null);
     if (!event) {
+      console.log("[cancelEvent] Không tìm thấy sự kiện");
       return res.status(404).json({ message: "Không tìm thấy sự kiện" });
     }
+    // Đếm số lượng đăng ký active
+    const registrationCount = await EventRegistration.countDocuments({ eventId: event._id, status: "active" });
+    const maxCapacity = event.capacity || 1;
+    if (registrationCount / maxCapacity > 0.3) {
+      return res.status(400).json({ message: "Không thể hủy sự kiện vì đã có hơn 30% số lượng đăng ký." });
+    }
     if (event.status === "cancelled") {
+      console.log("[cancelEvent] Sự kiện đã bị hủy trước đó");
       return res.status(400).json({ message: "Sự kiện đã bị hủy trước đó" });
     }
     event.status = "cancelled";
     await event.save();
+    const check = await Event.findById(event._id);
+    console.log("[cancelEvent] Status sau khi save:", check ? check.status : null);
     res.status(200).json({ message: "Hủy sự kiện thành công!", event });
   } catch (error) {
+    console.error("[cancelEvent] Lỗi khi hủy sự kiện:", error);
     res.status(500).json({ message: "Lỗi khi hủy sự kiện", error });
   }
 };

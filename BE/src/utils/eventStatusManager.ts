@@ -5,11 +5,14 @@ export const updateEventStatus = async () => {
   const now = new Date();
 
   try {
-    // Cập nhật các event từ upcoming sang ongoing
+    // Cập nhật các event từ upcoming sang ongoing, loại trừ cancelled
     const upcomingToOngoing = await Event.updateMany(
       {
-        status: 'upcoming',
-        startDate: { $lte: now }
+        $and: [
+          { status: 'upcoming' },
+          { startDate: { $lte: now } },
+          { status: { $ne: 'cancelled' } }
+        ]
       },
       { 
         $set: { 
@@ -19,13 +22,16 @@ export const updateEventStatus = async () => {
       }
     );
 
-    // Cập nhật các event từ ongoing sang completed
+    // Cập nhật các event từ ongoing sang completed, loại trừ cancelled
     const ongoingToCompleted = await Event.updateMany(
       {
-        status: 'ongoing',
-        endDate: { $lte: now }
+        $and: [
+          { status: 'ongoing' },
+          { endDate: { $lte: now } },
+          { status: { $ne: 'cancelled' } }
+        ]
       },
-      { 
+      {   
         $set: { 
           status: 'completed',
           updatedAt: now 
