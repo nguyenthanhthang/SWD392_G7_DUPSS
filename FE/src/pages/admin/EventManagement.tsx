@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { checkInEventApi, getAllEventsApi, createEventApi, updateEventApi } from "../../api";
+import { getEventFeedbacksApi } from "../../api/index";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
 import { FiSearch, FiUsers, FiMapPin, FiCalendar, FiCheckCircle, FiXCircle, FiChevronLeft, FiChevronRight, FiPlus, FiEdit, FiTrash2, FiX } from "react-icons/fi";
 import { Html5Qrcode } from "html5-qrcode";
+import { Pie } from "react-chartjs-2";
 
 // Thêm type definitions cho BarcodeDetector API
 declare global {
@@ -77,12 +79,13 @@ interface EventFormData {
 }
 
 // Event Card Component
-const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: { 
+const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel, onReport }: { 
   event: Event; 
   onSelect: (e: Event) => void;
   onEdit: (e: Event) => void;
   onDelete: (e: Event) => void;
   onCancel: (e: Event) => void;
+  onReport?: (e: Event) => void;
 }) => {
   return (
   <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow duration-200">
@@ -167,13 +170,22 @@ const EventCard = ({ event, onSelect, onEdit, onDelete, onCancel }: {
       
       <div className="flex-1"></div>
       <div className="flex gap-2 mt-4">
-        <button
-          onClick={() => onSelect(event)}
-          className="flex-1 py-2 px-3 bg-sky-600 text-white text-sm font-medium rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors"
-          disabled={event.status === "cancelled"}
-        >
-          Quét QR
-        </button>
+        {event.status === "completed" ? (
+          <button
+            onClick={() => onReport && onReport(event)}
+            className="flex-1 py-2 px-3 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+          >
+            Xem báo cáo
+          </button>
+        ) : (
+          <button
+            onClick={() => onSelect(event)}
+            className="flex-1 py-2 px-3 bg-sky-600 text-white text-sm font-medium rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors"
+            disabled={event.status === "cancelled"}
+          >
+            Quét QR
+          </button>
+        )}
         <button
           onClick={() => onEdit(event)}
           className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
@@ -1006,7 +1018,7 @@ const CheckInHistory = ({ history }: { history: CheckInRecord[] }) => (
 );
 
 // QR Scanner Modal
-const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, checkInHistoryError, eventCapacity }: { open: boolean; onClose: () => void; onScan: (data: string | null) => void; eventTitle: string; checkInHistory: CheckInRecord[]; checkInHistoryError?: string | null; eventCapacity?: number }) => {
+const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, checkInHistoryError, eventCapacity }: { open: boolean; onClose: () => void; onScan: (data: string | null, opts?: { success?: boolean }) => void; eventTitle: string; checkInHistory: CheckInRecord[]; checkInHistoryError?: string | null; eventCapacity?: number }) => {
   const qrRegionId = "qr-reader-html5";
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const scanningRef = useRef(false);
@@ -1029,7 +1041,7 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
       }
       // Scan file
       const result = await html5Qr.scanFile(file, true);
-      onScan(result);
+      onScan(result, { success: true });
       setTimeout(() => onClose(), 500);
     } catch (err) {
       console.error('Scan file error:', err);
@@ -1042,14 +1054,11 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
           (decodedText) => {
             if (scanningRef.current) {
               scanningRef.current = false;
-              onScan(decodedText);
+              onScan(decodedText, { success: true });
               setTimeout(() => onClose(), 500);
             }
           },
-          (errorMessage) => {
-            // Xử lý lỗi scan nếu cần
-            // console.warn('QR scan error:', errorMessage);
-          }
+          (errorMessage) => {}
         );
         isScanningCamera.current = true;
       } catch (e) {
@@ -1071,14 +1080,11 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
         (decodedText) => {
           if (scanningRef.current) {
             scanningRef.current = false;
-            onScan(decodedText);
+            onScan(decodedText, { success: true });
             setTimeout(() => onClose(), 500);
           }
         },
-        (errorMessage) => {
-          // Xử lý lỗi scan nếu cần
-          // console.warn('QR scan error:', errorMessage);
-        }
+        (errorMessage) => {}
       )
       .catch(() => {});
     return () => {
@@ -1086,9 +1092,7 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
       isScanningCamera.current = false;
       try {
         html5Qr.stop().then(() => html5Qr.clear()).catch(() => {});
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     };
   }, [open]);
 
@@ -1143,6 +1147,119 @@ const QRScannerModal = ({ open, onClose, onScan, eventTitle, checkInHistory, che
   );
 };
 
+// Modal báo cáo sự kiện
+const EventReportModal = ({ open, onClose, event }: { open: boolean; onClose: () => void; event: Event | null }) => {
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [checkInCount, setCheckInCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!event || !open) return;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const feedbackData = await getEventFeedbacksApi(event._id);
+        setFeedbacks(feedbackData);
+        const res = await fetch(`/api/events/${event._id}/check-in-history`);
+        const checkInData = await res.json();
+        setCheckInCount(Array.isArray(checkInData) ? checkInData.length : 0);
+      } catch {
+        setFeedbacks([]);
+        setCheckInCount(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [event, open]);
+
+  if (!event) return null;
+  const registered = event.registeredCount ?? 0;
+  const percent = registered > 0 ? Math.round((checkInCount / registered) * 100) : 0;
+
+  // Pie chart data
+  const pieData = {
+    labels: ["Check-in", "Chưa check-in"],
+    datasets: [
+      {
+        data: [checkInCount, Math.max(registered - checkInCount, 0)],
+        backgroundColor: ["#22c55e", "#e5e7eb"],
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  return (
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 ${open ? '' : 'hidden'}`}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-8 relative animate-fadeIn">
+        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl">×</button>
+        <h2 className="text-2xl font-bold mb-6 text-sky-700 flex items-center gap-2">
+          <span>📊 Báo cáo sự kiện:</span> <span className="truncate">{event.title}</span>
+        </h2>
+        {loading ? (
+          <div className="text-center py-12 text-lg text-sky-600 font-semibold">Đang tải dữ liệu...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Tổng quan & biểu đồ */}
+            <div>
+              <div className="mb-4 flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                  <span className="inline-block w-3 h-3 rounded-full bg-sky-500"></span>
+                  Tổng đăng ký: <span className="text-sky-700">{registered}</span>
+                </div>
+                <div className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                  <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                  Đã check-in: <span className="text-green-600">{checkInCount}</span>
+                </div>
+                <div className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                  <span className="inline-block w-3 h-3 rounded-full bg-yellow-400"></span>
+                  Tỉ lệ tham gia:
+                  <span className="text-yellow-600">{percent}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+                  <div className="h-3 rounded-full bg-green-500 transition-all duration-300" style={{ width: `${percent}%` }}></div>
+                </div>
+              </div>
+              <div className="flex justify-center items-center mt-6">
+                {/* Biểu đồ tròn */}
+                <Pie data={pieData} options={{ plugins: { legend: { display: false } } }} width={120} height={120} />
+              </div>
+            </div>
+            {/* Feedback */}
+            <div>
+              <h3 className="font-semibold mb-3 text-sky-700 text-lg flex items-center gap-2">📝 Feedback của sự kiện</h3>
+              {feedbacks.length === 0 ? (
+                <div className="text-gray-400 text-base italic">Chưa có feedback nào.</div>
+              ) : (
+                <ul className="max-h-64 overflow-y-auto divide-y divide-gray-200">
+                  {feedbacks.map((fb, idx) => (
+                    <li key={idx} className="py-3 flex gap-3 items-start">
+                      <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 font-bold text-lg">
+                        {fb.userId?.fullName ? fb.userId.fullName[0] : 'A'}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-gray-800">{fb.userId?.fullName || 'Ẩn danh'}</span>
+                          <span className="flex gap-0.5">
+                            {Array(5).fill(0).map((_, i) => (
+                              <svg key={i} className={`w-4 h-4 ${i < fb.rating ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.966c.3.922-.755 1.688-1.54 1.118l-3.385-2.46a1 1 0 00-1.175 0l-3.385 2.46c-.784.57-1.838-.196-1.54-1.118l1.287-3.966a1 1 0 00-.364-1.118l-3.385-2.46c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.967z" /></svg>
+                            ))}
+                          </span>
+                        </div>
+                        <div className="text-gray-700 text-base">{fb.content}</div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Main Admin Event Management Page
 const AdminEventManagement = () => {
   const [filter, setFilter] = useState("all");
@@ -1163,6 +1280,14 @@ const AdminEventManagement = () => {
   const [cancellingEvent, setCancellingEvent] = useState<Event | null>(null);
   const [allSponsors, setAllSponsors] = useState<Sponsor[]>([]);
   const [checkInHistoryError, setCheckInHistoryError] = useState<string | null>(null);
+  // Thêm state cho modal báo cáo
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportEvent, setReportEvent] = useState<Event | null>(null);
+
+  const handleReportEvent = (event: Event) => {
+    setReportEvent(event);
+    setShowReportModal(true);
+  };
 
   useEffect(() => {
     fetchEvents();
@@ -1355,26 +1480,28 @@ const AdminEventManagement = () => {
   };
 
   // 1. Sửa handleScan để không crash khi check-in trùng
-  const handleScan = async (data: string | null) => {
+  const handleScan = async (data: string | null, opts?: { success?: boolean }) => {
     if (!data || !selectedEvent) return;
     try {
-      // Extract userId from QR data (assuming QR contains userId)
-      const userId = data; // Assuming QR data is the userId
-      await checkInEventApi(selectedEvent._id, data, userId);
+      await checkInEventApi(selectedEvent._id, data);
       setCheckInHistory((prev) => [
         { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date().toISOString(), status: "success" as const },
         ...prev
       ].slice(0, 10));
       toast.success("Check-in thành công!");
+      setShowQRScanner(false); // Chỉ đóng khi thành công
       fetchEvents();
       fetchCheckInHistory(selectedEvent._id);
-    } catch {
-      toast.error("Check-in thất bại!");
+    } catch (err: any) {
+      // Lấy đúng message từ backend khi lỗi
+      const msg = err?.response?.data?.message || err?.message || "Check-in thất bại!";
+      toast.error(msg);
       setCheckInHistory((prev) => [
         { userName: "(QR)", eventName: selectedEvent.title, timestamp: new Date().toISOString(), status: "error" as const },
         ...prev
       ].slice(0, 10));
       fetchCheckInHistory(selectedEvent._id);
+      // KHÔNG đóng modal khi lỗi
     }
   };
 
@@ -1541,6 +1668,7 @@ const AdminEventManagement = () => {
                       onEdit={handleEditEvent}
                       onDelete={handleDeleteClick}
                       onCancel={handleCancelEvent}
+                      onReport={handleReportEvent}
                     />
                   ))}
                 </div>
@@ -1604,6 +1732,9 @@ const AdminEventManagement = () => {
 
       {/* Check-in History */}
       {showQRScanner && <CheckInHistory history={checkInHistory} />}
+
+      {/* Modal báo cáo sự kiện */}
+      <EventReportModal open={showReportModal} onClose={() => setShowReportModal(false)} event={reportEvent} />
     </div>
   );
 };

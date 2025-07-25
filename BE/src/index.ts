@@ -16,6 +16,7 @@ import feedbackRoutes from "./routes/feedbackRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
 
 import sponsorRoutes from "./routes/sponsorRoutes";
+import eventFeedbackRoutes from "./routes/eventFeedbackRoutes";
 
 import reportRoutes from "./routes/reportRoutes";
 import questionRoutes from "./routes/questionRoutes";
@@ -65,6 +66,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/sponsors", sponsorRoutes);
 app.use("/api/questions", questionRoutes);
+app.use("/api/event-feedback", eventFeedbackRoutes);
 
 
 // Route kiểm tra

@@ -109,7 +109,28 @@ export const getEventById = async (
 // [PUT] /api/events/:id - Cập nhật sự kiện
 export const updateEvent = async (req: Request, res: Response) => {
   try {
-    const event = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    let event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    }
+    // Cập nhật các trường từ req.body (trừ status)
+    Object.keys(req.body).forEach((key) => {
+      if (key !== "status") {
+        (event as any)[key] = req.body[key];
+      }
+    });
+    // Nếu status là cancelled thì giữ nguyên
+    if (event.status !== "cancelled") {
+      const now = new Date();
+      if (event.startDate > now) {
+        event.status = "upcoming";
+      } else if (event.endDate < now) {
+        event.status = "completed";
+      } else {
+        event.status = "ongoing";
+      }
+    }
+    await event.save();
     res.status(200).json(event);
   } catch (error) {
     res.status(400).json({ message: "Lỗi khi cập nhật sự kiện", error });
@@ -333,6 +354,7 @@ export const checkInEvent = async (
   req: Request<{ id: string }, {}, { qrData: string }>,
   res: Response
 ): Promise<void> => {
+  console.log("[checkInEvent] Nhận request check-in cho eventId:", req.params.id, "qrData:", req.body.qrData?.slice(0, 30));
   try {
     // Giải mã token từ QR code
     let decoded;
@@ -342,13 +364,16 @@ export const checkInEvent = async (
         eventId: string;
         timestamp: string;
       };
+      console.log("[checkInEvent] Token giải mã:", decoded);
     } catch (err) {
+      console.log("[checkInEvent] Mã QR không hợp lệ", err);
       res.status(400).json({ message: "Mã QR không hợp lệ" });
       return;
     }
 
     // Kiểm tra event ID có khớp không
     if (decoded.eventId !== req.params.id) {
+      console.log("[checkInEvent] Mã QR không khớp với sự kiện", decoded.eventId, req.params.id);
       res.status(400).json({ message: "Mã QR không khớp với sự kiện" });
       return;
     }
@@ -361,12 +386,14 @@ export const checkInEvent = async (
     });
 
     if (!registration) {
+      console.log("[checkInEvent] Không tìm thấy thông tin đăng ký", decoded.userId, decoded.eventId);
       res.status(400).json({ message: "Không tìm thấy thông tin đăng ký" });
       return;
     }
 
     // Kiểm tra đã check-in chưa
     if (registration.checkedInAt) {
+      console.log("[checkInEvent] Đã check-in trước đó", registration.checkedInAt);
       res.status(400).json({
         message: "Đã check-in trước đó",
         checkedInAt: registration.checkedInAt,
@@ -377,9 +404,10 @@ export const checkInEvent = async (
     // Cập nhật thời gian check-in
     registration.checkedInAt = new Date();
     await registration.save();
-
+    console.log("[checkInEvent] Check-in thành công cho user", decoded.userId, "event", decoded.eventId);
     res.status(200).json({ message: "Check-in thành công" });
   } catch (error) {
+    console.error("[checkInEvent] Lỗi khi check-in:", error);
     res.status(500).json({ message: "Lỗi khi check-in", error });
   }
 };
@@ -415,16 +443,22 @@ export const getRegisteredEvents = async (
       userId: req.params.userId,
     }).populate("eventId");
 
-    // Trả về cả status và qrCode
+    // Trả về cả status, checkedInAt và qrCode
     const events = registrations.map((reg) => {
       let eventObj = reg.eventId;
-      if (typeof reg.eventId === 'object' && reg.eventId !== null && typeof (reg.eventId as any).toObject === 'function') {
+      if (
+        typeof reg.eventId === "object" &&
+        reg.eventId !== null &&
+        typeof (reg.eventId as any).toObject === "function"
+      ) {
         eventObj = (reg.eventId as any).toObject();
       }
       return {
         ...eventObj,
+        checkedInAt: reg.checkedInAt,
+        registrationStatus: reg.status,
         isCancelled: reg.status === "cancelled",
-        qrCode: reg.qrString
+        qrCode: reg.qrString,
       };
     });
     res.status(200).json(events);

@@ -21,6 +21,7 @@ import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import PaymentHistory from "./PaymentHistory";
+import { FiMessageCircle, FiCheckCircle } from 'react-icons/fi';
 
 interface User {
   _id?: string;
@@ -134,6 +135,9 @@ export default function Profile() {
   });
   const [eventDangXem, setEventDangXem] = useState<Event | null>(null);
   const [modalEvent, setModalEvent] = useState(false);
+  const [eventFeedbacks, setEventFeedbacks] = useState<Record<string, EventFeedback | null>>({});
+  const [feedbackLoading, setFeedbackLoading] = useState<Record<string, boolean>>({});
+  const [feedbackForm, setFeedbackForm] = useState<Record<string, { content: string; rating: number }>>({});
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -398,6 +402,65 @@ export default function Profile() {
       const message =
         (error as any)?.response?.data?.message || "Không thể hủy đăng ký!";
       alert(message);
+    }
+  };
+
+  // Hàm lấy feedback của user cho từng event
+  const fetchEventFeedback = async (eventId: string) => {
+    setFeedbackLoading((prev) => ({ ...prev, [eventId]: true }));
+    try {
+      const res = await axios.get(`/api/event-feedback/${eventId}`);
+      // Lấy feedback của user hiện tại (nếu có)
+      const userId = authUser?._id;
+      const fb = Array.isArray(res.data)
+        ? res.data.find((f: any) => f.userId._id === userId)
+        : null;
+      setEventFeedbacks((prev) => ({ ...prev, [eventId]: fb || null }));
+    } catch {
+      setEventFeedbacks((prev) => ({ ...prev, [eventId]: null }));
+    } finally {
+      setFeedbackLoading((prev) => ({ ...prev, [eventId]: false }));
+    }
+  };
+
+  // Khi load danh sách event, fetch feedback cho từng event
+  useEffect(() => {
+    if (authUser && registeredEvents.length > 0) {
+      registeredEvents.forEach((ev) => {
+        fetchEventFeedback(ev._id);
+      });
+    }
+    // eslint-disable-next-line
+  }, [authUser, registeredEvents.length]);
+
+  // Hàm gửi feedback
+  const handleSendFeedback = async (eventId: string) => {
+    const form = feedbackForm[eventId];
+    console.log("[DEBUG] Gửi feedback:", eventId, form);
+    if (!form || !form.content || !form.rating) return;
+    setFeedbackLoading((prev) => ({ ...prev, [eventId]: true }));
+    try {
+      await axios.post(
+        "/api/event-feedback",
+        {
+          eventId,
+          content: form.content,
+          rating: form.rating,
+          userId: authUser?._id, // Truyền userId vào body
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      toast.success("Gửi feedback thành công!");
+      setFeedbackForm((prev) => ({ ...prev, [eventId]: { content: "", rating: 5 } }));
+      fetchEventFeedback(eventId);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Không thể gửi feedback");
+    } finally {
+      setFeedbackLoading((prev) => ({ ...prev, [eventId]: false }));
     }
   };
 
@@ -1304,6 +1367,85 @@ export default function Profile() {
                                   </button>
                                 ))}
                             </div>
+                            {/* Feedback cho event đã check-in */}
+                            {event.status === "completed" && event.checkedInAt && (
+                              <div className="mt-2">
+                                {feedbackLoading[event._id] ? (
+                                  <div className="text-xs text-gray-400 italic">Đang tải feedback...</div>
+                                ) : eventFeedbacks[event._id] ? (
+                                  <div className="bg-green-50 border border-green-200 rounded-xl shadow p-4 flex flex-col items-start max-w-md">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <FiCheckCircle className="text-green-500 text-xl" />
+                                      <span className="font-semibold text-green-700">Bạn đã gửi feedback</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 mb-1">
+                                      {[1,2,3,4,5].map((star) => (
+                                        <span key={star} className={star <= eventFeedbacks[event._id]!.rating ? "text-yellow-400 text-xl" : "text-gray-300 text-xl"}>★</span>
+                                      ))}
+                                    </div>
+                                    <div className="text-gray-700 mb-1 italic">"{eventFeedbacks[event._id]!.content}"</div>
+                                    <div className="text-xs text-gray-400">{new Date(eventFeedbacks[event._id]!.createdAt!).toLocaleString()}</div>
+                                  </div>
+                                ) : (
+                                  <div className="bg-white rounded-xl shadow-md border border-sky-100 p-4 max-w-md">
+                                    <div className="font-semibold text-sky-700 mb-2 flex items-center gap-2">
+                                      <FiMessageCircle className="text-sky-500" /> Gửi feedback cho sự kiện này
+                                    </div>
+                                    <form
+                                      onSubmit={e => {
+                                        e.preventDefault();
+                                        handleSendFeedback(event._id);
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-2 mb-2">
+                                        {[1,2,3,4,5].map((star) => (
+                                          <button
+                                            type="button"
+                                            key={star}
+                                            className={
+                                              (star <= (feedbackForm[event._id]?.rating || 5)
+                                                ? "text-yellow-400"
+                                                : "text-gray-300") +
+                                              " text-2xl transition-transform transform hover:scale-125 focus:outline-none"
+                                            }
+                                            onClick={() => setFeedbackForm((prev) => ({
+                                              ...prev,
+                                              [event._id]: {
+                                                ...prev[event._id],
+                                                rating: star,
+                                                content: prev[event._id]?.content || ""
+                                              }
+                                            }))}
+                                          >★</button>
+                                        ))}
+                                      </div>
+                                      <textarea
+                                        className="w-full border rounded p-2 text-sm mb-2 focus:ring-2 focus:ring-sky-200"
+                                        rows={2}
+                                        placeholder="Cảm nhận của bạn về sự kiện..."
+                                        value={feedbackForm[event._id]?.content || ""}
+                                        onChange={e => setFeedbackForm((prev) => ({
+                                          ...prev,
+                                          [event._id]: {
+                                            ...prev[event._id],
+                                            content: e.target.value,
+                                            rating: prev[event._id]?.rating || 5
+                                          }
+                                        }))}
+                                        required
+                                      />
+                                      <button
+                                        type="submit"
+                                        className="px-4 py-1.5 bg-sky-500 text-white rounded-lg font-semibold hover:bg-sky-600 transition-colors text-sm shadow"
+                                        disabled={feedbackLoading[event._id]}
+                                      >
+                                        {feedbackLoading[event._id] ? "Đang gửi..." : "Gửi feedback"}
+                                      </button>
+                                    </form>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

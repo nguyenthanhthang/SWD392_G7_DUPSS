@@ -164,3 +164,9 @@ export const uploadAvatarApi = async (file: File): Promise<string> => {
   );
   return response.data.imageUrl; // BE trả về { imageUrl }
 };
+
+// Lấy feedback của 1 sự kiện
+export const getEventFeedbacksApi = async (eventId: string) => {
+  const response = await axios.get(`${API_URL}/event-feedback/${eventId}`);
+  return response.data;
+};
