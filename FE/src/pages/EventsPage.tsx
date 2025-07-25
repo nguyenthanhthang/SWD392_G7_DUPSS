@@ -7,6 +7,7 @@ import {
   getRegisteredEventsApi,
   unregisterEventApi,
 } from "../api";
+import { getEventFeedbacksApi } from "../api/index";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { motion } from "framer-motion";
@@ -67,6 +68,7 @@ export default function EventsPage() {
   const [showUnregisterSuccess, setShowUnregisterSuccess] = useState(false);
   const [showUnregisterConfirm, setShowUnregisterConfirm] = useState(false);
   const [eventToUnregister, setEventToUnregister] = useState<string | null>(null);
+  const [eventFeedbacks, setEventFeedbacks] = useState<Record<string, { avg: number, count: number }>>({});
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -237,6 +239,29 @@ export default function EventsPage() {
       setCancelledEvents([]);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (filteredEvents.length === 0) return;
+    // Lấy feedback cho từng event (chỉ lấy trung bình và số lượng)
+    const fetchFeedbacks = async () => {
+      const feedbackMap: Record<string, { avg: number, count: number }> = {};
+      await Promise.all(filteredEvents.map(async (event) => {
+        try {
+          const feedbacks: { rating: number }[] = await getEventFeedbacksApi(event._id);
+          if (feedbacks && feedbacks.length > 0) {
+            const avg = Math.round((feedbacks.reduce((sum, f) => sum + (f.rating || 0), 0) / feedbacks.length) * 10) / 10;
+            feedbackMap[event._id] = { avg, count: feedbacks.length };
+          } else {
+            feedbackMap[event._id] = { avg: 0, count: 0 };
+          }
+        } catch {
+          feedbackMap[event._id] = { avg: 0, count: 0 };
+        }
+      }));
+      setEventFeedbacks(feedbackMap);
+    };
+    fetchFeedbacks();
+  }, [filteredEvents]);
 
   if (loading) {
     return (
@@ -546,6 +571,17 @@ export default function EventsPage() {
                   <h3 className="text-xl font-bold text-slate-800 mb-3">
                     {event.title}
                   </h3>
+                  {/* Feedback summary */}
+                  {eventFeedbacks[event._id] && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="flex gap-0.5">
+                        {Array(5).fill(0).map((_, i) => (
+                          <svg key={i} className={`w-4 h-4 ${i < eventFeedbacks[event._id].avg ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.966c.3.922-.755 1.688-1.54 1.118l-3.385-2.46a1 1 0 00-1.175 0l-3.385 2.46c-.784.57-1.838-.196-1.54-1.118l1.287-3.966a1 1 0 00-.364-1.118l-3.385-2.46c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.967z" /></svg>
+                        ))}
+                      </span>
+                      <span className="text-sm text-gray-600 font-medium">{eventFeedbacks[event._id].avg > 0 ? eventFeedbacks[event._id].avg : 'Chưa có đánh giá'} ({eventFeedbacks[event._id].count})</span>
+                    </div>
+                  )}
                   <p className="text-slate-600 mb-4 line-clamp-2 min-h-[48px] leading-relaxed">
                     {event.description}
                   </p>
