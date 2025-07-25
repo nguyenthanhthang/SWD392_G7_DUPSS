@@ -9,7 +9,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": "http://localhost:5000",
+      "/api": "https://swd392-g7-dupss.onrender.com",
     },
   },
 });

@@ -381,8 +381,8 @@ export default function ConsultantProfile() {
       // Upload to server
       const formData = new FormData();
       formData.append("image", file);
-      const uploadResponse = await fetch(
-        "http://localhost:5000/api/uploads/upload",
+      const response = await fetch(
+        "https://swd392-g7-dupss.onrender.com/api/uploads/upload",
         {
           method: "POST",
           headers: {
@@ -391,8 +391,8 @@ export default function ConsultantProfile() {
           body: formData,
         }
       );
-      if (!uploadResponse.ok) throw new Error("Failed to upload image");
-      const { imageUrl } = await uploadResponse.json();
+      if (!response.ok) throw new Error("Failed to upload image");
+      const { imageUrl } = await response.json();
       // Update user's photoUrl
       await updateAccountApi(user._id, { photoUrl: imageUrl });
       // Update local user state
@@ -1066,13 +1066,16 @@ function CertificateModal({
     try {
       const formData = new FormData();
       formData.append("image", file);
-      const res = await fetch("http://localhost:5000/api/uploads/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: formData,
-      });
+      const res = await fetch(
+        "https://swd392-g7-dupss.onrender.com/api/uploads/upload",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: formData,
+        }
+      );
       if (!res.ok) throw new Error("Upload thất bại");
       const { imageUrl } = await res.json();
       setData((prev) => ({ ...prev, fileUrl: imageUrl }));

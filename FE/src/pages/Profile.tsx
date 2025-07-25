@@ -16,12 +16,11 @@ import type { AxiosError } from "axios";
 import { Eye, EyeOff } from "lucide-react";
 import BlogDetailView from "../components/blog/BlogDetailView";
 import CreateBlogForm from "../components/blog/CreateBlogForm";
-import { format } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import PaymentHistory from "./PaymentHistory";
-import { FiMessageCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiMessageCircle, FiCheckCircle } from "react-icons/fi";
 
 interface User {
   _id?: string;
@@ -78,7 +77,22 @@ type Event = {
   sponsors?: Sponsor[];
   qrCode?: string;
   image?: string;
+  checkedInAt?: string;
 };
+
+// Định nghĩa interface EventFeedback nếu chưa có
+interface EventFeedback {
+  _id: string;
+  userId: {
+    _id: string;
+    fullName?: string;
+    photoUrl?: string;
+  };
+  eventId: string;
+  content: string;
+  rating: number;
+  createdAt?: string;
+}
 
 const menuTabs = [
   { key: "profile", label: "Hồ sơ người dùng" },
@@ -121,8 +135,6 @@ export default function Profile() {
   const [showQR, setShowQR] = useState<{ open: boolean; qr?: string } | null>(
     null
   );
-  const handleOpenQR = (qr: string) => setShowQR({ open: true, qr });
-  const handleCloseQR = () => setShowQR(null);
   const [eventFilterStatus, setEventFilterStatus] = useState("all");
   const [eventFilterKeyword, setEventFilterKeyword] = useState("");
   const filteredEvents = registeredEvents.filter((ev) => {
@@ -135,9 +147,15 @@ export default function Profile() {
   });
   const [eventDangXem, setEventDangXem] = useState<Event | null>(null);
   const [modalEvent, setModalEvent] = useState(false);
-  const [eventFeedbacks, setEventFeedbacks] = useState<Record<string, EventFeedback | null>>({});
-  const [feedbackLoading, setFeedbackLoading] = useState<Record<string, boolean>>({});
-  const [feedbackForm, setFeedbackForm] = useState<Record<string, { content: string; rating: number }>>({});
+  const [eventFeedbacks, setEventFeedbacks] = useState<
+    Record<string, EventFeedback | null>
+  >({});
+  const [feedbackLoading, setFeedbackLoading] = useState<
+    Record<string, boolean>
+  >({});
+  const [feedbackForm, setFeedbackForm] = useState<
+    Record<string, { content: string; rating: number }>
+  >({});
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -251,7 +269,7 @@ export default function Profile() {
     setPwdLoading(true);
     try {
       if (!user?.email) throw new Error("Không tìm thấy email người dùng");
-      await changePasswordApi(user.email, pwdNew, pwdConfirm);
+      await changePasswordApi(user.email, pwdNew, pwdConfirm, pwdOtp);
       setShowPwdModal(false);
       setPwdStep("email");
       setPwdEmail("");
@@ -311,7 +329,7 @@ export default function Profile() {
 
       // Sử dụng API upload của backend với progress tracking
       const response = await axios.post(
-        "http://localhost:5000/api/uploads/upload",
+        "https://swd392-g7-dupss.onrender.com/api/uploads/upload",
         formData,
         {
           headers: {
@@ -455,7 +473,10 @@ export default function Profile() {
         }
       );
       toast.success("Gửi feedback thành công!");
-      setFeedbackForm((prev) => ({ ...prev, [eventId]: { content: "", rating: 5 } }));
+      setFeedbackForm((prev) => ({
+        ...prev,
+        [eventId]: { content: "", rating: 5 },
+      }));
       fetchEventFeedback(eventId);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Không thể gửi feedback");
@@ -1368,84 +1389,122 @@ export default function Profile() {
                                 ))}
                             </div>
                             {/* Feedback cho event đã check-in */}
-                            {event.status === "completed" && event.checkedInAt && (
-                              <div className="mt-2">
-                                {feedbackLoading[event._id] ? (
-                                  <div className="text-xs text-gray-400 italic">Đang tải feedback...</div>
-                                ) : eventFeedbacks[event._id] ? (
-                                  <div className="bg-green-50 border border-green-200 rounded-xl shadow p-4 flex flex-col items-start max-w-md">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <FiCheckCircle className="text-green-500 text-xl" />
-                                      <span className="font-semibold text-green-700">Bạn đã gửi feedback</span>
+                            {event.status === "completed" &&
+                              event.checkedInAt && (
+                                <div className="mt-2">
+                                  {feedbackLoading[event._id] ? (
+                                    <div className="text-xs text-gray-400 italic">
+                                      Đang tải feedback...
                                     </div>
-                                    <div className="flex items-center gap-1 mb-1">
-                                      {[1,2,3,4,5].map((star) => (
-                                        <span key={star} className={star <= eventFeedbacks[event._id]!.rating ? "text-yellow-400 text-xl" : "text-gray-300 text-xl"}>★</span>
-                                      ))}
-                                    </div>
-                                    <div className="text-gray-700 mb-1 italic">"{eventFeedbacks[event._id]!.content}"</div>
-                                    <div className="text-xs text-gray-400">{new Date(eventFeedbacks[event._id]!.createdAt!).toLocaleString()}</div>
-                                  </div>
-                                ) : (
-                                  <div className="bg-white rounded-xl shadow-md border border-sky-100 p-4 max-w-md">
-                                    <div className="font-semibold text-sky-700 mb-2 flex items-center gap-2">
-                                      <FiMessageCircle className="text-sky-500" /> Gửi feedback cho sự kiện này
-                                    </div>
-                                    <form
-                                      onSubmit={e => {
-                                        e.preventDefault();
-                                        handleSendFeedback(event._id);
-                                      }}
-                                    >
-                                      <div className="flex items-center gap-2 mb-2">
-                                        {[1,2,3,4,5].map((star) => (
-                                          <button
-                                            type="button"
+                                  ) : eventFeedbacks[event._id] ? (
+                                    <div className="bg-green-50 border border-green-200 rounded-xl shadow p-4 flex flex-col items-start max-w-md">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <FiCheckCircle className="text-green-500 text-xl" />
+                                        <span className="font-semibold text-green-700">
+                                          Bạn đã gửi feedback
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1 mb-1">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                          <span
                                             key={star}
                                             className={
-                                              (star <= (feedbackForm[event._id]?.rating || 5)
-                                                ? "text-yellow-400"
-                                                : "text-gray-300") +
-                                              " text-2xl transition-transform transform hover:scale-125 focus:outline-none"
+                                              star <=
+                                              eventFeedbacks[event._id]!.rating
+                                                ? "text-yellow-400 text-xl"
+                                                : "text-gray-300 text-xl"
                                             }
-                                            onClick={() => setFeedbackForm((prev) => ({
+                                          >
+                                            ★
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <div className="text-gray-700 mb-1 italic">
+                                        "{eventFeedbacks[event._id]!.content}"
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        {new Date(
+                                          eventFeedbacks[event._id]!.createdAt!
+                                        ).toLocaleString()}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="bg-white rounded-xl shadow-md border border-sky-100 p-4 max-w-md">
+                                      <div className="font-semibold text-sky-700 mb-2 flex items-center gap-2">
+                                        <FiMessageCircle className="text-sky-500" />{" "}
+                                        Gửi feedback cho sự kiện này
+                                      </div>
+                                      <form
+                                        onSubmit={(e) => {
+                                          e.preventDefault();
+                                          handleSendFeedback(event._id);
+                                        }}
+                                      >
+                                        <div className="flex items-center gap-2 mb-2">
+                                          {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                              type="button"
+                                              key={star}
+                                              className={
+                                                (star <=
+                                                (feedbackForm[event._id]
+                                                  ?.rating || 5)
+                                                  ? "text-yellow-400"
+                                                  : "text-gray-300") +
+                                                " text-2xl transition-transform transform hover:scale-125 focus:outline-none"
+                                              }
+                                              onClick={() =>
+                                                setFeedbackForm((prev) => ({
+                                                  ...prev,
+                                                  [event._id]: {
+                                                    ...prev[event._id],
+                                                    rating: star,
+                                                    content:
+                                                      prev[event._id]
+                                                        ?.content || "",
+                                                  },
+                                                }))
+                                              }
+                                            >
+                                              ★
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <textarea
+                                          className="w-full border rounded p-2 text-sm mb-2 focus:ring-2 focus:ring-sky-200"
+                                          rows={2}
+                                          placeholder="Cảm nhận của bạn về sự kiện..."
+                                          value={
+                                            feedbackForm[event._id]?.content ||
+                                            ""
+                                          }
+                                          onChange={(e) =>
+                                            setFeedbackForm((prev) => ({
                                               ...prev,
                                               [event._id]: {
                                                 ...prev[event._id],
-                                                rating: star,
-                                                content: prev[event._id]?.content || ""
-                                              }
-                                            }))}
-                                          >★</button>
-                                        ))}
-                                      </div>
-                                      <textarea
-                                        className="w-full border rounded p-2 text-sm mb-2 focus:ring-2 focus:ring-sky-200"
-                                        rows={2}
-                                        placeholder="Cảm nhận của bạn về sự kiện..."
-                                        value={feedbackForm[event._id]?.content || ""}
-                                        onChange={e => setFeedbackForm((prev) => ({
-                                          ...prev,
-                                          [event._id]: {
-                                            ...prev[event._id],
-                                            content: e.target.value,
-                                            rating: prev[event._id]?.rating || 5
+                                                content: e.target.value,
+                                                rating:
+                                                  prev[event._id]?.rating || 5,
+                                              },
+                                            }))
                                           }
-                                        }))}
-                                        required
-                                      />
-                                      <button
-                                        type="submit"
-                                        className="px-4 py-1.5 bg-sky-500 text-white rounded-lg font-semibold hover:bg-sky-600 transition-colors text-sm shadow"
-                                        disabled={feedbackLoading[event._id]}
-                                      >
-                                        {feedbackLoading[event._id] ? "Đang gửi..." : "Gửi feedback"}
-                                      </button>
-                                    </form>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                                          required
+                                        />
+                                        <button
+                                          type="submit"
+                                          className="px-4 py-1.5 bg-sky-500 text-white rounded-lg font-semibold hover:bg-sky-600 transition-colors text-sm shadow"
+                                          disabled={feedbackLoading[event._id]}
+                                        >
+                                          {feedbackLoading[event._id]
+                                            ? "Đang gửi..."
+                                            : "Gửi feedback"}
+                                        </button>
+                                      </form>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                           </div>
                         ))}
                       </div>
@@ -1678,7 +1737,15 @@ export default function Profile() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
             <BlogDetailView
-              blog={{ ...blogDangXem, authorId: user?._id || "" }}
+              blog={{
+                ...blogDangXem!,
+                authorId: {
+                  _id: user?._id || "",
+                  fullName: user?.fullName || "",
+                  username: user?.username || "",
+                },
+                anDanh: !!blogDangXem?.anDanh,
+              }}
               onClose={() => setModalBlog(false)}
             />
           </div>
@@ -1802,7 +1869,7 @@ export default function Profile() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center relative min-w-[320px]">
             <button
-              onClick={handleCloseQR}
+              onClick={() => setShowQR(null)}
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
               aria-label="Đóng"
             >

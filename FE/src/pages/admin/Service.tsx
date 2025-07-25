@@ -223,12 +223,19 @@ const Service: React.FC = () => {
       formData.append("image", file);
 
       const response = await axios.post(
-        "http://localhost:5000/api/uploads/upload",
+        "https://swd392-g7-dupss.onrender.com/api/uploads/upload",
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          onUploadProgress: (progressEvent) => {
+            // This part is not directly related to the image upload logic
+            // but can be used for progress indication if needed.
+            // For now, it's commented out.
+            // const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            // console.log(`Upload progress: ${percentCompleted}%`);
           },
         }
       );
@@ -1116,7 +1123,10 @@ const Service: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="level" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="level"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Mức độ khuyến nghị
                 </label>
                 <select
@@ -1127,7 +1137,9 @@ const Service: React.FC = () => {
                   className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:ring-sky-500 focus:border-sky-500"
                 >
                   {LEVEL_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -1311,7 +1323,9 @@ const Service: React.FC = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500"
                 >
                   {LEVEL_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
               </div>

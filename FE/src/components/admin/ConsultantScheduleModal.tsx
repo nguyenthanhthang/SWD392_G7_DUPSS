@@ -329,11 +329,11 @@ const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({
 
   const handleBookedSlotClick = async (slotTimeId: string) => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/appointments/slotTime/${slotTimeId}`
+      const response = await axios.get(
+        `https://swd392-g7-dupss.onrender.com/api/appointments/slotTime/${slotTimeId}`
       );
-      if (res.data && res.data.length > 0) {
-        setAppointmentDetail(res.data[0]);
+      if (response.data && response.data.length > 0) {
+        setAppointmentDetail(response.data[0]);
         setShowAppointmentModal(true);
       } else {
         toast.error("Không tìm thấy thông tin cuộc hẹn!");
