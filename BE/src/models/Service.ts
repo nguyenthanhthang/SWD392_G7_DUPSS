@@ -9,6 +9,7 @@ export interface IService extends Document {
   createdAt: Date;
   updatedAt: Date;
   rating: number;
+  level?: "low" | "moderate" | "high" | "critical";
 }
 
 const ServiceSchema: Schema = new Schema({
@@ -19,7 +20,8 @@ const ServiceSchema: Schema = new Schema({
     status:{type:String,required:true,enum:["active","inactive","deleted"],default:"active"},
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
-    rating: { type: Number, default: 0 }
+    rating: { type: Number, default: 0 },
+    level: { type: String, enum: ["low", "moderate", "high", "critical"], required: false },
 });
 
 const Service = mongoose.model<IService>("Service", ServiceSchema);

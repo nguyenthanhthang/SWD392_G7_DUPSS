@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 
 export const createService = async(req:Request,res:Response)=>{
     try {
-        const {name,description,price,image, status} = req.body;
+        const {name,description,price,image, status, level} = req.body;
         // Validation thủ công
         if (!name || typeof name !== 'string' || !name.trim()) {
             return res.status(400).json({message: "Tên dịch vụ không hợp lệ!"});
@@ -22,7 +22,12 @@ export const createService = async(req:Request,res:Response)=>{
         // Status hợp lệ
         const validStatus = ["active", "inactive", "deleted"];
         const serviceStatus = status && validStatus.includes(status) ? status : "active";
-        const service = new Service({name,description,price,image, status: serviceStatus});
+        // Level hợp lệ nếu có
+        const validLevels = ["low", "moderate", "high", "critical"];
+        if (level && !validLevels.includes(level)) {
+            return res.status(400).json({message: "Level dịch vụ không hợp lệ!"});
+        }
+        const service = new Service({name,description,price,image, status: serviceStatus, ...(level && {level})});
         await service.save();
         res.status(201).json(service);
     } catch (error) {
@@ -53,6 +58,13 @@ export const getServiceById = async(req:Request,res:Response)=>{
 
 export const updateService = async(req:Request,res:Response)=>{
     try {
+        const { level } = req.body;
+        if (level) {
+            const validLevels = ["low", "moderate", "high", "critical"];
+            if (!validLevels.includes(level)) {
+                return res.status(400).json({message: "Level dịch vụ không hợp lệ!"});
+            }
+        }
         const service = await Service.findByIdAndUpdate(req.params.id,req.body,{new:true});
         if(!service){
             return res.status(404).json({message:"Dịch vụ không tồn tại"});

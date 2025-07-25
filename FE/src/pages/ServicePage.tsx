@@ -49,6 +49,7 @@ interface Service {
   image?: string;
   duration?: string;
   status?: 'active' | 'inactive';
+  level?: string;
 }
 
 interface SlotTime {
@@ -979,6 +980,14 @@ export default function ServicePage() {
     }
   };
 
+  // Thêm mapping cho level:
+  const LEVEL_LABELS: Record<string, { label: string; color: string; icon: JSX.Element }> = {
+    low: { label: 'Thấp', color: 'bg-green-100 text-green-700 border-green-300', icon: <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1" /> },
+    moderate: { label: 'Trung bình', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-1" /> },
+    high: { label: 'Cao', color: 'bg-orange-100 text-orange-700 border-orange-300', icon: <span className="inline-block w-2 h-2 rounded-full bg-orange-500 mr-1" /> },
+    critical: { label: 'Nghiêm trọng', color: 'bg-red-100 text-red-700 border-red-300', icon: <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1" /> },
+  };
+
   return (
     <div className="bg-gradient-to-b from-sky-50 to-[#f0f7fa] min-h-screen flex flex-col">
       {/* Slot hold countdown timer */}
@@ -1188,6 +1197,38 @@ export default function ServicePage() {
                         </div>
                       </div>
                     
+                      <div className="mb-6 flex justify-center">
+                        <div className="bg-white/80 border border-sky-100 rounded-xl shadow px-4 py-3 w-full max-w-xl">
+                          <div className="font-medium text-gray-700 mb-2 text-center text-base">Chú thích mức độ khuyến nghị</div>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-3 h-3 rounded-full bg-green-300 border border-green-400" />
+                              <span className="font-semibold text-green-700">Thấp:</span>
+                              <span className="text-gray-600">Phù hợp với các vấn đề nhẹ, cần tư vấn cơ bản.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-3 h-3 rounded-full bg-yellow-200 border border-yellow-400" />
+                              <span className="font-semibold text-yellow-700">Trung bình:</span>
+                              <span className="text-gray-600">Dành cho các vấn đề cần sự hỗ trợ chuyên sâu hơn.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-3 h-3 rounded-full bg-orange-200 border border-orange-400" />
+                              <span className="font-semibold text-orange-700">Cao:</span>
+                              <span className="text-gray-600">Dành cho trường hợp có dấu hiệu căng thẳng, lo âu, cần chuyên gia hỗ trợ.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-3 h-3 rounded-full bg-red-200 border border-red-400" />
+                              <span className="font-semibold text-red-700">Nghiêm trọng:</span>
+                              <span className="text-gray-600">Khuyến nghị liên hệ chuyên gia ngay, có thể có nguy cơ cao.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-3 h-3 rounded-full bg-gray-300 border border-gray-400" />
+                              <span className="font-semibold text-gray-700">Phù hợp với tất cả mọi người.</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    
                       <div className="space-y-4 mb-8">
                         {(expandServices ? services : services.slice(0, MAX_VISIBLE_SERVICES)).map(service => (
                           <div
@@ -1228,11 +1269,19 @@ export default function ServicePage() {
                               <div className="flex-1">
                                 <div className="mb-2 flex items-center gap-2">
                                   <span className="font-medium text-gray-800" title={service.name}>{service.name}</span>
-                                  {service.category === 'vip' && (
-                                    <span className="px-2 py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-xs rounded-full font-medium shadow-sm">VIP</span>
-                                  )}
-                                  {service.category === 'premium' && (
-                                    <span className="px-2 py-0.5 bg-gradient-to-r from-sky-400 to-cyan-500 text-white text-xs rounded-full font-medium shadow-sm">Premium</span>
+                                  {/* Hiển thị mức độ */}
+                                  {service.level ? (
+                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold border ${LEVEL_LABELS[service.level]?.color || 'bg-gray-100 text-gray-600 border-gray-200'}`}
+                                      title={`Mức độ khuyến nghị: ${LEVEL_LABELS[service.level]?.label}`}
+                                    >
+                                      {LEVEL_LABELS[service.level]?.icon}
+                                      {LEVEL_LABELS[service.level]?.label}
+                                    </span>
+                                  ) : (
+                                    <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Phù hợp với tất cả mọi người">
+                                      <span className="inline-block w-2 h-2 rounded-full bg-gray-400 mr-1" />
+                                      Phù hợp với tất cả mọi người
+                                    </span>
                                   )}
                                 </div>
                                 {service.description && (

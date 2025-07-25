@@ -31,6 +31,7 @@ interface IService {
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
+  level?: "low" | "moderate" | "high" | "critical";
 }
 
 // Component Tooltip
@@ -49,6 +50,14 @@ const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
     </div>
   );
 };
+
+const LEVEL_OPTIONS = [
+  { value: "", label: "Không chọn" },
+  { value: "low", label: "Thấp" },
+  { value: "moderate", label: "Trung bình" },
+  { value: "high", label: "Cao" },
+  { value: "critical", label: "Nghiêm trọng" },
+];
 
 const Service: React.FC = () => {
   const [services, setServices] = useState<IService[]>([]);
@@ -70,6 +79,7 @@ const Service: React.FC = () => {
     price: 0,
     image: "", // Thêm trường image thay vì duration
     status: "active" as "active" | "inactive",
+    level: "" as "" | "low" | "moderate" | "high" | "critical",
   });
 
   // Pagination state
@@ -298,6 +308,7 @@ const Service: React.FC = () => {
       price: 0,
       image: "",
       status: "active",
+      level: "",
     });
     // Reset errors khi mở modal tạo mới
     setErrors({
@@ -319,6 +330,7 @@ const Service: React.FC = () => {
       price: 0,
       image: "",
       status: "active",
+      level: "",
     });
   };
 
@@ -353,6 +365,7 @@ const Service: React.FC = () => {
         price: Number(formData.price),
         image: formData.image,
         status: formData.status,
+        ...(formData.level && { level: formData.level }),
       };
 
       // Gọi API tạo dịch vụ
@@ -408,6 +421,7 @@ const Service: React.FC = () => {
       price: service.price,
       image: service.image,
       status: service.status,
+      level: service.level || "",
     });
     // Reset errors khi mở modal cập nhật
     setErrors({
@@ -430,6 +444,7 @@ const Service: React.FC = () => {
       price: 0,
       image: "",
       status: "active",
+      level: "",
     });
     // Reset errors khi đóng modal cập nhật
     setErrors({
@@ -480,7 +495,10 @@ const Service: React.FC = () => {
     }
 
     try {
-      await api.put(`/services/${selectedService._id}`, formData);
+      await api.put(`/services/${selectedService._id}`, {
+        ...formData,
+        ...(formData.level ? { level: formData.level } : {}),
+      });
 
       // Reset errors ngay sau khi API thành công
       setErrors({
@@ -1097,6 +1115,23 @@ const Service: React.FC = () => {
                 </select>
               </div>
 
+              <div>
+                <label htmlFor="level" className="block text-sm font-medium text-gray-700 mb-1">
+                  Mức độ khuyến nghị
+                </label>
+                <select
+                  id="level"
+                  name="level"
+                  value={formData.level}
+                  onChange={handleInputChange}
+                  className="block w-full rounded-md py-2 px-3 text-sm border-gray-300 focus:ring-sky-500 focus:border-sky-500"
+                >
+                  {LEVEL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
@@ -1263,6 +1298,21 @@ const Service: React.FC = () => {
                 >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mức độ khuyến nghị
+                </label>
+                <select
+                  name="level"
+                  value={formData.level}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500"
+                >
+                  {LEVEL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
             </div>

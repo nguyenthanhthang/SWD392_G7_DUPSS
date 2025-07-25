@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAllBlogsApi, getAllEventsApi } from '../api';
+import { getAllBlogsApi, getAllEventsApi, getAllServicesApi } from '../api';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
@@ -41,6 +41,14 @@ interface QuizRecommendationProps {
   quizResult: QuizResult;
 }
 
+interface Service {
+  _id: string;
+  name: string;
+  description: string;
+  image?: string;
+  level?: string;
+}
+
 const truncateContent = (content: string, maxLength: number = 120) => {
   const strippedContent = content.replace(/<[^>]*>?/gm, '');
   return strippedContent.length > maxLength
@@ -52,6 +60,8 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [events, setEvents] = useState<EventHome[]>([]);
   const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
   const navigate = useNavigate();
 
   // Phân tích chi tiết dựa trên kết quả
@@ -238,6 +248,7 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setLoadingServices(true);
       try {
         // Lấy blog mới nhất
         const allBlogs = await getAllBlogsApi();
@@ -253,10 +264,15 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
           ? allEvents.sort((a: EventHome, b: EventHome) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).slice(0, 4)
           : [];
         setEvents(sortedEvents);
+
+        // Lấy danh sách dịch vụ
+        const allServices = await getAllServicesApi();
+        setServices(allServices);
       } catch {
         // Không hiển thị lỗi để không làm gián đoạn UX
       } finally {
         setLoading(false);
+        setLoadingServices(false);
       }
     };
     fetchData();
@@ -264,6 +280,11 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
 
   const analysis = getDetailedAnalysis();
   const content = getRelevantContent();
+
+  // Lọc dịch vụ phù hợp
+  const matchedServices = services.filter(s => s.level === quizResult.riskLevel);
+  const fallbackServices = services.filter(s => !s.level);
+  const recommendedServices = matchedServices.length > 0 ? matchedServices : fallbackServices;
 
   return (
     <motion.div
@@ -435,6 +456,52 @@ const QuizRecommendation: React.FC<QuizRecommendationProps> = ({ quizResult }) =
       </motion.div>
 
       {/* Content Recommendations */}
+      <motion.div
+        initial={{ x: 40, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="bg-white rounded-3xl p-8 shadow-xl border border-sky-200 mb-8"
+      >
+        <h3 className="text-2xl font-bold text-sky-800 mb-6">Dịch vụ phù hợp với bạn</h3>
+        {loadingServices ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-sky-600"></div>
+          </div>
+        ) : recommendedServices.length === 0 ? (
+          <div className="text-gray-500 text-center">Không tìm thấy dịch vụ phù hợp.</div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
+            {recommendedServices.map(service => (
+              <div
+                key={service._id}
+                className="flex bg-sky-50 rounded-xl p-4 cursor-pointer hover:bg-sky-100 transition-all border border-sky-100 shadow-sm"
+                onClick={() => navigate(`/service?id=${service._id}`)}
+              >
+                <img
+                  src={service.image || '/logo.png'}
+                  alt={service.name}
+                  className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="ml-4 flex-1">
+                  <div className="font-semibold text-sky-800 line-clamp-1 text-base">{service.name}</div>
+                  <div className="text-gray-600 text-sm line-clamp-2 mt-1">{service.description}</div>
+                  {service.level && (
+                    <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700 border border-sky-200">
+                      Mức độ: {service.level === 'low' ? 'Thấp' : service.level === 'moderate' ? 'Trung bình' : service.level === 'high' ? 'Cao' : service.level === 'critical' ? 'Nghiêm trọng' : 'Phù hợp với tất cả'}
+                    </span>
+                  )}
+                  {!service.level && (
+                    <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                      Phù hợp với tất cả mọi người
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Blog Section */}
         <motion.div
