@@ -91,13 +91,13 @@ export const testLoginEndpoint = async () => {
   }
 };
 
-// Auto-run tests when imported
-if (typeof window !== "undefined") {
-  // Only run in browser
-  setTimeout(() => {
-    testBackendConnection();
-    setTimeout(() => {
-      testLoginEndpoint();
-    }, 2000);
-  }, 1000);
-}
+// Auto-run tests when imported - DISABLED
+// if (typeof window !== "undefined") {
+//   // Only run in browser
+//   setTimeout(() => {
+//     testBackendConnection();
+//     setTimeout(() => {
+//       testLoginEndpoint();
+//     }, 2000);
+//   }, 1000);
+// }

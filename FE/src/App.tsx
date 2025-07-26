@@ -7,7 +7,6 @@ import {
 import { Suspense, lazy, useEffect } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import serverHealthMonitor from "./utils/serverHealth";
-import "./utils/testApi"; // Auto-run API tests
 
 // Lazy load all page components
 const Login = lazy(() => import("./pages/Login"));
