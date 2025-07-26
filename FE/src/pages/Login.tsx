@@ -9,6 +9,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { sendResetPasswordEmailApi, changePasswordApi } from "../api";
 import { Eye, EyeOff } from "lucide-react";
 import type { AxiosError } from "axios";
+import ColdStartLoading from "../components/ColdStartLoading";
 
 type GoogleJwtPayload = {
   email: string;
@@ -21,6 +22,8 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showColdStartLoading, setShowColdStartLoading] = useState(false);
   const { login, loginWithGoogle, error: authError, loading, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,18 +60,34 @@ function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoggingIn) return; // Prevent double submission
+
     try {
+      setIsLoggingIn(true);
+      setShowColdStartLoading(true);
       await login(email, password);
       // Chuyển hướng sẽ được xử lý trong useEffect khi user cập nhật
-    } catch {
-      // Lỗi đã được xử lý trong AuthContext
+    } catch (error: any) {
+      // Check if it's a cold start error
+      if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        console.log("🔄 Server is waking up, showing cold start loading...");
+        // Keep showing cold start loading
+      } else {
+        setShowColdStartLoading(false);
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleGoogleSuccess = async (
     credentialResponse: CredentialResponse
   ) => {
+    if (isLoggingIn) return; // Prevent double submission
+
     try {
+      setIsLoggingIn(true);
+      setShowColdStartLoading(true);
       if (!credentialResponse.credential) {
         alert("Đăng nhập Google thất bại!");
         return;
@@ -88,8 +107,15 @@ function LoginPage() {
           ? (fromObjGoogle as { pathname: string }).pathname
           : "/";
       navigate(fromGoogle, { replace: true });
-    } catch {
-      alert("Đăng nhập Google thất bại!");
+    } catch (error: any) {
+      if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        console.log("🔄 Server is waking up, showing cold start loading...");
+      } else {
+        setShowColdStartLoading(false);
+        alert("Đăng nhập Google thất bại!");
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -174,6 +200,12 @@ function LoginPage() {
     setForgotLoading(false);
   };
 
+  const handleColdStartTimeout = () => {
+    setShowColdStartLoading(false);
+    // Could implement offline mode or retry logic here
+    alert("Server đang gặp vấn đề. Vui lòng thử lại sau.");
+  };
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center bg-white overflow-hidden">
       {forgotToast && (
@@ -237,7 +269,7 @@ function LoginPage() {
                       className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600 sm:text-sm"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      disabled={loading}
+                      disabled={loading || isLoggingIn}
                       placeholder="Nhập email hoặc username"
                     />
                   </div>
@@ -275,14 +307,14 @@ function LoginPage() {
                         className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600 sm:text-sm"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        disabled={loading}
+                        disabled={loading || isLoggingIn}
                       />
                       <button
                         type="button"
                         tabIndex={-1}
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
                         onClick={() => setShowPassword((v) => !v)}
-                        disabled={loading}
+                        disabled={loading || isLoggingIn}
                         aria-label={
                           showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
                         }
@@ -331,9 +363,9 @@ function LoginPage() {
                   <button
                     type="submit"
                     className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    disabled={loading}
+                    disabled={loading || isLoggingIn}
                   >
-                    {loading ? "Signing in..." : "Sign in"}
+                    {loading || isLoggingIn ? "Signing in..." : "Sign in"}
                   </button>
                 </div>
               </form>
@@ -491,6 +523,9 @@ function LoginPage() {
             Quay lại đăng nhập
           </button>
         </div>
+      )}
+      {showColdStartLoading && (
+        <ColdStartLoading onTimeout={handleColdStartTimeout} />
       )}
     </div>
   );

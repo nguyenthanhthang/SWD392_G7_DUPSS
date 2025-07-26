@@ -4,8 +4,10 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import serverHealthMonitor from "./utils/serverHealth";
+import "./utils/testApi"; // Auto-run API tests
 
 // Lazy load all page components
 const Login = lazy(() => import("./pages/Login"));
@@ -108,6 +110,19 @@ function ConsultantRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { loading } = useAuth();
+
+  // Start server health monitoring when app loads
+  useEffect(() => {
+    console.log("🚀 Starting server health monitoring...");
+    serverHealthMonitor.startMonitoring();
+
+    // Pre-wake server on app load
+    serverHealthMonitor.preWakeServer();
+
+    return () => {
+      serverHealthMonitor.stopMonitoring();
+    };
+  }, []);
 
   if (loading) {
     return <LoadingSpinner />;

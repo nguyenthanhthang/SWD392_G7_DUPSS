@@ -10,11 +10,29 @@ export interface BlogData {
   anDanh?: boolean;
 }
 
+// API URLs - with fallback
+const API_URLS = [
+  "https://swd392-g7-dupss.onrender.com/api",
+  "http://localhost:5000/api", // Local development fallback
+];
+
+let currentApiIndex = 0;
+
+const getApiUrl = () => {
+  return API_URLS[currentApiIndex];
+};
+
+const switchToNextApi = () => {
+  currentApiIndex = (currentApiIndex + 1) % API_URLS.length;
+  console.log(`🔄 Switching to API: ${getApiUrl()}`);
+};
+
 const api = axios.create({
-  baseURL: "https://swd392-g7-dupss.onrender.com/api",
+  baseURL: getApiUrl(),
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // 30 seconds timeout for Render.com cold start
 });
 
 // Add request interceptor
@@ -22,6 +40,9 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
+
+    // Update baseURL for each request
+    config.baseURL = getApiUrl();
 
     // Kiểm tra token tồn tại
     if (token) {
@@ -53,15 +74,53 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor
+// Add response interceptor with retry logic for Render.com cold start
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     console.error(
       "API Response Error:",
       error.response?.status,
       error.response?.data
     );
+
+    // Special handling for Render.com cold start
+    if (error.code === "ECONNABORTED" || !error.response) {
+      const config = error.config;
+
+      // First retry with longer delay for cold start
+      if (!config._retry) {
+        config._retry = true;
+        console.log(
+          "🔄 Render.com server might be waking up, retrying in 5 seconds..."
+        );
+
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(api(config));
+          }, 5000);
+        });
+      }
+
+      // Second retry with even longer delay
+      if (!config._retry2) {
+        config._retry2 = true;
+        console.log("🔄 Still waking up, retrying in 10 seconds...");
+
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(api(config));
+          }, 10000);
+        });
+      }
+
+      // If all retries failed, try switching to next API
+      if (!config._switched) {
+        config._switched = true;
+        switchToNextApi();
+        return api(config);
+      }
+    }
 
     if (error.response?.status === 401) {
       // Clear local storage on unauthorized
