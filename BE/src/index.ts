@@ -37,16 +37,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "https://swd-392-g7-dupss-hcbq-pfad63kum.vercel.app",
-      "https://g7dupss.com",
-      "https://swd-392-g7-dup-git-7eaa92-nguyenthanhthang190500-8478s-projects.vercel.app",
-      "https://swd-392-g7-dupss-hcbq.vercel.app",
-      "https://*.vercel.app",
-      "https://vercel.app",
-    ],
+    origin: "*", // Cho phép tất cả domain tạm thời
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
