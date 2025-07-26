@@ -22,7 +22,10 @@ import reportRoutes from "./routes/reportRoutes";
 import questionRoutes from "./routes/questionRoutes";
 
 import uploadRouter from "./routes/upload";
-import { startEventStatusCron, updateEventStatus } from './utils/eventStatusManager';
+import {
+  startEventStatusCron,
+  updateEventStatus,
+} from "./utils/eventStatusManager";
 
 // Load biến môi trường
 dotenv.config();
@@ -38,9 +41,15 @@ app.use(
       "http://localhost:5173",
       "http://localhost:3000",
       "https://swd-392-g7-dupss-hcbq-pfad63kum.vercel.app",
-      "https://g7dupss.com"
+      "https://g7dupss.com",
+      "https://swd-392-g7-dup-git-7eaa92-nguyenthanhthang190500-8478s-projects.vercel.app",
+      "https://swd-392-g7-dupss-hcbq.vercel.app",
+      "https://*.vercel.app",
+      "https://vercel.app",
     ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 app.use(express.json());
@@ -68,7 +77,6 @@ app.use("/api/sponsors", sponsorRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/event-feedback", eventFeedbackRoutes);
 
-
 // Route kiểm tra
 app.get("/", (_req, res) => {
   res.send(" HopeHub backend is running");
@@ -77,10 +85,10 @@ app.get("/", (_req, res) => {
 // Start server
 app.listen(PORT, async () => {
   console.log(` Server is running on http://localhost:${PORT}`);
-  
+
   // Chạy update status ngay khi server start
   await updateEventStatus();
-  
+
   // Bắt đầu cron job
   startEventStatusCron();
 });
