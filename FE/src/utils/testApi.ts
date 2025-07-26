@@ -10,16 +10,6 @@ export const testBackendConnection = async () => {
       url: API_BASE_URL.replace("/api", ""),
       method: "GET",
     },
-    {
-      name: "Auth endpoint",
-      url: `${API_BASE_URL}/auth`,
-      method: "GET",
-    },
-    {
-      name: "Health check",
-      url: `${API_BASE_URL}/health`,
-      method: "GET",
-    },
   ];
 
   for (const test of tests) {
@@ -39,8 +29,13 @@ export const testBackendConnection = async () => {
 
       if (response.ok) {
         console.log(`✅ ${test.name}: OK (${responseTime}ms)`);
-        const data = await response.text();
-        console.log(`   Response: ${data.substring(0, 100)}...`);
+        try {
+          const data = await response.json();
+          console.log(`   Response:`, data);
+        } catch {
+          const data = await response.text();
+          console.log(`   Response: ${data.substring(0, 100)}...`);
+        }
       } else {
         console.log(
           `❌ ${test.name}: ${response.status} ${response.statusText}`
@@ -77,6 +72,8 @@ export const testLoginEndpoint = async () => {
 
     if (response.ok) {
       console.log("✅ Login endpoint: OK");
+      const data = await response.json();
+      console.log("   Response:", data);
     } else {
       const errorData = await response.json();
       console.log(
@@ -84,6 +81,10 @@ export const testLoginEndpoint = async () => {
           errorData.message || "Unknown error"
         }`
       );
+      // Đây là lỗi bình thường vì test với tài khoản không tồn tại
+      if (errorData.message?.includes("không tồn tại")) {
+        console.log("   ℹ️ Expected error - test account doesn't exist");
+      }
     }
   } catch (error: any) {
     console.log(`❌ Login endpoint: ${error.message}`);
