@@ -46,7 +46,6 @@ export const getAllEventsApi = async (): Promise<Event[]> => {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
-    withCredentials: true,
   });
   return response.data;
 };
@@ -66,7 +65,6 @@ export const checkInEventApi = async (
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
-      withCredentials: true,
     }
   );
   return response.data;
@@ -79,7 +77,6 @@ export const getUserQuizHistoryApi = async (
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
-    withCredentials: true,
   });
   return { success: true, data: response.data };
 };
@@ -158,7 +155,6 @@ export const uploadAvatarApi = async (file: File): Promise<string> => {
         "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
-      withCredentials: true,
     }
   );
   return response.data.imageUrl; // BE trả về { imageUrl }
