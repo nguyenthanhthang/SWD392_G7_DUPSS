@@ -58,6 +58,7 @@ const QuizResultsManagement = lazy(
 const EventDetailPage = lazy(() => import("./pages/EventDetailPage"));
 const VerifyOTP = lazy(() => import("./pages/VerifyOTP"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
+const TransactionManagement = lazy(() => import("./pages/admin/TransactionManagement"));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -213,6 +214,7 @@ function AppContent() {
                         element={<QuizResultsManagement />}
                       />
                       <Route path="profile" element={<AdminProfile />} />
+                      <Route path="transactions" element={<TransactionManagement />} />
                     </Routes>
                   </Suspense>
                 </AdminLayout>

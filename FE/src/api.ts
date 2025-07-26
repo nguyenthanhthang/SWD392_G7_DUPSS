@@ -1015,7 +1015,7 @@ export const getPaymentByAppointmentIdApi = async (appointmentId: string) => {
 };
 
 export const getAllPaymentsApi = async () => {
-  const res = await api.get("/payment/test");
+  const res = await api.get("/payment/");
   return res.data;
 };
 
