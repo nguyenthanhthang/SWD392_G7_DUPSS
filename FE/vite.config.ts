@@ -7,9 +7,4 @@ export default defineConfig({
   define: {
     global: "window",
   },
-  server: {
-    proxy: {
-      "/api": "https://swd392-g7-dupss.onrender.com",
-    },
-  },
 });
