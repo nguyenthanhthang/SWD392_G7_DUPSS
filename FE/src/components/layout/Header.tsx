@@ -54,7 +54,7 @@ function Header() {
   const defaultStyle = "text-gray-600 hover:text-gray-900";
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm w-full">
+    <header className="sticky top-0 z-50 bg-light shadow-sm w-full">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">
@@ -64,8 +64,8 @@ function Header() {
                 alt="Logo"
                 className="h-10 w-10 object-cover rounded-full mr-2"
               />
-              <span className="ml-2 text-xl font-semibold text-[#283593]">
-                HopeHub
+              <span className="ml-2 text-xl font-semibold text-primary">
+                PhilosoSpace
               </span>
             </Link>
           </div>
@@ -74,26 +74,8 @@ function Header() {
             <Link to="/" className={isActive('/') ? activeStyle : defaultStyle}>
               Trang chủ
             </Link>
-            <Link to="/quizz" className={isActive('/quizz') ? activeStyle : defaultStyle}>
-              Trắc nghiệm
-            </Link>
-            <Link
-              to="/consulting"
-              className={isActive('/consulting') ? activeStyle : defaultStyle}
-            >
-              Tư vấn
-            </Link>
-            <Link to="/service" className={isActive('/service') ? activeStyle : defaultStyle}>
-              Dịch vụ
-            </Link>
-            <Link to="/events" className={isActive('/events') ? activeStyle : defaultStyle}>
-              Sự kiện
-            </Link>
             <Link to="/blogs" className={isActive('/blogs') ? activeStyle : defaultStyle}>
-              Blog
-            </Link>
-            <Link to="/about-us" className={isActive('/about-us') ? activeStyle : defaultStyle}>
-              Giới thiệu
+              Triết học
             </Link>
           </nav>
 
@@ -159,7 +141,7 @@ function Header() {
           ) : (
             <Link
               to="/login"
-              className="px-8 py-3 rounded-full border-2 border-black text-xl font-medium text-black bg-white hover:bg-gray-100 transition"
+              className="px-8 py-3 rounded-full border-2 border-primary text-xl font-medium text-primary bg-light hover:bg-primary-50 transition"
             >
               Đăng nhập
             </Link>

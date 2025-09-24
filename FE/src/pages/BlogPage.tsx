@@ -135,15 +135,15 @@ function BlogPage() {
       : strippedContent;
   };
 
-  // Random pastel background colors for blog cards without images
+  // Philosophy theme background colors for blog cards without images
   const getBgColor = (id: string) => {
     const colors = [
-      'bg-gradient-to-r from-blue-50 to-blue-100',
-      'bg-gradient-to-r from-green-50 to-green-100',
-      'bg-gradient-to-r from-yellow-50 to-yellow-100',
-      'bg-gradient-to-r from-pink-50 to-pink-100',
-      'bg-gradient-to-r from-purple-50 to-purple-100',
-      'bg-gradient-to-r from-indigo-50 to-indigo-100',
+      'bg-gradient-to-r from-primary-50 to-primary-100',
+      'bg-gradient-to-r from-secondary-50 to-secondary-100',
+      'bg-gradient-to-r from-accent-50 to-accent-100',
+      'bg-gradient-to-r from-primary-100 to-secondary-100',
+      'bg-gradient-to-r from-secondary-100 to-accent-100',
+      'bg-gradient-to-r from-accent-100 to-primary-100',
     ];
     // Use the first character of the id to deterministically choose a color
     const index = id.charCodeAt(0) % colors.length;
@@ -154,15 +154,15 @@ function BlogPage() {
     <MainLayout>
       <Toaster position="top-center" />
       
-      {/* Minimalist Blog Banner inspired by Buzzsprout Blog */}
-      <div className="bg-white pt-4 pb-8 text-center border-b border-gray-200">
-        <h1 className="text-5xl md:text-6xl font-extrabold text-gray-800 mb-4 tracking-tight">Blog & Tin tức</h1>
-        <p className="text-lg md:text-xl text-gray-600 font-medium max-w-2xl mx-auto">
-          Khám phá những bài viết bổ ích về tâm lý học và sức khỏe tinh thần.
+      {/* Philosophy Blog Banner */}
+      <div className="bg-light pt-4 pb-8 text-center border-b border-primary-200">
+        <h1 className="text-5xl md:text-6xl font-extrabold text-primary mb-4 tracking-tight">Blog Triết học</h1>
+        <p className="text-lg md:text-xl text-bodytext font-medium max-w-2xl mx-auto">
+          Khám phá những bài viết sâu sắc về triết học, tư duy và ý nghĩa cuộc sống.
         </p>
       </div>
 
-      <div className="container mx-auto px-4 py-6 bg-gradient-to-b from-white to-sky-50/30 min-h-screen">
+      <div className="container mx-auto px-4 py-6 bg-gradient-to-b from-light to-primary-50/30 min-h-screen">
         {/* Create blog button - show different versions based on login state */}
         {!showCreateForm && (
           <div className="mb-8 flex justify-center">
@@ -170,9 +170,9 @@ function BlogPage() {
               onClick={handleCreateBlogClick}
               className={`${
                 isLoggedIn 
-                  ? 'bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600' 
-                  : 'bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600'
-              } px-6 py-3 rounded-xl shadow-lg transition-all duration-300 flex items-center font-semibold text-lg text-white drop-shadow`}
+                  ? 'bg-gradient-to-r from-primary to-accent hover:from-primary-700 hover:to-accent-700' 
+                  : 'bg-gradient-to-r from-secondary-400 to-secondary-500 hover:from-secondary-500 hover:to-secondary-600'
+              } px-6 py-3 rounded-xl shadow-lg transition-all duration-300 flex items-center font-semibold text-lg text-light drop-shadow`}
             >
               <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isLoggedIn ? (

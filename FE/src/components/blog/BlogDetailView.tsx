@@ -178,12 +178,12 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-r from-blue-400 via-pink-300 to-pink-200"></div>
+          <div className="w-full h-full bg-gradient-to-r from-primary-400 via-secondary-300 to-accent-200"></div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10 flex items-end">
           <div className="px-6 pb-10">
             <div className="flex items-center mb-3">
-              <span className="bg-cyan-600/80 text-white px-4 py-1 rounded-full text-sm backdrop-blur-sm">
+              <span className="bg-primary/80 text-light px-4 py-1 rounded-full text-sm backdrop-blur-sm">
                 {dinhDangNgay(blog.createdAt)}
               </span>
               <span className="mx-3 text-white/70">•</span>
@@ -194,12 +194,12 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
         </div>
       </div>
       {/* Nội dung blog */}
-      <div className="bg-white py-8 px-4 md:px-10 rounded-b-xl shadow-sm">
+      <div className="bg-light py-8 px-4 md:px-10 rounded-b-xl shadow-sm">
         {/* Chủ đề */}
         {blog.topics && blog.topics.length > 0 && (
           <div className="mb-4 flex flex-wrap gap-2">
             {blog.topics.map((chuDe) => (
-              <span key={chuDe} className="inline-block bg-cyan-50 text-cyan-600 text-xs px-3 py-1 rounded-full">
+              <span key={chuDe} className="inline-block bg-primary-50 text-primary text-xs px-3 py-1 rounded-full">
                 {chuDe}
               </span>
             ))}
@@ -207,22 +207,22 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
         )}
         {/* Nội dung chính */}
         <div
-          className="prose lg:prose-xl prose-cyan max-w-none mb-6"
+          className="prose lg:prose-xl prose-stone max-w-none mb-6"
           dangerouslySetInnerHTML={{ __html: blog.content }}
         />
 
         {/* Comments section */}
         <div className="mt-12 border-t pt-8">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-2xl font-bold text-gray-800">Bình luận ({comments.length})</h3>
+            <h3 className="text-2xl font-bold text-primary">Bình luận ({comments.length})</h3>
             
             {/* Sort options */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Sắp xếp:</span>
+              <span className="text-sm text-bodytext">Sắp xếp:</span>
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
-                className="px-3 py-1 text-sm border border-gray-200 rounded-lg focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                className="px-3 py-1 text-sm border border-primary-200 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 <option value="newest">Mới nhất</option>
                 <option value="oldest">Cũ nhất</option>
@@ -239,23 +239,23 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Viết bình luận của bạn..."
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none"
+                    className="w-full px-4 py-3 rounded-lg border border-primary-200 focus:border-primary focus:ring-1 focus:ring-primary resize-none"
                     rows={3}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed h-fit"
+                  className="px-6 py-3 bg-gradient-to-r from-primary to-accent text-light rounded-lg hover:from-primary-700 hover:to-accent-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed h-fit"
                 >
                   {isLoading ? 'Đang gửi...' : 'Gửi bình luận'}
                 </button>
               </div>
             </form>
           ) : (
-            <div className="mb-8 p-4 bg-gray-50 rounded-lg text-center">
-              <p className="text-gray-600">
-                Vui lòng <a href="/login" className="text-cyan-600 hover:text-cyan-700 font-medium">đăng nhập</a> để bình luận
+            <div className="mb-8 p-4 bg-primary-50 rounded-lg text-center">
+              <p className="text-bodytext">
+                Vui lòng <a href="/login" className="text-primary hover:text-primary-700 font-medium">đăng nhập</a> để bình luận
               </p>
             </div>
           )}
@@ -263,18 +263,18 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
           {/* Comments list */}
           <div className="space-y-6">
             {sortedComments.map((comment) => (
-              <div key={comment._id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+              <div key={comment._id} className="flex gap-4 p-4 bg-primary-50 rounded-lg">
                 <div className="flex-grow">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="font-medium text-gray-800">{comment.username}</span>
-                      <span className="mx-2 text-gray-400">•</span>
-                      <span className="text-sm text-gray-500">{dinhDangNgay(comment.createdAt)}</span>
+                      <span className="font-medium text-primary">{comment.username}</span>
+                      <span className="mx-2 text-secondary-400">•</span>
+                      <span className="text-sm text-bodytext">{dinhDangNgay(comment.createdAt)}</span>
                     </div>
                     {user?._id === comment.userId && (
                       <button
                         onClick={() => comment._id && handleDeleteComment(comment._id)}
-                        className="text-red-500 hover:text-red-600"
+                        className="text-danger hover:text-danger-600"
                         title="Xóa bình luận"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -283,13 +283,13 @@ const BlogDetailView: React.FC<BlogDetailViewProps> = ({ blog, onClose }) => {
                       </button>
                     )}
                   </div>
-                  <p className="text-gray-700">{comment.content}</p>
+                  <p className="text-bodytext">{comment.content}</p>
                 </div>
               </div>
             ))}
             
             {comments.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-secondary-500">
                 Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
               </div>
             )}

@@ -21,7 +21,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       {isAdminPage ? <AdminHeader isSidebarCollapsed={isSidebarCollapsed} /> : <Header />}
 
